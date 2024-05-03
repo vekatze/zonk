@@ -1,0 +1,15 @@
+import {
+  this.pos {Pos, pos},
+}
+
+data state {
+| State(
+    stream: text,
+    lastpos: pos,
+  )
+}
+
+define new-state(input: text): cell(state) {
+  let initial-state = State of {stream = input, lastpos = Pos of {row = 0, column = 0}} in
+  new-cell(initial-state)
+}

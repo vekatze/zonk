@@ -1,0 +1,125 @@
+import {
+  core.magic,
+  core.memory {load-int},
+  core.rune {load-rune},
+  core.rune.entity,
+  core.text {_get-content-pointer, format, singleton},
+  core.text.entity,
+  noa.gen.pairs {pairs},
+  noa.gen.texts {texts},
+  noa.suite {noa},
+  this.error {Error, error},
+  this.parser {parser},
+  this.pos {Pos},
+  this.state {State, new-state, state},
+}
+
+define _read<a>(ch: &cell(a)): &a {
+  let ch = core.magic.cast(&cell(a), int, ch) in
+  let val-base = load-int(ch) in
+  core.magic.cast(int, &a, val-base)
+}
+
+define chunk(t: &text): parser(unit) {
+  function (st-ref: &cell(state)) {
+    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    let len1 = core.text.text-byte-length(stream) in
+    let len2 = core.text.text-byte-length(t) in
+    if lt-int(len1, len2) {
+      Fail(Error(*"unexpected end of input", Pos(*row, *column)))
+    } else {
+      let ptr1 = _get-content-pointer(stream) in
+      let ptr2 = _get-content-pointer(t) in
+      let f =
+        define consumer(index: int, row: int, column: int): except(error, unit) {
+          if eq-int(index, len2) {
+            mutate(st-ref, function (st) {
+              let State of {stream, lastpos = Pos of {}} = st in
+              State of {
+                stream = core.text._drop(len2, stream),
+                lastpos = Pos of {row, column},
+              }
+            });
+            Pass(Unit)
+          } else {
+            let rune1 = load-rune(add-int(ptr1, index)) in
+            let rune2 = load-rune(add-int(ptr2, index)) in
+            if core.rune.entity.as-entity::identity(rune1, rune2) {
+              let offset = core.rune.size(rune1) in
+              let newline = 0x0a in
+              if core.rune.entity.as-entity::identity(rune1, newline) {
+                consumer(add-int(index, offset), add-int(row, 1), 0)
+              } else {
+                consumer(add-int(index, offset), row, add-int(column, 1))
+              }
+            } else {
+              Fail(Error(
+                format(
+                  "unexpected character: {}, expecting: {}",
+                  [singleton(rune1), singleton(rune2)],
+                ),
+                Pos(row, column),
+              ))
+            }
+          }
+        }
+      in
+      f(0, *row, *column)
+    }
+  }
+}
+
+inline take-while(_: (rune) -> bool): parser(text) {
+  function (_: &cell(state)) {
+    admit
+  }
+}
+
+define zen(): unit {
+  noa::check(
+    "chunk(t1) against append(t1, t2) must succeed and the remaining text is t2",
+    pairs(texts, texts),
+    function (p) {
+      let Pair(t1, t2) = p in
+      let full-text on t1, t2 = core.text.append(t1, t2) in
+      let st = new-state(full-text) in
+      let parse-result on t1, st =
+        let p = chunk(t1) in
+        let parse-result = p(st) in
+        parse-result
+      in
+      let _ = t1 in
+      match parse-result {
+      | Pass(_) =>
+        let result on t2, st =
+          tie State of {stream} = _read(st) in
+          core.text.entity.as-entity::identity(t2, stream)
+        in
+        let _ = t2 in
+        let _ = st in
+        result
+      | Fail(_) =>
+        False
+      }
+    },
+  );
+  let st = new-state(*"hel\nあlo, wo\nrld! this is me") in
+  let p = chunk("hel\nあlo") in
+  let _ on st = p(st) in
+  let p2 = chunk(", wo\nrld") in
+  let result on st = p2(st) in
+  match result {
+  | Pass(_) =>
+    let _ on st =
+      tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
+      print("remaining text: ");
+      print(stream);
+      print("\n");
+      printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)])
+    in
+    let _ = st in
+    print("pass!\n")
+  | Fail(Error(content, _)) =>
+    printf("fail: {}\n", [content])
+  }
+}

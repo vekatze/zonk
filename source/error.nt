@@ -1,0 +1,10 @@
+import {
+  this.pos {pos},
+}
+
+data error {
+| Error(
+    content: text,
+    position: pos,
+  )
+}

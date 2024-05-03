@@ -1,0 +1,6 @@
+data pos {
+| Pos(
+    row: int,
+    column: int,
+  )
+}

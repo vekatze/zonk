@@ -1,0 +1,8 @@
+import {
+  this.error {error},
+  this.state {state},
+}
+
+inline parser(a: tau): tau {
+  (input: &cell(state)) -> except(error, a)
+}
