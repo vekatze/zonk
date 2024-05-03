@@ -1,16 +1,16 @@
 import {
   core.magic,
-  core.memory {load-int},
+  core.memory {load-int, store-int},
   core.rune {load-rune},
   core.rune.entity,
-  core.text {_get-content-pointer, format, singleton},
+  core.text {_get-content-pointer, _get-rune, _take-N, format, singleton},
   core.text.entity,
   noa.gen.pairs {pairs},
   noa.gen.texts {texts},
   noa.suite {noa},
   this.error {Error, error},
   this.parser {parser},
-  this.pos {Pos},
+  this.pos {Pos, pos},
   this.state {State, new-state, state},
 }
 
@@ -18,6 +18,48 @@ define _read<a>(ch: &cell(a)): &a {
   let ch = core.magic.cast(&cell(a), int, ch) in
   let val-base = load-int(ch) in
   core.magic.cast(int, &a, val-base)
+}
+
+inline _proceed(st-ref: &cell(state), byte-offset: int, new-pos: pos): unit {
+  mutate(st-ref, function (st) {
+    let State of {stream, lastpos = Pos of {}} = st in
+    State of {
+      stream = core.text._drop(byte-offset, stream),
+      lastpos = new-pos,
+    }
+  })
+}
+
+constant _newline: rune {
+  0x0a
+}
+
+inline _get-new-pos(r: rune, row: int, column: int): pos {
+  if core.rune.entity.as-entity::identity(r, _newline) {
+    Pos of {row = add-int(row, 1), column = 0}
+  } else {
+    Pos of {row, column = add-int(column, 1)}
+  }
+}
+
+define satisfy(p: (rune) -> bool): parser(rune) {
+  function (st-ref: &cell(state)) {
+    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    let len = core.text.text-byte-length(stream) in
+    if eq-int(len, 0) {
+      Fail(Error(*"unexpected end of input", Pos(*row, *column)))
+    } else {
+      let r = _get-rune(stream, 0) in
+      if p(r) {
+        let new-pos = _get-new-pos(r, *row, *column) in
+        let offset = core.rune.size(r) in
+        _proceed(st-ref, offset, new-pos);
+        Pass(r)
+      } else {
+        Fail(Error(format("`satisfy` against {} failed", [singleton(r)]), Pos(*row, *column)))
+      }
+    }
+  }
 }
 
 define chunk(t: &text): parser(unit) {
@@ -33,25 +75,15 @@ define chunk(t: &text): parser(unit) {
       let f =
         define consumer(index: int, row: int, column: int): except(error, unit) {
           if eq-int(index, len2) {
-            mutate(st-ref, function (st) {
-              let State of {stream, lastpos = Pos of {}} = st in
-              State of {
-                stream = core.text._drop(len2, stream),
-                lastpos = Pos of {row, column},
-              }
-            });
+            _proceed(st-ref, len2, Pos of {row, column});
             Pass(Unit)
           } else {
             let rune1 = load-rune(add-int(ptr1, index)) in
             let rune2 = load-rune(add-int(ptr2, index)) in
             if core.rune.entity.as-entity::identity(rune1, rune2) {
               let offset = core.rune.size(rune1) in
-              let newline = 0x0a in
-              if core.rune.entity.as-entity::identity(rune1, newline) {
-                consumer(add-int(index, offset), add-int(row, 1), 0)
-              } else {
-                consumer(add-int(index, offset), row, add-int(column, 1))
-              }
+              let Pos of {row, column} = _get-new-pos(rune1, row, column) in
+              consumer(add-int(index, offset), row, column)
             } else {
               Fail(Error(
                 format(
@@ -69,9 +101,108 @@ define chunk(t: &text): parser(unit) {
   }
 }
 
-inline take-while(_: (rune) -> bool): parser(text) {
-  function (_: &cell(state)) {
-    admit
+inline take-while(p: (rune) -> bool): parser(text) {
+  function (st-ref: &cell(state)) {
+    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    let len = core.text.text-byte-length(stream) in
+    if eq-int(len, 0) {
+      Pass(*stream)
+    } else {
+      let ptr1 = _get-content-pointer(stream) in
+      let f =
+        define consumer(index: int, row: int, column: int): text {
+          let r = load-rune(add-int(ptr1, index)) in
+          if p(r) {
+            let offset = core.rune.size(r) in
+            let Pos of {row, column} = _get-new-pos(r, row, column) in
+            consumer(add-int(index, offset), row, column)
+          } else {
+            let result = _take-N(index, stream) in
+            _proceed(st-ref, index, Pos of {row, column});
+            result
+          }
+        }
+      in
+      Pass(f(0, *row, *column))
+    }
+  }
+}
+
+inline drop-while(p: (rune) -> bool): parser(unit) {
+  function (st-ref: &cell(state)) {
+    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    let len = core.text.text-byte-length(stream) in
+    if eq-int(len, 0) {
+      Pass(Unit)
+    } else {
+      let ptr1 = _get-content-pointer(stream) in
+      let f =
+        define consumer(index: int, row: int, column: int): unit {
+          let r = load-rune(add-int(ptr1, index)) in
+          if p(r) {
+            let offset = core.rune.size(r) in
+            let Pos of {row, column} = _get-new-pos(r, row, column) in
+            consumer(add-int(index, offset), row, column)
+          } else {
+            _proceed(st-ref, index, Pos of {row, column});
+            Unit
+          }
+        }
+      in
+      f(0, *row, *column);
+      Pass(Unit)
+    }
+  }
+}
+
+define _load-text-offset(t: &text): int {
+  load-int(magic cast(&text, int, t))
+}
+
+define _rewind(t: text, new-from: int): text {
+  let from-ptr = core.magic.cast(text, int, t) in
+  store-int(new-from, from-ptr);
+  core.magic.cast(int, text, from-ptr)
+}
+
+define _rewind-N(t: &text, offset: int): unit {
+  let from-ptr = magic cast(&text, int, t) in
+  store-int(offset, from-ptr)
+}
+
+define attempt<a>(p: parser(a)): parser(a) {
+  function (st-ref: &cell(state)) {
+    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    let base-offset = _load-text-offset(stream) in
+    match p(st-ref) {
+    | Pass(result) =>
+      Pass(result)
+    | Fail(e) =>
+      mutate(st-ref, function (st) {
+        let State of {stream, lastpos = Pos of {}} = st in
+        let new-stream = _rewind(stream, base-offset) in
+        State of {stream = new-stream, lastpos = Pos of {row = *row, column = *column}}
+      });
+      Fail(e)
+    }
+  }
+}
+
+inline choice<a>(p1: parser(a), p2: parser(a)): parser(a) {
+  function (st-ref: &cell(state)) {
+    match p1(st-ref) {
+    | Pass(result) =>
+      Pass(result)
+    | Fail(_) =>
+      p2(st-ref)
+    }
+  }
+}
+
+define join-parser<a>(p1: parser(a), p2: parser(a)): parser(a) {
+  function (st-ref: &cell(state)) {
+    try _ = p1(st-ref) in
+    p2(st-ref)
   }
 }
 
@@ -103,11 +234,38 @@ define zen(): unit {
       }
     },
   );
-  let st = new-state(*"hel\nあlo, wo\nrld! this is me") in
-  let p = chunk("hel\nあlo") in
-  let _ on st = p(st) in
-  let p2 = chunk(", wo\nrld") in
-  let result on st = p2(st) in
+  let is-h =
+    function (r) {
+      core.rune.entity.as-entity::identity(r, 0x68)
+    }
+  in
+  let newline-p =
+    function (r) {
+      core.rune.entity.as-entity::identity(r, 0x0a)
+    }
+  in
+  let st = new-state(*"helあlo, world! this is me") in
+  let hey-or-hel =
+    choice(
+      attempt(join-parser(chunk("h"), chunk("aoeu"))),
+      chunk("helあ"),
+    )
+  in
+  let p = satisfy(newline-p) in
+  let until-newline =
+    take-while(function (r) {
+      not(core.rune.entity.as-entity::identity(r, 0x0a))
+    })
+  in
+  let skip-until-newline =
+    drop-while(function (r) {
+      not(core.rune.entity.as-entity::identity(r, 0x0a))
+    })
+  in
+  let result on st = hey-or-hel(st) in
+  // let result on st = skip-until-newline(st) in
+  // let p2 = chunk(", wo\nrld") in
+  // let result on st = p2(st) in
   match result {
   | Pass(_) =>
     let _ on st =
