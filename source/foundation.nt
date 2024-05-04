@@ -212,6 +212,21 @@ define attempt<a>(p: parser(a)): parser(a) {
   }
 }
 
+// co-attempt
+define look-ahead<a>(p: parser(a)): parser(a) {
+  function (st-ref: &cell(state)) {
+    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    let base-offset = _load-text-offset(stream) in
+    match p(st-ref) {
+    | Pass(result) =>
+      mutate(st-ref, _rewind-state(base-offset, *row, *column));
+      Pass(result)
+    | Fail(e) =>
+      Fail(e)
+    }
+  }
+}
+
 inline choice<a>(p1: parser(a), p2: parser(a)): parser(a) {
   function (st-ref: &cell(state)) {
     match p1(st-ref) {
