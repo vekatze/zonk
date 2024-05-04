@@ -4,7 +4,7 @@ import {
   core.memory {load-int, store-int},
   core.rune {load-rune},
   core.rune.entity,
-  core.text {_get-content-pointer, _get-rune, _take-N, format, singleton},
+  core.text {_get-content-pointer, _get-rune, _take-N, format, is-empty, singleton, take-N},
   core.text.entity,
   noa.gen.pairs {pairs},
   noa.gen.texts {texts},
@@ -227,6 +227,27 @@ define look-ahead<a>(p: parser(a)): parser(a) {
   }
 }
 
+define not-followed-by<a>(p: parser(a)): parser(unit) {
+  function (st-ref: &cell(state)) {
+    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    let base-offset = _load-text-offset(stream) in
+    match p(st-ref) {
+    | Pass(_) =>
+      mutate(st-ref, _rewind-state(base-offset, *row, *column));
+      let head-char = take-N(1, stream) in
+      let b on head-char = is-empty(head-char) in
+      if b {
+        Fail(Error(*"unexpected end of input", Pos(*row, *column)))
+      } else {
+        Fail(Error(format("unexpected {}", [head-char]), Pos(*row, *column)))
+      }
+    | Fail(_) =>
+      mutate(st-ref, _rewind-state(base-offset, *row, *column));
+      Pass(Unit)
+    }
+  }
+}
+
 inline choice<a>(p1: parser(a), p2: parser(a)): parser(a) {
   function (st-ref: &cell(state)) {
     match p1(st-ref) {
@@ -320,7 +341,7 @@ define zen(): unit {
       core.rune.entity.as-entity::identity(r, 0x0a)
     }
   in
-  let st = new-state(*"hehehe") in
+  let st = new-state(*"hehehetest") in
   let many-he = many(chunk("he")) in
   let hey-or-hel =
     choice(
@@ -339,8 +360,9 @@ define zen(): unit {
   //     not(core.rune.entity.as-entity::identity(r, 0x0a))
   //   })
   // in
-  // let result on st = many-he(st) in
-  let result on st = end-of-input()(st) in
+  let result on st = many-he(st) in
+  let result on st = not-followed-by(chunk("te"))(st) in
+  // let result on st = end-of-input()(st) in
   // let result on st = hey-or-hel(st) in
   // let result on st = skip-until-newline(st) in
   // let p2 = chunk(", wo\nrld") in
