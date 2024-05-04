@@ -6,3 +6,16 @@ import {
 inline parser(a: tau): tau {
   (input: &cell(state)) -> except(error, a)
 }
+
+inline zonk<a, b>(p1: parser(a), f: (a) -> parser(b)): parser(b) {
+  function (st-ref: &cell(state)) {
+    try v1 = p1(st-ref) in
+    f(v1)(st-ref)
+  }
+}
+
+inline return<a>(x: a): parser(a) {
+  function (_: &cell(state)) {
+    Pass(x)
+  }
+}

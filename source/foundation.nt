@@ -1,4 +1,5 @@
 import {
+  core.control {discard},
   core.magic,
   core.memory {load-int, store-int},
   core.rune {load-rune},
@@ -9,7 +10,7 @@ import {
   noa.gen.texts {texts},
   noa.suite {noa},
   this.error {Error, error},
-  this.parser {parser},
+  this.parser {parser, return, zonk},
   this.pos {Pos, pos},
   this.state {State, new-state, state},
 }
@@ -18,6 +19,11 @@ define _read<a>(ch: &cell(a)): &a {
   let ch = core.magic.cast(&cell(a), int, ch) in
   let val-base = load-int(ch) in
   core.magic.cast(int, &a, val-base)
+}
+
+define get-position(st-ref: &cell(state)): pos {
+  tie State of {lastpos = Pos of {row, column}} = _read(st-ref) in
+  Pos of {row = *row, column = *column}
 }
 
 inline _proceed(st-ref: &cell(state), byte-offset: int, new-pos: pos): unit {
@@ -39,6 +45,25 @@ inline _get-new-pos(r: rune, row: int, column: int): pos {
     Pos of {row = add-int(row, 1), column = 0}
   } else {
     Pos of {row, column = add-int(column, 1)}
+  }
+}
+
+define end-of-input(): parser(unit) {
+  function (st-ref: &cell(state)) {
+    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    let len = core.text.text-byte-length(stream) in
+    if eq-int(len, 0) {
+      Pass(Unit)
+    } else {
+      let r = _get-rune(stream, 0) in
+      Fail(Error(
+        format(
+          "unexpected character: {}, expecting: end of input",
+          [singleton(r)],
+        ),
+        Pos(*row, *column),
+      ))
+    }
   }
 }
 
@@ -165,9 +190,12 @@ define _rewind(t: text, new-from: int): text {
   core.magic.cast(int, text, from-ptr)
 }
 
-define _rewind-N(t: &text, offset: int): unit {
-  let from-ptr = magic cast(&text, int, t) in
-  store-int(offset, from-ptr)
+define _rewind-state(base-offset: int, row: int, column: int): (state) -> state {
+  function (st: state) {
+    let State of {stream, lastpos = Pos of {}} = st in
+    let new-stream = _rewind(stream, base-offset) in
+    State of {stream = new-stream, lastpos = Pos of {row, column}}
+  }
 }
 
 define attempt<a>(p: parser(a)): parser(a) {
@@ -178,11 +206,7 @@ define attempt<a>(p: parser(a)): parser(a) {
     | Pass(result) =>
       Pass(result)
     | Fail(e) =>
-      mutate(st-ref, function (st) {
-        let State of {stream, lastpos = Pos of {}} = st in
-        let new-stream = _rewind(stream, base-offset) in
-        State of {stream = new-stream, lastpos = Pos of {row = *row, column = *column}}
-      });
+      mutate(st-ref, _rewind-state(base-offset, *row, *column));
       Fail(e)
     }
   }
@@ -199,10 +223,47 @@ inline choice<a>(p1: parser(a), p2: parser(a)): parser(a) {
   }
 }
 
-define join-parser<a>(p1: parser(a), p2: parser(a)): parser(a) {
+define select<a>(p: parser(a), ps: list(parser(a))): parser(a) {
   function (st-ref: &cell(state)) {
-    try _ = p1(st-ref) in
-    p2(st-ref)
+    match p(st-ref) {
+    | Pass(result) =>
+      Pass(result)
+    | Fail(e) =>
+      match ps {
+      | Nil =>
+        Fail(e)
+      | Cons(alt, rest) =>
+        select(alt, rest)(st-ref)
+      }
+    }
+  }
+}
+
+inline many<a>(p: parser(a)): parser(list(a)) {
+  define self(st-ref: &cell(state)) {
+    match p(st-ref) {
+    | Pass(v) =>
+      try vs = self(st-ref) in
+      Pass(Cons(v, vs))
+    | Fail(_) =>
+      Pass([])
+    }
+  }
+}
+
+inline some<a>(p: parser(a)): parser(list(a)) {
+  function (st-ref: &cell(state)) {
+    try v = p(st-ref) in
+    try vs = many(p)(st-ref) in
+    Pass(Cons(v, vs))
+  }
+}
+
+inline some-with<a>(p: parser(a)): parser(list(a)) {
+  with zonk {
+    bind v = p in
+    bind vs = many(p) in
+    return(Cons(v, vs))
   }
 }
 
@@ -219,15 +280,15 @@ define zen(): unit {
         let parse-result = p(st) in
         parse-result
       in
-      let _ = t1 in
+      discard(t1);
       match parse-result {
       | Pass(_) =>
         let result on t2, st =
           tie State of {stream} = _read(st) in
           core.text.entity.as-entity::identity(t2, stream)
         in
-        let _ = t2 in
-        let _ = st in
+        discard(t2);
+        discard(st);
         result
       | Fail(_) =>
         False
@@ -244,25 +305,28 @@ define zen(): unit {
       core.rune.entity.as-entity::identity(r, 0x0a)
     }
   in
-  let st = new-state(*"helあlo, world! this is me") in
+  let st = new-state(*"hehehe") in
+  let many-he = many(chunk("he")) in
   let hey-or-hel =
     choice(
-      attempt(join-parser(chunk("h"), chunk("aoeu"))),
+      chunk("aoeu"),
       chunk("helあ"),
     )
   in
-  let p = satisfy(newline-p) in
-  let until-newline =
-    take-while(function (r) {
-      not(core.rune.entity.as-entity::identity(r, 0x0a))
-    })
-  in
-  let skip-until-newline =
-    drop-while(function (r) {
-      not(core.rune.entity.as-entity::identity(r, 0x0a))
-    })
-  in
-  let result on st = hey-or-hel(st) in
+  // let p = satisfy(newline-p) in
+  // let until-newline =
+  //   take-while(function (r) {
+  //     not(core.rune.entity.as-entity::identity(r, 0x0a))
+  //   })
+  // in
+  // let skip-until-newline =
+  //   drop-while(function (r) {
+  //     not(core.rune.entity.as-entity::identity(r, 0x0a))
+  //   })
+  // in
+  // let result on st = many-he(st) in
+  let result on st = end-of-input()(st) in
+  // let result on st = hey-or-hel(st) in
   // let result on st = skip-until-newline(st) in
   // let p2 = chunk(", wo\nrld") in
   // let result on st = p2(st) in
