@@ -5,52 +5,16 @@ import {
   core.list {is-empty},
   core.magic,
   core.memory {store-int},
-  core.text {format, intercalate, singleton, take-N, text-byte-length},
+  core.text {format, intercalate, take-N},
   core.text.show {show-text, show-text-N},
   core.word,
   this.pos {Pos, pos},
 }
 
-data observation {
-| Rune(rune)
-| Range(from: int, size: int, stream: &text)
-| Text(text)
-| Text-N(&text)
-| Label(text)
-| End-Of-Input
-}
-
-define _observation-size(o: &observation): int {
-  case o {
-  | Rune(r) =>
-    core.rune.size(*r)
-  | Range(_, size, _) =>
-    *size
-  | Text(t) =>
-    text-byte-length(t)
-  | Text-N(t) =>
-    text-byte-length(*t)
-  | Label(_) =>
-    0
-  | End-Of-Input =>
-    0
-  }
-}
-
-define _max-obserwation(o1: observation, o2: observation): observation {
-  let s1 on o1 = _observation-size(o1) in
-  let s2 on o2 = _observation-size(o2) in
-  if gt-int(s1, s2) {
-    o1
-  } else {
-    o2
-  }
-}
-
 data _error {
 | _Error(
     found: int,
-    expected: list(observation),
+    expected: list(&text),
   )
 }
 
@@ -78,23 +42,6 @@ define _unsafe-slice-N-absolute(start: int, size: int, t: &text): text {
   core.magic.cast(int, text, new-ptr)
 }
 
-define show-observation(o: observation): text {
-  match o {
-  | Rune(r) =>
-    show-text(singleton(r))
-  | Range(from, len, stream) =>
-    show-text(_unsafe-slice-N-absolute(from, len, stream))
-  | Text(t) =>
-    show-text(t)
-  | Text-N(t) =>
-    show-text-N(t)
-  | Label(l) =>
-    l
-  | End-Of-Input =>
-    *"end of input"
-  }
-}
-
 define show-found(size: int, stream: &text): text {
   show-text(take-N(size, stream))
 }
@@ -104,7 +51,7 @@ define show-position(p: pos): text {
   format("row {}, column {}", [%ld(add-int(row, 1)), %ld(add-int(column, 1))])
 }
 
-define set-expected(o: observation, e: error): error {
+define set-expected(o: &text, e: error): error {
   function () {
     match e() {
     | _Error of {found} =>
@@ -130,7 +77,7 @@ define report(e: error, position: pos, stream: &text): text {
     if b {
       format("parse error at {}:\nunexpected:\n  {}", [position', show-found(found, stream)])
     } else {
-      let expected' = intercalate(*", ", map(show-observation, expected)) in
+      let expected' = intercalate(*", ", map(show-text-N, expected)) in
       format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [position', expected', show-found(found, stream)])
     }
   }
