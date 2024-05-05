@@ -7,7 +7,7 @@ import {
   noa.gen.pairs {pairs},
   noa.gen.texts {texts},
   noa.suite {noa},
-  this.error {End-Of-Input, Error, Rune, Text, error, unexpected-end-of-input},
+  this.error {End-Of-Input, Error, Label, Rune, Text, error, report, unexpected-end-of-input},
   this.internal {_get-new-pos, _load-text-offset, _proceed, _read, _rewind-state},
   this.parser {parser},
   this.pos {Pos, pos},
@@ -171,7 +171,26 @@ constant ascii-space: parser(unit) {
   )
 }
 
-define attempt<a>(p: parser(a)): parser(a) {
+inline with-label<a>(label: &text, p: parser(a)): parser(a) {
+  function (st-ref: &cell(state)) {
+    tie State of {stream} = _read(st-ref) in
+    let base-offset = _load-text-offset(stream) in
+    match p(st-ref) {
+    | Pass(result) =>
+      Pass(result)
+    | Fail(e) =>
+      let new-offset = _load-text-offset(stream) in
+      if eq-int(base-offset, new-offset) {
+        let Error of {found, position} = e in
+        Fail(Error of {found, position, expected = [Label(*label)]})
+      } else {
+        Fail(e)
+      }
+    }
+  }
+}
+
+inline attempt<a>(p: parser(a)): parser(a) {
   function (st-ref: &cell(state)) {
     tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
@@ -185,7 +204,7 @@ define attempt<a>(p: parser(a)): parser(a) {
   }
 }
 
-define look-ahead<a>(p: parser(a)): parser(a) {
+inline look-ahead<a>(p: parser(a)): parser(a) {
   function (st-ref: &cell(state)) {
     tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
@@ -199,7 +218,7 @@ define look-ahead<a>(p: parser(a)): parser(a) {
   }
 }
 
-define not-followed-by<a>(p: parser(a)): parser(unit) {
+inline not-followed-by<a>(p: parser(a)): parser(unit) {
   function (st-ref: &cell(state)) {
     tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
@@ -230,11 +249,18 @@ define choose<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
     | Nil =>
       fallback(st-ref)
     | Cons(cand, rest) =>
+      tie State of {stream} = _read(st-ref) in
+      let base-offset = _load-text-offset(stream) in
       match cand(st-ref) {
       | Pass(v) =>
         Pass(v)
-      | Fail(_) =>
-        choose(rest, fallback)(st-ref)
+      | Fail(e) =>
+        let new-offset = _load-text-offset(stream) in
+        if eq-int(base-offset, new-offset) {
+          choose(rest, fallback)(st-ref)
+        } else {
+          Fail(e)
+        }
       }
     }
   }
@@ -362,8 +388,8 @@ define zen(): unit {
       }
     },
   );
-  let st = new-state(*" \n\r  hehehetest") in
-  let many-he = many(chunk("he")) in
+  let st = new-state(*"gあhehoge \n\r  hehehetest") in
+  // let many-he = many(chunk("he")) in
   // let p = satisfy(newline-p) in
   // let until-newline =
   //   take-while(function (r) {
@@ -377,12 +403,23 @@ define zen(): unit {
   // in
   let my-parser =
     choose of {
-      candidates = [chunk("he"), not-followed-by(chunk("te")), chunk("{}")],
+      // candidates = [chunk("he"), not-followed-by(chunk("te")), chunk("{}")],
+      candidates = {
+        [
+          chunk("gaoe"),
+          with-label("なんか", function (st) {
+            try _ = chunk("g")(st) in
+            try _ = chunk("あhebc")(st) in
+            Pass(Unit)
+          }),
+          chunk("abc"),
+          chunk("{}"),
+        ]
+      },
       fallback = chunk("test"),
     }
   in
-  let result on st = ascii-space(st) in
-  let result on st = many-he(st) in
+  let result on st = with-label("some great input", my-parser)(st) in
   // let result on st = not-followed-by(chunk("te"))(st) in
   // let result on st = end-of-input()(st) in
   // let result on st = hey-or-hel(st) in
@@ -400,7 +437,7 @@ define zen(): unit {
     in
     let _ = st in
     print("pass!\n")
-  | Fail(_) =>
-    print("fail!\n")
+  | Fail(e) =>
+    printf("{}\n", [report(e)])
   }
 }

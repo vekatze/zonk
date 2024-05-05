@@ -1,10 +1,14 @@
 import {
-  this.pos {pos},
+  core.list {is-empty},
+  core.text {format, intercalate, singleton},
+  core.text.show {show-text},
+  this.pos {Pos, pos},
 }
 
 data observation {
 | Rune(rune)
 | Text(text)
+| Label(text)
 | End-Of-Input
 }
 
@@ -18,4 +22,34 @@ data error {
 
 define unexpected-end-of-input(p: pos): error {
   Error of {found = End-Of-Input, expected = [], position = p}
+}
+
+define show-observation(o: observation): text {
+  match o {
+  | Rune(r) =>
+    show-text(singleton(r))
+  | Text(t) =>
+    show-text(t)
+  | Label(l) =>
+    l
+  | End-Of-Input =>
+    *"end of input"
+  }
+}
+
+define show-position(p: pos): text {
+  let Pos of {row, column} = p in
+  format("row {}, column {}", [%ld(add-int(row, 1)), %ld(add-int(column, 1))])
+}
+
+define report(e: error): text {
+  let Error of {found, expected, position} = e in
+  let position' = show-position(position) in
+  let b on expected = is-empty(expected) in
+  if b {
+    format("parse error at {}:\nunexpected {}", [position', show-observation(found)])
+  } else {
+    let expected' = intercalate(*", ", map(show-observation, expected)) in
+    format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [position', expected', show-observation(found)])
+  }
 }
