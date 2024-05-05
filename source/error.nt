@@ -1,6 +1,6 @@
 import {
   core.list {is-empty},
-  core.text {_slice-N, format, intercalate, singleton},
+  core.text {_slice-N, format, intercalate, singleton, text-byte-length},
   core.text.show {show-text, show-text-N},
   this.pos {Pos, pos},
 }
@@ -12,6 +12,33 @@ data observation {
 | Text-N(&text)
 | Label(text)
 | End-Of-Input
+}
+
+define _observation-size(o: &observation): int {
+  case o {
+  | Rune(r) =>
+    core.rune.size(*r)
+  | Range(_, size, _) =>
+    *size
+  | Text(t) =>
+    text-byte-length(t)
+  | Text-N(t) =>
+    text-byte-length(*t)
+  | Label(_) =>
+    0
+  | End-Of-Input =>
+    0
+  }
+}
+
+define _max-obserwation(o1: observation, o2: observation): observation {
+  let s1 on o1 = _observation-size(o1) in
+  let s2 on o2 = _observation-size(o2) in
+  if gt-int(s1, s2) {
+    o1
+  } else {
+    o2
+  }
 }
 
 data error {
