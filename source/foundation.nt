@@ -1,4 +1,5 @@
 import {
+  core.control {loop},
   core.rune {load-rune},
   core.rune.entity,
   core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N, text-byte-length},
@@ -9,15 +10,14 @@ import {
   this.error {
     End-Of-Input,
     Error,
+    Error-Mini,
     Label,
     Range,
     Rune,
     Text,
-    Text-N,
-    _max-obserwation,
     error,
-    observation,
-    report,
+    join,
+    set-expected,
     unexpected-end-of-input,
   },
   this.internal {_get-new-pos, _load-text-offset, _proceed, _read, _rewind-state},
@@ -102,9 +102,9 @@ inline chunk(t: &text): parser(unit) {
               let Pos of {row, column} = _get-new-pos(rune1, row, column) in
               consumer(add-int(index, offset), row, column)
             } else {
-              Fail(Error of {
+              Fail(Error-Mini of {
                 found = Range(base-offset, add-int(index, offset), stream),
-                expected = [Text-N(t)],
+                expected-text = t,
                 position = Pos(*orig-row, *orig-column),
               })
             }
@@ -194,8 +194,9 @@ inline with-label<a>(label: &text, p: parser(a)): parser(a) {
     | Fail(e) =>
       let new-offset = _load-text-offset(stream) in
       if eq-int(base-offset, new-offset) {
-        let Error of {found, position} = e in
-        Fail(Error of {found, position, expected = [Label(*label)]})
+        Fail(set-expected(Label(*label), e))
+        // let Error of {found, position} = e in
+        // Fail(Error of {found, position, expected = [Label(*label)]})
       } else {
         Fail(e)
       }
@@ -259,8 +260,7 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
 define _choose<a>(
   candidates: list(parser(a)),
   fallback: parser(a),
-  found-cand: observation,
-  expected-acc: list(observation),
+  error-cand: error,
 ): parser(a) {
   function (st-ref: &cell(state)) {
     tie State of {stream} = _read(st-ref) in
@@ -273,9 +273,7 @@ define _choose<a>(
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          let Error of {found, expected, position} = e in
-          let found = _max-obserwation(found, found-cand) in
-          Fail(Error of {found, position, expected = append(expected-acc, expected)})
+          Fail(join(e, error-cand))
         } else {
           Fail(e)
         }
@@ -287,9 +285,7 @@ define _choose<a>(
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          let Error of {found, expected} = e in
-          let found = _max-obserwation(found, found-cand) in
-          _choose(rest, fallback, found, append(expected-acc, expected))(st-ref)
+          _choose(rest, fallback, join(e, error-cand))(st-ref)
         } else {
           Fail(e)
         }
@@ -312,8 +308,7 @@ inline choose<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          let Error of {found, expected} = e in
-          _choose(rest, fallback, found, expected)(st-ref)
+          _choose(rest, fallback, e)(st-ref)
         } else {
           Fail(e)
         }
@@ -496,26 +491,26 @@ define zen(): unit {
       fallback = chunk("tk"),
     }
   in
-  // loop(1000, Unit, function (_, _) {
-  //   _try-parse(my-parser)
-  // });
-  let st = new-state(*"ab\nctああhehoge \n\r  hehehetest") in
-  let _ on st =
-    let _ = chunk("ab\nc")(st) in
-    let result = my-parser(st) in
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
-    match result {
-    | Pass(_) =>
-      print("remaining text: ");
-      print(stream);
-      print("\n");
-      printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
-      let _ = st in
-      print("pass!\n")
-    | Fail(e) =>
-      printf("{}\n", [report(e)])
-    }
-  in
-  let _ = st in
+  loop(1000000, Unit, function (_, _) {
+    _try-parse(my-parser)
+  });
+  // let st = new-state(*"ab\nctああhehoge \n\r  hehehetest") in
+  // let _ on st =
+  //   let _ = chunk("ab\nc")(st) in
+  //   let result = my-parser(st) in
+  //   tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
+  //   match result {
+  //   | Pass(_) =>
+  //     print("remaining text: ");
+  //     print(stream);
+  //     print("\n");
+  //     printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
+  //     let _ = st in
+  //     print("pass!\n")
+  //   | Fail(e) =>
+  //     printf("{}\n", [report(e)])
+  //   }
+  // in
+  // let _ = st in
   Unit
 }

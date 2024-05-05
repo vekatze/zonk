@@ -53,6 +53,16 @@ data error {
     expected: list(observation),
     position: pos,
   )
+| Error-Mini(
+    found: observation,
+    expected-text: &text,
+    position: pos,
+  )
+| Error-Single(
+    found: observation,
+    expected: observation,
+    position: pos,
+  )
 }
 
 define unexpected-end-of-input(p: pos): error {
@@ -95,14 +105,73 @@ define show-position(p: pos): text {
   format("row {}, column {}", [%ld(add-int(row, 1)), %ld(add-int(column, 1))])
 }
 
+define inject-error(e: error): error {
+  match e {
+  | Error(found, expected, position) =>
+    Error(found, expected, position)
+  | Error-Mini(found, expected-text, position) =>
+    Error(found, [Text-N(expected-text)], position)
+  | Error-Single(found, expected, position) =>
+    Error(found, [expected], position)
+  }
+}
+
+define set-expected(o: observation, e: error): error {
+  match e {
+  | Error of {found, position} =>
+    Error-Single of {found, position, expected = o}
+  | Error-Single(found, _, position) =>
+    Error-Single of {found, position, expected = o}
+  | Error-Mini(found, _, position) =>
+    Error-Single of {found, position, expected = o}
+  }
+}
+
+// define update(new-found: observation, new-expected: list(observation), e: error): error {
+//   match e {
+//   | Error of {found, expected, position} =>
+//     admit
+//   | _ =>
+//     admit
+//   }
+// }
+inline join(e1: error, e2: error): error {
+  match e1, e2 {
+  | Error(found1, expected1, position1), Error(_, expected2, _) =>
+    Error(found1, append(expected1, expected2), position1)
+  | Error(found1, expected1, position1), Error-Mini(_, expected2-text, _) =>
+    Error(found1, append(expected1, [Text-N(expected2-text)]), position1)
+    // Error(found1, Cons(Text-N(expected2-text), expected1), position1)
+  | Error(found1, expected1, position1), Error-Single(_, expected2, _) =>
+    Error(found1, append(expected1, [expected2]), position1)
+    // Error(found1, Cons(expected2, expected1), position1)
+  | Error-Mini(found1, expected1, position1), Error(_, expected2, _) =>
+    Error(found1, Cons(Text-N(expected1), expected2), position1)
+  | Error-Mini(found1, expected1, position1), Error-Mini(_, expected2, _) =>
+    Error(found1, [Text-N(expected1), Text-N(expected2)], position1)
+  | Error-Mini(found1, expected1, position1), Error-Single(_, expected2, _) =>
+    Error(found1, [Text-N(expected1), expected2], position1)
+  | Error-Single(found1, expected1, position1), Error(_, expected2, _) =>
+    Error(found1, Cons(expected1, expected2), position1)
+  | Error-Single(found1, expected1, position1), Error-Mini(_, expected2, _) =>
+    Error(found1, [expected1, Text-N(expected2)], position1)
+  | Error-Single(found1, expected1, position1), Error-Single(_, expected2, _) =>
+    Error(found1, [expected1, expected2], position1)
+  }
+}
+
 define report(e: error): text {
-  let Error of {found, expected, position} = e in
-  let position' = show-position(position) in
-  let b on expected = is-empty(expected) in
-  if b {
-    format("parse error at {}:\nunexpected:\n  {}", [position', show-observation(found)])
-  } else {
-    let expected' = intercalate(*", ", map(show-observation, expected)) in
-    format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [position', expected', show-observation(found)])
+  match e {
+  | Error of {found, expected, position} =>
+    let position' = show-position(position) in
+    let b on expected = is-empty(expected) in
+    if b {
+      format("parse error at {}:\nunexpected:\n  {}", [position', show-observation(found)])
+    } else {
+      let expected' = intercalate(*", ", map(show-observation, expected)) in
+      format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [position', expected', show-observation(found)])
+    }
+  | e =>
+    report(inject-error(e))
   }
 }
