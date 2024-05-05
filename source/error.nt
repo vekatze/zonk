@@ -1,7 +1,13 @@
 import {
+  core.external {malloc},
+  core.int {max-int, min-int},
+  core.int8-array {_copy-int8-array},
   core.list {is-empty},
-  core.text {_slice-N, format, intercalate, singleton, text-byte-length},
+  core.magic,
+  core.memory {load-int, store-int},
+  core.text {format, intercalate, singleton, text-byte-length},
   core.text.show {show-text, show-text-N},
+  core.word,
   this.pos {Pos, pos},
 }
 
@@ -53,12 +59,29 @@ define unexpected-end-of-input(p: pos): error {
   Error of {found = End-Of-Input, expected = [], position = p}
 }
 
+define _unsafe-slice-N-absolute(start: int, size: int, t: &text): text {
+  let start = max-int(start, 0) in
+  let size = max-int(size, 0) in
+  let ptr = core.magic.cast(&text, int, t) in
+  let u = core.word.size in
+  let content-ptr = add-int(ptr, add-int(mul-int(u, 2), start)) in
+  let to-ptr = add-int(ptr, u) in
+  let to = load-int(to-ptr) in
+  let new-size = min-int(size, to) in
+  let new-ptr = malloc(add-int(new-size, mul-int(u, 2))) in
+  store-int(0, new-ptr);
+  store-int(new-size, add-int(new-ptr, u));
+  let new-content-ptr = add-int(new-ptr, mul-int(u, 2)) in
+  _copy-int8-array(add-int(content-ptr, start), new-content-ptr, 0, new-size);
+  core.magic.cast(int, text, new-ptr)
+}
+
 define show-observation(o: observation): text {
   match o {
   | Rune(r) =>
     show-text(singleton(r))
   | Range(from, len, stream) =>
-    show-text(_slice-N(from, len, stream))
+    _unsafe-slice-N-absolute(from, len, stream)
   | Text(t) =>
     show-text(t)
   | Text-N(t) =>

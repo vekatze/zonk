@@ -1,3 +1,8 @@
+import {
+  this.foundation {zen},
+}
+
 define main(): unit {
-  print("Hello, world!\n")
+  zen()
+  // print("Hello, world!\n")
 }

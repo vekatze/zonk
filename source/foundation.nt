@@ -1,4 +1,5 @@
 import {
+  core.control {loop},
   core.rune {load-rune},
   core.rune.entity,
   core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N, text-byte-length},
@@ -17,7 +18,6 @@ import {
     _max-obserwation,
     error,
     observation,
-    report,
     unexpected-end-of-input,
   },
   this.internal {_get-new-pos, _load-text-offset, _proceed, _read, _rewind-state},
@@ -80,12 +80,12 @@ constant any-rune: parser(rune) {
 
 inline chunk(t: &text): parser(unit) {
   function (st-ref: &cell(state)) {
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    tie State of {stream, lastpos = Pos of {row = orig-row, column = orig-column}} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     let len1 = core.text.text-byte-length(stream) in
     let len2 = core.text.text-byte-length(t) in
     if lt-int(len1, len2) {
-      Fail(unexpected-end-of-input(Pos(*row, *column)))
+      Fail(unexpected-end-of-input(Pos(*orig-row, *orig-column)))
     } else {
       let ptr1 = _get-content-pointer(stream) in
       let ptr2 = _get-content-pointer(t) in
@@ -103,15 +103,16 @@ inline chunk(t: &text): parser(unit) {
               consumer(add-int(index, offset), row, column)
             } else {
               Fail(Error of {
+                // found = Text(_slice-N(0, add-int(index, offset), stream)),
                 found = Range(base-offset, add-int(index, offset), stream),
                 expected = [Text-N(t)],
-                position = Pos(row, column),
+                position = Pos(*orig-row, *orig-column),
               })
             }
           }
         }
       in
-      f(0, *row, *column)
+      f(0, *orig-row, *orig-column)
     }
   }
 }
@@ -342,7 +343,32 @@ inline some<a>(p: parser(a)): parser(list(a)) {
   }
 }
 
-define zen(): unit {
+define _try-parse(my-parser: parser(unit)): unit {
+  let st = new-state(*"abcnああhehoge \n\r  hehehetest") in
+  // let result on st = with-label("some great input", my-parser)(st) in
+  let _ on st =
+    let _ = chunk("abc")(st) in
+    let result = my-parser(st) in
+    tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
+    match result {
+    | Pass(_) =>
+      print("remaining text: ");
+      print(stream);
+      print("\n");
+      printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
+      let _ = st in
+      print("pass!\n")
+    | Fail(e) =>
+      let _ = e in
+      Unit
+      // printf("{}\n", [report(e)])
+    }
+  in
+  let _ = st in
+  Unit
+}
+
+define noa-test(): unit {
   noa::check(
     "chunk(t1) against append(t1, t2) must succeed and the remaining text is t2",
     pairs(texts, texts),
@@ -441,8 +467,10 @@ define zen(): unit {
         result
       }
     },
-  );
-  let st = new-state(*"tああhehoge \n\r  hehehetest") in
+  )
+}
+
+define zen(): unit {
   let my-parser =
     choose of {
       candidates = {
@@ -471,28 +499,33 @@ define zen(): unit {
       fallback = chunk("tk"),
     }
   in
-  // let result on st = with-label("some great input", my-parser)(st) in
-  let _ on st =
-    let result = my-parser(st) in
-    // let result on st = not-followed-by(chunk("te"))(st) in
-    // let result on st = end-of-input()(st) in
-    // let result on st = hey-or-hel(st) in
-    // let result on st = skip-until-newline(st) in
-    // let p2 = chunk(", wo\nrld") in
-    // let result on st = p2(st) in
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
-    match result {
-    | Pass(_) =>
-      print("remaining text: ");
-      print(stream);
-      print("\n");
-      printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
-      let _ = st in
-      print("pass!\n")
-    | Fail(e) =>
-      printf("{}\n", [report(e)])
-    }
-  in
-  let _ = st in
+  loop(1000000, Unit, function (_, _) {
+    _try-parse(my-parser)
+  });
+  // let st = new-state(*"abcnああhehoge \n\r  hehehetest") in
+  // // let result on st = with-label("some great input", my-parser)(st) in
+  // let _ on st =
+  //   let _ = chunk("abc")(st) in
+  //   let result = my-parser(st) in
+  //   // let result on st = not-followed-by(chunk("te"))(st) in
+  //   // let result on st = end-of-input()(st) in
+  //   // let result on st = hey-or-hel(st) in
+  //   // let result on st = skip-until-newline(st) in
+  //   // let p2 = chunk(", wo\nrld") in
+  //   // let result on st = p2(st) in
+  //   tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
+  //   match result {
+  //   | Pass(_) =>
+  //     print("remaining text: ");
+  //     print(stream);
+  //     print("\n");
+  //     printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
+  //     let _ = st in
+  //     print("pass!\n")
+  //   | Fail(e) =>
+  //     printf("{}\n", [report(e)])
+  //   }
+  // in
+  // let _ = st in
   Unit
 }
