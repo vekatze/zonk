@@ -60,7 +60,7 @@ define _show-found(size: int, stream: &text): text {
   show-text(take-N(size, stream))
 }
 
-define release<a>(p: parser(a), st: &cell(state)): except(error, a) {
+inline release<a>(p: parser(a), st: &cell(state)): except(error, a) {
   let parse-result = _unwrap(p)(st) in
   tie State of {stream, cursor, found} = _read(st) in
   match parse-result {
@@ -77,6 +77,10 @@ define release<a>(p: parser(a), st: &cell(state)): except(error, a) {
       },
     )
   }
+}
+
+inline _release<a>(p: parser(a), st: &cell(state)): except(_stash, a) {
+  _unwrap(p)(st)
 }
 
 constant end-of-input: parser(unit) {
@@ -393,8 +397,8 @@ inline some<a>(p: parser(a)): parser(list(a)) {
 define _try-parse(my-parser: parser(unit)): unit {
   let st = new-state(*"abcnああhehoge \n\r  hehehetest") in
   let _ on st =
-    let _ = release(chunk("abc"), st) in
-    let result = release(my-parser, st) in
+    let _ = _release(chunk("abc"), st) in
+    let result = _release(my-parser, st) in
     tie State of {stream, cursor = Point of {row, column}} = _read(st) in
     match result {
     | Pass(_) =>
