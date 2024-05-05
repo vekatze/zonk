@@ -10,9 +10,6 @@ import {
   this.error {
     End-Of-Input,
     Label,
-    Range,
-    Rune,
-    Text,
     Text-N,
     _Error,
     error,
@@ -41,10 +38,9 @@ constant end-of-input: parser(unit) {
     if eq-int(len, 0) {
       Pass(Unit)
     } else {
-      let r = _get-rune(stream, 0) in
       Fail(function () {
         _Error of {
-          found = Rune(r),
+          found = 1,
           expected = [End-Of-Input],
         }
       })
@@ -68,7 +64,7 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
       } else {
         Fail(function () {
           _Error of {
-            found = Rune(r),
+            found = 1,
             expected = [],
           }
         })
@@ -86,7 +82,6 @@ constant any-rune: parser(rune) {
 inline chunk(t: &text): parser(unit) {
   function (st-ref: &cell(state)) {
     tie State of {stream, lastpos = Pos of {row = orig-row, column = orig-column}} = _read(st-ref) in
-    let base-offset = _load-text-offset(stream) in
     let len1 = core.text.text-byte-length(stream) in
     let len2 = core.text.text-byte-length(t) in
     if lt-int(len1, len2) {
@@ -95,7 +90,7 @@ inline chunk(t: &text): parser(unit) {
       let ptr1 = _get-content-pointer(stream) in
       let ptr2 = _get-content-pointer(t) in
       let f =
-        define consumer(index: int, row: int, column: int): except(error, unit) {
+        define consumer(index: int, char-len: int, row: int, column: int): except(error, unit) {
           if eq-int(index, len2) {
             _proceed(st-ref, len2, Pos of {row, column});
             Pass(Unit)
@@ -105,11 +100,11 @@ inline chunk(t: &text): parser(unit) {
             let offset = core.rune.size(rune1) in
             if core.rune.entity.as-entity::identity(rune1, rune2) {
               let Pos of {row, column} = _get-new-pos(rune1, row, column) in
-              consumer(add-int(index, offset), row, column)
+              consumer(add-int(index, offset), add-int(char-len, 1), row, column)
             } else {
               Fail(function () {
                 _Error of {
-                  found = Range(base-offset, add-int(index, offset), stream),
+                  found = add-int(char-len, 1),
                   expected = [Text-N(t)],
                 }
               })
@@ -117,7 +112,7 @@ inline chunk(t: &text): parser(unit) {
           }
         }
       in
-      f(0, *orig-row, *orig-column)
+      f(0, 0, *orig-row, *orig-column)
     }
   }
 }
@@ -245,12 +240,13 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
       mutate(st-ref, _rewind-state(base-offset, *row, *column));
       let head-char = take-N(1, stream) in
       let b on head-char = is-empty(head-char) in
+      let _ = head-char in
       if b {
         Fail(unexpected-end-of-input())
       } else {
         Fail(function () {
           _Error of {
-            found = Text(head-char),
+            found = 1,
             expected = [],
           }
         })
@@ -516,7 +512,7 @@ define zen(): unit {
   //     print("pass!\n")
   //   | Fail(e) =>
   //     printf("(fail) 0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
-  //     printf("{}\n", [report(e, Pos(*row, *column))])
+  //     printf("{}\n", [report(e, Pos(*row, *column), stream)])
   //   }
   // in
   // let _ = st in

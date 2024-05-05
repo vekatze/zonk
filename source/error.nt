@@ -5,7 +5,7 @@ import {
   core.list {is-empty},
   core.magic,
   core.memory {store-int},
-  core.text {format, intercalate, singleton, text-byte-length},
+  core.text {format, intercalate, singleton, take-N, text-byte-length},
   core.text.show {show-text, show-text-N},
   core.word,
   this.pos {Pos, pos},
@@ -49,7 +49,7 @@ define _max-obserwation(o1: observation, o2: observation): observation {
 
 data _error {
 | _Error(
-    found: observation,
+    found: int,
     expected: list(observation),
   )
 }
@@ -60,7 +60,7 @@ constant error: tau {
 
 define unexpected-end-of-input(): error {
   function () {
-    _Error of {found = End-Of-Input, expected = []}
+    _Error of {found = 0, expected = []}
   }
 }
 
@@ -95,6 +95,10 @@ define show-observation(o: observation): text {
   }
 }
 
+define show-found(size: int, stream: &text): text {
+  show-text(take-N(size, stream))
+}
+
 define show-position(p: pos): text {
   let Pos of {row, column} = p in
   format("row {}, column {}", [%ld(add-int(row, 1)), %ld(add-int(column, 1))])
@@ -112,22 +116,22 @@ define set-expected(o: observation, e: error): error {
 inline join(e1: error, e2: error): error {
   function () {
     match e1(), e2() {
-    | _Error(found1, expected1), _Error(_, expected2) =>
-      _Error(found1, append(expected1, expected2))
+    | _Error(found1, expected1), _Error(found2, expected2) =>
+      _Error(max-int(found1, found2), append(expected1, expected2))
     }
   }
 }
 
-define report(e: error, position: pos): text {
+define report(e: error, position: pos, stream: &text): text {
   match e() {
   | _Error of {found, expected} =>
     let position' = show-position(position) in
     let b on expected = is-empty(expected) in
     if b {
-      format("parse error at {}:\nunexpected:\n  {}", [position', show-observation(found)])
+      format("parse error at {}:\nunexpected:\n  {}", [position', show-found(found, stream)])
     } else {
       let expected' = intercalate(*", ", map(show-observation, expected)) in
-      format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [position', expected', show-observation(found)])
+      format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [position', expected', show-found(found, stream)])
     }
   }
 }
