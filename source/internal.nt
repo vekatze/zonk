@@ -50,7 +50,7 @@ inline _rewind-state(base-offset: int, row: int, column: int, found: int): (stat
   }
 }
 
-define _set-found(st-ref: &cell(state), new-found: int): unit {
+inline _set-found(st-ref: &cell(state), new-found: int): unit {
   mutate(st-ref, function (st) {
     let State of {stream, cursor, found} = st in
     State of {stream, cursor, found = max-int(found, new-found)}
