@@ -1,4 +1,5 @@
 import {
+  core.control {loop},
   core.rune {load-rune},
   core.rune.entity,
   core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N, text-byte-length},
@@ -7,10 +8,9 @@ import {
   noa.gen.texts {texts},
   noa.suite {noa},
   this.error {
-    _Error,
+    Error,
     error,
     join,
-    report,
     set-expected,
     unexpected-end-of-input,
   },
@@ -42,12 +42,10 @@ constant end-of-input: parser(unit) {
     if eq-int(len, 0) {
       Pass(Unit)
     } else {
-      Fail(function () {
-        _Error of {
-          found = 1,
-          // expected = [End-Of-Input],
-          expected = [""],
-        }
+      Fail(Error of {
+        found = 1,
+        // expected = [End-Of-Input],
+        expected = [""],
       })
     }
   }
@@ -67,11 +65,9 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
         _proceed(st-ref, offset, new-pos);
         Pass(r)
       } else {
-        Fail(function () {
-          _Error of {
-            found = 1,
-            expected = [],
-          }
+        Fail(Error of {
+          found = 1,
+          expected = [],
         })
       }
     }
@@ -107,11 +103,9 @@ inline chunk(t: &text): parser(unit) {
               let Pos of {row, column} = _get-new-pos(rune1, row, column) in
               consumer(add-int(index, offset), add-int(char-len, 1), row, column)
             } else {
-              Fail(function () {
-                _Error of {
-                  found = add-int(char-len, 1),
-                  expected = [t],
-                }
+              Fail(Error of {
+                found = add-int(char-len, 1),
+                expected = [t],
               })
             }
           }
@@ -249,11 +243,9 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
       if b {
         Fail(unexpected-end-of-input())
       } else {
-        Fail(function () {
-          _Error of {
-            found = 1,
-            expected = [],
-          }
+        Fail(Error of {
+          found = 1,
+          expected = [],
         })
       }
     | Fail(_) =>
@@ -499,27 +491,27 @@ define zen(): unit {
       fallback = chunk("tk"),
     }
   in
-  // loop(1000000, Unit, function (_, _) {
-  //   _try-parse(my-parser)
-  // });
-  let st = new-state(*"abcd\nctああhehoge \n\r  hehehetest") in
-  let _ on st =
-    let result = chunk("ab\nc")(st) in
-    let result = my-parser(st) in
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
-    match result {
-    | Pass(_) =>
-      print("remaining text: ");
-      print(stream);
-      print("\n");
-      printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
-      let _ = st in
-      print("pass!\n")
-    | Fail(e) =>
-      // printf("(fail) 0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
-      printf("{}\n", [report(e, Pos(*row, *column), stream)])
-    }
-  in
-  let _ = st in
+  loop(1000000, Unit, function (_, _) {
+    _try-parse(my-parser)
+  });
+  // let st = new-state(*"abcd\nctああhehoge \n\r  hehehetest") in
+  // let _ on st =
+  //   let result = chunk("ab\nc")(st) in
+  //   let result = my-parser(st) in
+  //   tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
+  //   match result {
+  //   | Pass(_) =>
+  //     print("remaining text: ");
+  //     print(stream);
+  //     print("\n");
+  //     printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
+  //     let _ = st in
+  //     print("pass!\n")
+  //   | Fail(e) =>
+  //     // printf("(fail) 0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
+  //     printf("{}\n", [report(e, Pos(*row, *column), stream)])
+  //   }
+  // in
+  // let _ = st in
   Unit
 }

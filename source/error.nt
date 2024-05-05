@@ -11,21 +11,15 @@ import {
   this.pos {Pos, pos},
 }
 
-data _error {
-| _Error(
+data error {
+| Error(
     found: int,
     expected: list(&text),
   )
 }
 
-constant error: tau {
-  () -> _error
-}
-
 define unexpected-end-of-input(): error {
-  function () {
-    _Error of {found = 0, expected = []}
-  }
+  Error of {found = 0, expected = []}
 }
 
 define _unsafe-slice-N-absolute(start: int, size: int, t: &text): text {
@@ -52,26 +46,22 @@ define show-position(p: pos): text {
 }
 
 define set-expected(o: &text, e: error): error {
-  function () {
-    match e() {
-    | _Error of {found} =>
-      _Error of {found, expected = [o]}
-    }
+  match e {
+  | Error of {found} =>
+    Error of {found, expected = [o]}
   }
 }
 
 inline join(e1: error, e2: error): error {
-  function () {
-    match e1(), e2() {
-    | _Error(found1, expected1), _Error(found2, expected2) =>
-      _Error(max-int(found1, found2), append(expected1, expected2))
-    }
+  match e1, e2 {
+  | Error(found1, expected1), Error(found2, expected2) =>
+    Error(max-int(found1, found2), append(expected1, expected2))
   }
 }
 
 define report(e: error, position: pos, stream: &text): text {
-  match e() {
-  | _Error of {found, expected} =>
+  match e {
+  | Error of {found, expected} =>
     let position' = show-position(position) in
     let b on expected = is-empty(expected) in
     if b {
