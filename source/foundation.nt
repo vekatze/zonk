@@ -1,5 +1,4 @@
 import {
-  core.control {discard},
   core.rune {load-rune},
   core.rune.entity,
   core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N, text-byte-length},
@@ -7,7 +6,7 @@ import {
   noa.gen.pairs {pairs},
   noa.gen.texts {texts},
   noa.suite {noa},
-  this.error {End-Of-Input, Error, Label, Rune, Text, error, report, unexpected-end-of-input},
+  this.error {End-Of-Input, Error, Label, Rune, Text, Text-N, error, observation, report, unexpected-end-of-input},
   this.internal {_get-new-pos, _load-text-offset, _proceed, _read, _rewind-state},
   this.parser {parser},
   this.pos {Pos, pos},
@@ -91,7 +90,7 @@ inline chunk(t: &text): parser(unit) {
             } else {
               Fail(Error of {
                 found = Rune(rune1),
-                expected = [Rune(rune2)],
+                expected = [Text-N(t)],
                 position = Pos(row, column),
               })
             }
@@ -243,27 +242,43 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
   }
 }
 
-define choose<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
+define _choose<a>(candidates: list(parser(a)), fallback: parser(a), expected-acc: list(observation)): parser(a) {
   function (st-ref: &cell(state)) {
+    tie State of {stream} = _read(st-ref) in
+    let base-offset = _load-text-offset(stream) in
     match candidates {
     | Nil =>
-      fallback(st-ref)
+      match fallback(st-ref) {
+      | Pass(v) =>
+        Pass(v)
+      | Fail(e) =>
+        let new-offset = _load-text-offset(stream) in
+        if eq-int(base-offset, new-offset) {
+          let Error of {found, expected, position} = e in
+          Fail(Error of {found, position, expected = append(expected-acc, expected)})
+        } else {
+          Fail(e)
+        }
+      }
     | Cons(cand, rest) =>
-      tie State of {stream} = _read(st-ref) in
-      let base-offset = _load-text-offset(stream) in
       match cand(st-ref) {
       | Pass(v) =>
         Pass(v)
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(base-offset, new-offset) {
-          choose(rest, fallback)(st-ref)
+          let Error of {expected} = e in
+          _choose(rest, fallback, append(expected-acc, expected))(st-ref)
         } else {
           Fail(e)
         }
       }
     }
   }
+}
+
+inline choose<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
+  _choose(candidates, fallback, [])
 }
 
 inline many<a>(p: parser(a)): parser(list(a)) {
@@ -294,24 +309,24 @@ define zen(): unit {
       let Pair(t1, t2) = p in
       let full-text on t1, t2 = core.text.append(t1, t2) in
       let st = new-state(full-text) in
-      let parse-result on t1, st =
+      let parse-result on t1, t2, st =
         let p = chunk(t1) in
         let parse-result = p(st) in
-        parse-result
+        match parse-result {
+        | Pass(_) =>
+          let result =
+            tie State of {stream} = _read(st) in
+            core.text.entity.as-entity::identity(t2, stream)
+          in
+          result
+        | Fail(_) =>
+          False
+        }
       in
-      discard(t1);
-      match parse-result {
-      | Pass(_) =>
-        let result on t2, st =
-          tie State of {stream} = _read(st) in
-          core.text.entity.as-entity::identity(t2, stream)
-        in
-        discard(t2);
-        discard(st);
-        result
-      | Fail(_) =>
-        False
-      }
+      let _ = t1 in
+      let _ = t2 in
+      let _ = st in
+      parse-result
     },
   );
   noa::check(
@@ -321,23 +336,21 @@ define zen(): unit {
       let st = new-state(t) in
       let parse-result on t, st =
         let p = chunk(t) in
-        let parse-result = p(st) in
-        parse-result
-      in
-      let _ = t in
-      match parse-result {
-      | Pass(_) =>
-        let result-2 on st = end-of-input(st) in
-        let _ = st in
-        match result-2 {
+        match p(st) {
         | Pass(_) =>
-          True
+          match end-of-input(st) {
+          | Pass(_) =>
+            True
+          | Fail(_) =>
+            False
+          }
         | Fail(_) =>
           False
         }
-      | Fail(_) =>
-        False
-      }
+      in
+      let _ = t in
+      let _ = st in
+      parse-result
     },
   );
   noa::check(
@@ -347,21 +360,21 @@ define zen(): unit {
       let Pair(t1, t2) = p in
       let full-text on t1, t2 = core.text.append(t1, t2) in
       let st = new-state(full-text) in
-      let parse-result on t1, t2, st =
+      let result on t1, t2, st =
         let _ = chunk(t1)(st) in
         let _ = chunk(t2)(st) in
         let parse-result = end-of-input(st) in
-        parse-result
+        match parse-result {
+        | Pass(_) =>
+          True
+        | Fail(_) =>
+          False
+        }
       in
       let _ = t1 in
       let _ = t2 in
       let _ = st in
-      match parse-result {
-      | Pass(_) =>
-        True
-      | Fail(_) =>
-        False
-      }
+      result
     },
   );
   noa::check(
@@ -373,22 +386,22 @@ define zen(): unit {
         True
       } else {
         let st = new-state(t) in
-        let parse-result on st =
+        let result on st =
           let p = end-of-input in
           let parse-result = p(st) in
-          parse-result
+          match parse-result {
+          | Pass(_) =>
+            False
+          | Fail(_) =>
+            True
+          }
         in
         let _ = st in
-        match parse-result {
-        | Pass(_) =>
-          False
-        | Fail(_) =>
-          True
-        }
+        result
       }
     },
   );
-  let st = new-state(*"gあhehoge \n\r  hehehetest") in
+  let st = new-state(*"tgあhehoge \n\r  hehehetest") in
   // let many-he = many(chunk("he")) in
   // let p = satisfy(newline-p) in
   // let until-newline =
@@ -403,41 +416,54 @@ define zen(): unit {
   // in
   let my-parser =
     choose of {
-      // candidates = [chunk("he"), not-followed-by(chunk("te")), chunk("{}")],
       candidates = {
         [
           chunk("gaoe"),
+          choose([chunk("k")], with-label("なんか", function (st) {
+            try _ = chunk("p")(st) in
+            try _ = chunk("kgあ")(st) in
+            Pass(Unit)
+          })),
+          chunk("k"),
           with-label("なんか", function (st) {
-            try _ = chunk("g")(st) in
+            try _ = chunk("pt")(st) in
             try _ = chunk("あhebc")(st) in
             Pass(Unit)
           }),
+          function (st) {
+            try _ = chunk("pt")(st) in
+            try _ = chunk("あhebc")(st) in
+            Pass(Unit)
+          },
           chunk("abc"),
           chunk("{}"),
         ]
       },
-      fallback = chunk("test"),
+      fallback = chunk("tk"),
     }
   in
-  let result on st = with-label("some great input", my-parser)(st) in
-  // let result on st = not-followed-by(chunk("te"))(st) in
-  // let result on st = end-of-input()(st) in
-  // let result on st = hey-or-hel(st) in
-  // let result on st = skip-until-newline(st) in
-  // let p2 = chunk(", wo\nrld") in
-  // let result on st = p2(st) in
-  match result {
-  | Pass(_) =>
-    let _ on st =
+  // let result on st = with-label("some great input", my-parser)(st) in
+  let _ on st =
+    let result = my-parser(st) in
+    // let result on st = not-followed-by(chunk("te"))(st) in
+    // let result on st = end-of-input()(st) in
+    // let result on st = hey-or-hel(st) in
+    // let result on st = skip-until-newline(st) in
+    // let p2 = chunk(", wo\nrld") in
+    // let result on st = p2(st) in
+    match result {
+    | Pass(_) =>
       tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
       print("remaining text: ");
       print(stream);
       print("\n");
-      printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)])
-    in
-    let _ = st in
-    print("pass!\n")
-  | Fail(e) =>
-    printf("{}\n", [report(e)])
-  }
+      printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
+      let _ = st in
+      print("pass!\n")
+    | Fail(e) =>
+      printf("{}\n", [report(e)])
+    }
+  in
+  let _ = st in
+  Unit
 }

@@ -1,13 +1,14 @@
 import {
   core.list {is-empty},
   core.text {format, intercalate, singleton},
-  core.text.show {show-text},
+  core.text.show {show-text, show-text-N},
   this.pos {Pos, pos},
 }
 
 data observation {
 | Rune(rune)
 | Text(text)
+| Text-N(&text)
 | Label(text)
 | End-Of-Input
 }
@@ -30,6 +31,8 @@ define show-observation(o: observation): text {
     show-text(singleton(r))
   | Text(t) =>
     show-text(t)
+  | Text-N(t) =>
+    show-text-N(t)
   | Label(l) =>
     l
   | End-Of-Input =>

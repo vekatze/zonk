@@ -44,7 +44,7 @@ define _rewind(t: text, new-from: int): text {
   core.magic.cast(int, text, from-ptr)
 }
 
-define _rewind-state(base-offset: int, row: int, column: int): (state) -> state {
+inline _rewind-state(base-offset: int, row: int, column: int): (state) -> state {
   function (st: state) {
     let State of {stream, lastpos = Pos of {}} = st in
     let new-stream = _rewind(stream, base-offset) in
