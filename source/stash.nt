@@ -1,7 +1,12 @@
+import {
+  this.tag {tag},
+}
+
 data _stash {
 | _Stash(
     // list of unfulfilled expectations
-    expected: list(&text),
+    // expected: list(&text),
+    expected: list(tag),
   )
 }
 
@@ -9,7 +14,7 @@ constant _empty-stash: _stash {
   _Stash of {expected = []}
 }
 
-define _set-expected(os: list(&text), e: _stash): _stash {
+define _set-expected(os: list(tag), e: _stash): _stash {
   match e {
   | _Stash of {} =>
     _Stash of {expected = os}

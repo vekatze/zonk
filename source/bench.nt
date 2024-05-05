@@ -35,7 +35,7 @@ define _try-parse(p: parser(unit)): unit {
   Unit
 }
 
-define _random-bench(): unit {
+define _bench(): unit {
   let whatever =
     choice of {
       candidates = {
@@ -67,4 +67,8 @@ define _random-bench(): unit {
   loop(1000000, Unit, function (_, _) {
     _try-parse(whatever)
   })
+}
+
+define zen(): unit {
+  _bench()
 }

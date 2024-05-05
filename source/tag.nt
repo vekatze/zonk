@@ -1,0 +1,17 @@
+import {
+  core.text.show {show-text-N},
+}
+
+data tag {
+| Raw-Text(&text)
+| Label(&text)
+}
+
+define show-tag(k: tag): text {
+  match k {
+  | Raw-Text(t) =>
+    show-text-N(t)
+  | Label(t) =>
+    *t
+  }
+}

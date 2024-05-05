@@ -14,6 +14,7 @@ import {
     _stash,
   },
   this.state {State, new-state, state},
+  this.tag {Label, Raw-Text},
 }
 
 data parser(a) {
@@ -82,7 +83,7 @@ constant end-of-input: parser(unit) {
     } else {
       _set-gap-spot(st-ref, 1);
       Fail(_Stash of {
-        expected = [""],
+        expected = [Label("end of input")],
       })
     }
   })
@@ -142,7 +143,7 @@ inline chunk(t: &text): parser(unit) {
             } else {
               _set-gap-spot(st-ref, add-int(char-len, 1));
               Fail(_Stash of {
-                expected = [t],
+                expected = [Raw-Text(t)],
               })
             }
           }
@@ -231,7 +232,7 @@ inline with-label<a>(label: &text, p: parser(a)): parser(a) {
     | Fail(e) =>
       let new-offset = _load-text-offset(stream) in
       if eq-int(base-offset, new-offset) {
-        Fail(_set-expected([label], e))
+        Fail(_set-expected([Label(label)], e))
       } else {
         Fail(e)
       }
@@ -424,7 +425,7 @@ define zen(): unit {
       fallback = chunk("tn"),
     }
   in
-  let st = new-state(*"ptabcd\nctああhehoge \n\r  hehehetest") in
+  let st = new-state(*"pqabcd\nctああhehoge \n\r  hehehetest") in
   let _ on st =
     let _ = _unwrap(chunk("abcd\nc"))(st) in
     let result = run(my-parser, st) in

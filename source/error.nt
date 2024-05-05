@@ -1,14 +1,14 @@
 import {
   core.list {is-empty},
   core.text {format, intercalate},
-  core.text.show {show-text-N},
   this.point {point, show-point},
+  this.tag {show-tag, tag},
 }
 
 data error {
 | Error(
     found: text,
-    expected: list(&text),
+    expected: list(tag),
     error-location: point,
   )
 }
@@ -20,7 +20,7 @@ define report(e: error): text {
   if b {
     format("parse error at {}:\nunexpected:\n  {}", [error-location', found])
   } else {
-    let expected' = intercalate(*", ", map(show-text-N, expected)) in
+    let expected' = intercalate(*", ", map(show-tag, expected)) in
     format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [error-location', expected', found])
   }
 }
