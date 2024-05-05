@@ -6,22 +6,22 @@ import {
   noa.gen.pairs {pairs},
   noa.gen.texts {texts},
   noa.suite {noa},
-  this.error {
-    Error,
-    error,
-    join,
+  this.internal {_get-new-pos, _load-text-offset, _proceed, _read, _rewind-state, _set-found},
+  this.pos {Pos, pos},
+  this.stash {
+    _Stash,
+    _empty-stash,
+    _join-stash,
+    _stash,
     report,
     set-expected,
     show-found,
-    unexpected-end-of-input,
   },
-  this.internal {_get-new-pos, _load-text-offset, _proceed, _read, _rewind-state, _set-found},
-  this.pos {Pos, pos},
   this.state {State, new-state, state},
 }
 
 inline parser(a: tau): tau {
-  (input: &cell(state)) -> except(error, a)
+  (input: &cell(state)) -> except(_stash, a)
 }
 
 inline zonk<a, b>(p: parser(a), k: (a) -> parser(b)): parser(b) {
@@ -50,7 +50,7 @@ inline get-position(): parser(pos) {
   }
 }
 
-define release<a>(p: parser(a), st: &cell(state)): except(error, a) {
+define release<a>(p: parser(a), st: &cell(state)): except(_stash, a) {
   let parse-result = p(st) in
   tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st) in
   match parse-result {
@@ -58,7 +58,7 @@ define release<a>(p: parser(a), st: &cell(state)): except(error, a) {
     Pass(v)
   | Fail(e) =>
     let found-text = show-found(*found, stream) in
-    let Error of {expected} = e in
+    let _Stash of {expected} = e in
     admit
   }
 }
@@ -71,7 +71,7 @@ constant end-of-input: parser(unit) {
       Pass(Unit)
     } else {
       _set-found(st-ref, 1);
-      Fail(Error of {
+      Fail(_Stash of {
         expected = [""],
       })
     }
@@ -83,7 +83,7 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
     tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
     if eq-int(len, 0) {
-      Fail(unexpected-end-of-input())
+      Fail(_empty-stash)
     } else {
       let r = _get-rune(stream, 0) in
       if p(r) {
@@ -93,7 +93,7 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
         Pass(r)
       } else {
         _set-found(st-ref, 1);
-        Fail(Error of {
+        Fail(_Stash of {
           expected = [],
         })
       }
@@ -113,12 +113,12 @@ inline chunk(t: &text): parser(unit) {
     let len1 = core.text.text-byte-length(stream) in
     let len2 = core.text.text-byte-length(t) in
     if lt-int(len1, len2) {
-      Fail(unexpected-end-of-input())
+      Fail(_empty-stash)
     } else {
       let ptr1 = _get-content-pointer(stream) in
       let ptr2 = _get-content-pointer(t) in
       let f =
-        define consumer(index: int, char-len: int, row: int, column: int): except(error, unit) {
+        define consumer(index: int, char-len: int, row: int, column: int): except(_stash, unit) {
           if eq-int(index, len2) {
             _proceed(st-ref, len2, Pos of {row, column});
             Pass(Unit)
@@ -131,7 +131,7 @@ inline chunk(t: &text): parser(unit) {
               consumer(add-int(index, offset), add-int(char-len, 1), row, column)
             } else {
               _set-found(st-ref, add-int(char-len, 1));
-              Fail(Error of {
+              Fail(_Stash of {
                 expected = [t],
               })
             }
@@ -269,10 +269,10 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
       let b on head-char = is-empty(head-char) in
       let _ = head-char in
       if b {
-        Fail(unexpected-end-of-input())
+        Fail(_empty-stash)
       } else {
         _set-found(st-ref, 1);
-        Fail(Error of {
+        Fail(_Stash of {
           expected = [],
         })
       }
@@ -286,7 +286,7 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
 define _choice<a>(
   candidates: list(parser(a)),
   fallback: parser(a),
-  error-cand: error,
+  _stash-cand: _stash,
   default-found: int,
 ): parser(a) {
   function (st-ref: &cell(state)) {
@@ -301,7 +301,7 @@ define _choice<a>(
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          Fail(join(error-cand, e))
+          Fail(_join-stash(_stash-cand, e))
         } else {
           Fail(e)
         }
@@ -314,7 +314,7 @@ define _choice<a>(
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          _choice(rest, fallback, join(error-cand, e), default-found)(st-ref)
+          _choice(rest, fallback, _join-stash(_stash-cand, e), default-found)(st-ref)
         } else {
           Fail(e)
         }

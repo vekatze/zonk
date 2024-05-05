@@ -5,14 +5,15 @@ import {
   this.pos {Pos, pos},
 }
 
-data error {
-| Error(
+data _stash {
+| _Stash(
+    // list of unfulfilled expectations
     expected: list(&text),
   )
 }
 
-define unexpected-end-of-input(): error {
-  Error of {expected = []}
+constant _empty-stash: _stash {
+  _Stash of {expected = []}
 }
 
 define show-found(size: int, stream: &text): text {
@@ -24,30 +25,30 @@ define show-position(p: pos): text {
   format("row {}, column {}", [%ld(add-int(row, 1)), %ld(add-int(column, 1))])
 }
 
-define set-expected(o: &text, e: error): error {
+define set-expected(o: &text, e: _stash): _stash {
   match e {
-  | Error of {} =>
-    Error of {expected = [o]}
+  | _Stash of {} =>
+    _Stash of {expected = [o]}
   }
 }
 
-inline join(e1: error, e2: error): error {
+inline _join-stash(e1: _stash, e2: _stash): _stash {
   match e1, e2 {
-  | Error(expected1), Error(expected2) =>
-    Error(append(expected1, expected2))
+  | _Stash(expected1), _Stash(expected2) =>
+    _Stash(append(expected1, expected2))
   }
 }
 
-define report(e: error, position: pos, found: int, stream: &text): text {
+define report(e: _stash, position: pos, found: int, stream: &text): text {
   match e {
-  | Error of {expected} =>
+  | _Stash of {expected} =>
     let position' = show-position(position) in
     let b on expected = is-empty(expected) in
     if b {
-      format("parse error at {}:\nunexpected:\n  {}", [position', show-found(found, stream)])
+      format("parse _stash at {}:\nunexpected:\n  {}", [position', show-found(found, stream)])
     } else {
       let expected' = intercalate(*", ", map(show-text-N, expected)) in
-      format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [position', expected', show-found(found, stream)])
+      format("parse _stash at {}:\nexpected:\n  {}\nfound:\n  {}", [position', expected', show-found(found, stream)])
     }
   }
 }
