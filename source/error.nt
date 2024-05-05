@@ -1,12 +1,13 @@
 import {
   core.list {is-empty},
-  core.text {format, intercalate, singleton},
+  core.text {_slice-N, format, intercalate, singleton},
   core.text.show {show-text, show-text-N},
   this.pos {Pos, pos},
 }
 
 data observation {
 | Rune(rune)
+| Range(from: int, size: int, stream: &text)
 | Text(text)
 | Text-N(&text)
 | Label(text)
@@ -29,6 +30,8 @@ define show-observation(o: observation): text {
   match o {
   | Rune(r) =>
     show-text(singleton(r))
+  | Range(from, len, stream) =>
+    show-text(_slice-N(from, len, stream))
   | Text(t) =>
     show-text(t)
   | Text-N(t) =>

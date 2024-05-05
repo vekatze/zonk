@@ -6,7 +6,7 @@ import {
   noa.gen.pairs {pairs},
   noa.gen.texts {texts},
   noa.suite {noa},
-  this.error {End-Of-Input, Error, Label, Rune, Text, Text-N, error, observation, report, unexpected-end-of-input},
+  this.error {End-Of-Input, Error, Label, Range, Rune, Text, Text-N, error, observation, report, unexpected-end-of-input},
   this.internal {_get-new-pos, _load-text-offset, _proceed, _read, _rewind-state},
   this.parser {parser},
   this.pos {Pos, pos},
@@ -68,6 +68,7 @@ constant any-rune: parser(rune) {
 inline chunk(t: &text): parser(unit) {
   function (st-ref: &cell(state)) {
     tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    let base-offset = _load-text-offset(stream) in
     let len1 = core.text.text-byte-length(stream) in
     let len2 = core.text.text-byte-length(t) in
     if lt-int(len1, len2) {
@@ -83,13 +84,13 @@ inline chunk(t: &text): parser(unit) {
           } else {
             let rune1 = load-rune(add-int(ptr1, index)) in
             let rune2 = load-rune(add-int(ptr2, index)) in
+            let offset = core.rune.size(rune1) in
             if core.rune.entity.as-entity::identity(rune1, rune2) {
-              let offset = core.rune.size(rune1) in
               let Pos of {row, column} = _get-new-pos(rune1, row, column) in
               consumer(add-int(index, offset), row, column)
             } else {
               Fail(Error of {
-                found = Rune(rune1),
+                found = Range(base-offset, add-int(index, offset), stream),
                 expected = [Text-N(t)],
                 position = Pos(row, column),
               })
@@ -401,31 +402,19 @@ define zen(): unit {
       }
     },
   );
-  let st = new-state(*"tgあhehoge \n\r  hehehetest") in
-  // let many-he = many(chunk("he")) in
-  // let p = satisfy(newline-p) in
-  // let until-newline =
-  //   take-while(function (r) {
-  //     not(core.rune.entity.as-entity::identity(r, 0x0a))
-  //   })
-  // in
-  // let skip-until-newline =
-  //   drop-while(function (r) {
-  //     not(core.rune.entity.as-entity::identity(r, 0x0a))
-  //   })
-  // in
+  let st = new-state(*"tああhehoge \n\r  hehehetest") in
   let my-parser =
     choose of {
       candidates = {
         [
           chunk("gaoe"),
-          choose([chunk("k")], with-label("なんか", function (st) {
+          choose([chunk("k")], with-label("whatever", function (st) {
             try _ = chunk("p")(st) in
             try _ = chunk("kgあ")(st) in
             Pass(Unit)
           })),
           chunk("k"),
-          with-label("なんか", function (st) {
+          with-label("whatever 2", function (st) {
             try _ = chunk("pt")(st) in
             try _ = chunk("あhebc")(st) in
             Pass(Unit)
@@ -451,9 +440,9 @@ define zen(): unit {
     // let result on st = skip-until-newline(st) in
     // let p2 = chunk(", wo\nrld") in
     // let result on st = p2(st) in
+    tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
     match result {
     | Pass(_) =>
-      tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
       print("remaining text: ");
       print(stream);
       print("\n");
