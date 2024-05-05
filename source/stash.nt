@@ -1,10 +1,3 @@
-import {
-  core.list {is-empty},
-  core.text {format, intercalate, take-N},
-  core.text.show {show-text, show-text-N},
-  this.pos {Pos, pos},
-}
-
 data _stash {
 | _Stash(
     // list of unfulfilled expectations
@@ -16,16 +9,7 @@ constant _empty-stash: _stash {
   _Stash of {expected = []}
 }
 
-define show-found(size: int, stream: &text): text {
-  show-text(take-N(size, stream))
-}
-
-define show-position(p: pos): text {
-  let Pos of {row, column} = p in
-  format("row {}, column {}", [%ld(add-int(row, 1)), %ld(add-int(column, 1))])
-}
-
-define set-expected(o: &text, e: _stash): _stash {
+define _set-expected(o: &text, e: _stash): _stash {
   match e {
   | _Stash of {} =>
     _Stash of {expected = [o]}
@@ -36,19 +20,5 @@ inline _join-stash(e1: _stash, e2: _stash): _stash {
   match e1, e2 {
   | _Stash(expected1), _Stash(expected2) =>
     _Stash(append(expected1, expected2))
-  }
-}
-
-define report(e: _stash, position: pos, found: int, stream: &text): text {
-  match e {
-  | _Stash of {expected} =>
-    let position' = show-position(position) in
-    let b on expected = is-empty(expected) in
-    if b {
-      format("parse _stash at {}:\nunexpected:\n  {}", [position', show-found(found, stream)])
-    } else {
-      let expected' = intercalate(*", ", map(show-text-N, expected)) in
-      format("parse _stash at {}:\nexpected:\n  {}\nfound:\n  {}", [position', expected', show-found(found, stream)])
-    }
   }
 }

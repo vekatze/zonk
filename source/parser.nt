@@ -3,19 +3,19 @@ import {
   core.rune.entity,
   core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N, text-byte-length},
   core.text.entity,
+  core.text.show {show-text},
   noa.gen.pairs {pairs},
   noa.gen.texts {texts},
   noa.suite {noa},
+  this.error {Error, error, report},
   this.internal {_get-new-pos, _load-text-offset, _proceed, _read, _rewind-state, _set-found},
   this.pos {Pos, pos},
   this.stash {
     _Stash,
     _empty-stash,
     _join-stash,
+    _set-expected,
     _stash,
-    report,
-    set-expected,
-    show-found,
   },
   this.state {State, new-state, state},
 }
@@ -50,16 +50,26 @@ inline get-position(): parser(pos) {
   }
 }
 
-define release<a>(p: parser(a), st: &cell(state)): except(_stash, a) {
+define _show-found(size: int, stream: &text): text {
+  show-text(take-N(size, stream))
+}
+
+define release<a>(p: parser(a), st: &cell(state)): except(error, a) {
   let parse-result = p(st) in
-  tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st) in
+  tie State of {stream, lastpos, found} = _read(st) in
   match parse-result {
   | Pass(v) =>
     Pass(v)
   | Fail(e) =>
-    let found-text = show-found(*found, stream) in
+    let found-text = _show-found(*found, stream) in
     let _Stash of {expected} = e in
-    admit
+    Fail(
+      Error of {
+        found = found-text,
+        expected,
+        position = *lastpos,
+      },
+    )
   }
 }
 
@@ -221,7 +231,7 @@ inline with-label<a>(label: &text, p: parser(a)): parser(a) {
     | Fail(e) =>
       let new-offset = _load-text-offset(stream) in
       if eq-int(base-offset, new-offset) {
-        Fail(set-expected(label, e))
+        Fail(_set-expected(label, e))
       } else {
         Fail(e)
       }
@@ -535,8 +545,8 @@ define zen(): unit {
   let st = new-state(*"ptabcd\nctああhehoge \n\r  hehehetest") in
   let _ on st =
     let _ = chunk("abcd\nc")(st) in
-    let result = my-parser(st) in
-    tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st) in
+    let result = release(my-parser, st) in
+    tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
     match result {
     | Pass(_) =>
       print("remaining text: ");
@@ -547,7 +557,8 @@ define zen(): unit {
       print("pass!\n")
     | Fail(e) =>
       // printf("(fail) 0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
-      printf("{}\n", [report(e, Pos(*row, *column), *found, stream)])
+      // printf("{}\n", [report(e, Pos(*row, *column), *found, stream)])
+      printf("{}\n", [report(e)])
     }
   in
   let _ = st in

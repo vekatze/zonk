@@ -1,0 +1,26 @@
+import {
+  core.list {is-empty},
+  core.text {format, intercalate},
+  core.text.show {show-text-N},
+  this.pos {pos, show-position},
+}
+
+data error {
+| Error(
+    found: text,
+    expected: list(&text),
+    position: pos,
+  )
+}
+
+define report(e: error): text {
+  let Error of {found, expected, position} = e in
+  let position' = show-position(position) in
+  let b on expected = is-empty(expected) in
+  if b {
+    format("parse error at {}:\nunexpected:\n  {}", [position', found])
+  } else {
+    let expected' = intercalate(*", ", map(show-text-N, expected)) in
+    format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [position', expected', found])
+  }
+}

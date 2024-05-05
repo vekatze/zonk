@@ -1,6 +1,15 @@
+import {
+  core.text {format},
+}
+
 data pos {
 | Pos(
     row: int,
     column: int,
   )
+}
+
+define show-position(p: pos): text {
+  let Pos of {row, column} = p in
+  format("row {}, column {}", [%ld(add-int(row, 1)), %ld(add-int(column, 1))])
 }
