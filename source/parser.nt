@@ -1,5 +1,4 @@
 import {
-  core.int {max-int},
   core.rune {load-rune},
   core.rune.entity,
   core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N, text-byte-length},
@@ -16,7 +15,7 @@ import {
     show-found,
     unexpected-end-of-input,
   },
-  this.internal {_get-new-pos, _load-text-offset, _proceed, _read, _rewind-state},
+  this.internal {_get-new-pos, _load-text-offset, _proceed, _read, _rewind-state, _set-found},
   this.pos {Pos, pos},
   this.state {State, new-state, state},
 }
@@ -38,7 +37,7 @@ inline return<a>(x: a): parser(a) {
   }
 }
 
-inline get-state(): parser(&cell(state)) {
+inline _get-state(): parser(&cell(state)) {
   function (st-ref: &cell(state)) {
     Pass(st-ref)
   }
@@ -51,7 +50,7 @@ inline get-position(): parser(pos) {
   }
 }
 
-inline release<a>(p: parser(a), st: &cell(state)): except(error, a) {
+define release<a>(p: parser(a), st: &cell(state)): except(error, a) {
   let parse-result = p(st) in
   tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st) in
   match parse-result {
@@ -62,13 +61,6 @@ inline release<a>(p: parser(a), st: &cell(state)): except(error, a) {
     let Error of {expected} = e in
     admit
   }
-}
-
-inline _set-found(st-ref: &cell(state), new-found: int): unit {
-  mutate(st-ref, function (st) {
-    let State of {stream, lastpos, found} = st in
-    State of {stream, lastpos, found = max-int(found, new-found)}
-  })
 }
 
 constant end-of-input: parser(unit) {
@@ -291,7 +283,7 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
   }
 }
 
-define _choose<a>(
+define _choice<a>(
   candidates: list(parser(a)),
   fallback: parser(a),
   error-cand: error,
@@ -322,7 +314,7 @@ define _choose<a>(
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          _choose(rest, fallback, join(error-cand, e), default-found)(st-ref)
+          _choice(rest, fallback, join(error-cand, e), default-found)(st-ref)
         } else {
           Fail(e)
         }
@@ -331,7 +323,7 @@ define _choose<a>(
   }
 }
 
-inline choose<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
+inline choice<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
   match candidates {
   | Nil =>
     fallback
@@ -345,7 +337,7 @@ inline choose<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          _choose(rest, fallback, e, *found)(st-ref)
+          _choice(rest, fallback, e, *found)(st-ref)
         } else {
           Fail(e)
         }
@@ -358,7 +350,7 @@ inline many<a>(p: parser(a)): parser(list(a)) {
   let f =
     define self() {
       with zonk {
-        bind st = get-state() in
+        bind st = _get-state() in
         match p(st) {
         | Pass(v) =>
           with zonk {
@@ -510,11 +502,11 @@ define noa-test(): unit {
 define zen(): unit {
   noa-test();
   let my-parser =
-    choose of {
+    choice of {
       candidates = {
         [
           chunk("gaoe"),
-          choose([chunk("k")], with-label("whatever", function (st) {
+          choice([chunk("k")], with-label("whatever", function (st) {
             try _ = chunk("px")(st) in
             try _ = chunk("kgあ")(st) in
             Pass(Unit)

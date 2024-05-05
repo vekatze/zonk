@@ -1,4 +1,5 @@
 import {
+  core.int {max-int},
   core.magic,
   core.memory {load-int, store-int},
   core.rune.entity,
@@ -47,4 +48,11 @@ inline _rewind-state(base-offset: int, row: int, column: int, found: int): (stat
     let new-stream = _rewind(stream, base-offset) in
     State of {stream = new-stream, lastpos = Pos of {row, column}, found}
   }
+}
+
+define _set-found(st-ref: &cell(state), new-found: int): unit {
+  mutate(st-ref, function (st) {
+    let State of {stream, lastpos, found} = st in
+    State of {stream, lastpos, found = max-int(found, new-found)}
+  })
 }
