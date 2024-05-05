@@ -9,10 +9,10 @@ constant _empty-stash: _stash {
   _Stash of {expected = []}
 }
 
-define _set-expected(o: &text, e: _stash): _stash {
+define _set-expected(os: list(&text), e: _stash): _stash {
   match e {
   | _Stash of {} =>
-    _Stash of {expected = [o]}
+    _Stash of {expected = os}
   }
 }
 

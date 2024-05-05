@@ -231,10 +231,21 @@ inline with-label<a>(label: &text, p: parser(a)): parser(a) {
     | Fail(e) =>
       let new-offset = _load-text-offset(stream) in
       if eq-int(base-offset, new-offset) {
-        Fail(_set-expected(label, e))
+        Fail(_set-expected([label], e))
       } else {
         Fail(e)
       }
+    }
+  })
+}
+
+inline hidden<a>(p: parser(a)): parser(a) {
+  _Parser(function (st-ref: &cell(state)) {
+    match _unwrap(p)(st-ref) {
+    | Pass(result) =>
+      Pass(result)
+    | Fail(e) =>
+      Fail(_set-expected([], e))
     }
   })
 }
