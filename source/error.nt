@@ -2,25 +2,25 @@ import {
   core.list {is-empty},
   core.text {format, intercalate},
   core.text.show {show-text-N},
-  this.pos {pos, show-position},
+  this.point {point, show-point},
 }
 
 data error {
 | Error(
     found: text,
     expected: list(&text),
-    position: pos,
+    error-location: point,
   )
 }
 
 define report(e: error): text {
-  let Error of {found, expected, position} = e in
-  let position' = show-position(position) in
+  let Error of {found, expected, error-location} = e in
+  let error-location' = show-point(error-location) in
   let b on expected = is-empty(expected) in
   if b {
-    format("parse error at {}:\nunexpected:\n  {}", [position', found])
+    format("parse error at {}:\nunexpected:\n  {}", [error-location', found])
   } else {
     let expected' = intercalate(*", ", map(show-text-N, expected)) in
-    format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [position', expected', found])
+    format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [error-location', expected', found])
   }
 }

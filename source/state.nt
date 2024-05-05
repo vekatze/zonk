@@ -1,11 +1,11 @@
 import {
-  this.pos {Pos, pos},
+  this.point {Point, point},
 }
 
 data state {
 | State(
     stream: text,
-    cursor: pos,
+    cursor: point,
     found: int,
   )
 }
@@ -14,7 +14,7 @@ define new-state(input: text): cell(state) {
   new-cell(
     State of {
       stream = input,
-      cursor = Pos of {row = 0, column = 0},
+      cursor = Point of {row = 0, column = 0},
       found = 0,
     },
   )

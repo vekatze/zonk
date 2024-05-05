@@ -3,7 +3,7 @@ import {
   core.magic,
   core.memory {load-int, store-int},
   core.rune.entity,
-  this.pos {Pos, pos},
+  this.point {Point, point},
   this.state {State, state},
 }
 
@@ -17,18 +17,18 @@ define _read<a>(ch: &cell(a)): &a {
   core.magic.cast(int, &a, val-base)
 }
 
-inline _proceed(st-ref: &cell(state), byte-offset: int, new-pos: pos): unit {
+inline _proceed(st-ref: &cell(state), byte-offset: int, new-point: point): unit {
   mutate(st-ref, function (st) {
-    let State of {stream, cursor = Pos of {}, found} = st in
-    State of {stream = core.text._drop(byte-offset, stream), cursor = new-pos, found}
+    let State of {stream, cursor = Point of {}, found} = st in
+    State of {stream = core.text._drop(byte-offset, stream), cursor = new-point, found}
   })
 }
 
-inline _get-new-pos(r: rune, row: int, column: int): pos {
+inline _get-new-point(r: rune, row: int, column: int): point {
   if core.rune.entity.as-entity::identity(r, _newline) {
-    Pos of {row = add-int(row, 1), column = 0}
+    Point of {row = add-int(row, 1), column = 0}
   } else {
-    Pos of {row, column = add-int(column, 1)}
+    Point of {row, column = add-int(column, 1)}
   }
 }
 
@@ -44,9 +44,9 @@ define _rewind(t: text, new-from: int): text {
 
 inline _rewind-state(base-offset: int, row: int, column: int, found: int): (state) -> state {
   function (st: state) {
-    let State of {stream, cursor = Pos of {}} = st in
+    let State of {stream, cursor = Point of {}} = st in
     let new-stream = _rewind(stream, base-offset) in
-    State of {stream = new-stream, cursor = Pos of {row, column}, found}
+    State of {stream = new-stream, cursor = Point of {row, column}, found}
   }
 }
 
