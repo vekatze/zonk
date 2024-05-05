@@ -55,7 +55,7 @@ inline get-point(): parser(point) {
   })
 }
 
-inline release<a>(p: parser(a), st: &cell(state)): except(error, a) {
+inline run<a>(p: parser(a), st: &cell(state)): except(error, a) {
   let parse-result = _unwrap(p)(st) in
   tie State of {stream, cursor, gap-spot} = _read(st) in
   match parse-result {
@@ -73,7 +73,7 @@ inline release<a>(p: parser(a), st: &cell(state)): except(error, a) {
   }
 }
 
-inline _release<a>(p: parser(a), st: &cell(state)): except(_stash, a) {
+inline _run<a>(p: parser(a), st: &cell(state)): except(_stash, a) {
   _unwrap(p)(st)
 }
 
@@ -391,8 +391,16 @@ inline some<a>(p: parser(a)): parser(list(a)) {
 define _try-parse(my-parser: parser(unit)): unit {
   let st = new-state(*"abcnああhehoge \n\r  hehehetest") in
   let _ on st =
-    let _ = _release(chunk("abc"), st) in
-    let result = _release(my-parser, st) in
+    let p =
+      with zonk {
+        bind _ = chunk("abc") in
+        bind _ = my-parser in
+        return(Unit)
+      }
+    in
+    // let _ = _run(chunk("abc"), st) in
+    // let result = _run(my-parser, st) in
+    let result = _run(p, st) in
     tie State of {stream, cursor = Point of {row, column}} = _read(st) in
     match result {
     | Pass(_) =>
@@ -421,7 +429,7 @@ define noa-test(): unit {
       let st = new-state(full-text) in
       let parse-result on t1, t2, st =
         let p = chunk(t1) in
-        let parse-result = release(p, st) in
+        let parse-result = run(p, st) in
         match parse-result {
         | Pass(_) =>
           let result =
@@ -452,7 +460,7 @@ define noa-test(): unit {
             return(Unit)
           }
         in
-        match release(p, st) {
+        match run(p, st) {
         | Pass(_) =>
           True
         | Fail(_) =>
@@ -480,7 +488,7 @@ define noa-test(): unit {
             return(Unit)
           }
         in
-        match release(p, st) {
+        match run(p, st) {
         | Pass(_) =>
           True
         | Fail(_) =>
@@ -503,7 +511,7 @@ define noa-test(): unit {
       } else {
         let st = new-state(t) in
         let result on st =
-          match release(end-of-input, st) {
+          match run(end-of-input, st) {
           | Pass(_) =>
             False
           | Fail(_) =>
@@ -553,7 +561,7 @@ define zen(): unit {
   let st = new-state(*"ptabcd\nctああhehoge \n\r  hehehetest") in
   let _ on st =
     let _ = _unwrap(chunk("abcd\nc"))(st) in
-    let result = release(my-parser, st) in
+    let result = run(my-parser, st) in
     tie State of {stream, cursor = Point of {row, column}} = _read(st) in
     match result {
     | Pass(_) =>
