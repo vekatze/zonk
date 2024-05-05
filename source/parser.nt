@@ -1,5 +1,4 @@
 import {
-  core.control {loop},
   core.rune {load-rune},
   core.rune.entity,
   core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N, text-byte-length},
@@ -8,7 +7,7 @@ import {
   noa.gen.pairs {pairs},
   noa.gen.texts {texts},
   noa.suite {noa},
-  this.error {Error, error},
+  this.error {Error, error, report},
   this.internal {_get-new-point, _load-text-offset, _proceed, _read, _rewind-state, _set-gap-spot},
   this.point {Point, point},
   this.stash {
@@ -446,15 +445,16 @@ define noa-test(): unit {
     function (t) {
       let st = new-state(t) in
       let parse-result on t, st =
-        let p = chunk(t) in
+        let p =
+          with zonk {
+            bind _ = chunk(t) in
+            bind _ = end-of-input in
+            return(Unit)
+          }
+        in
         match release(p, st) {
         | Pass(_) =>
-          match _unwrap(end-of-input)(st) {
-          | Pass(_) =>
-            True
-          | Fail(_) =>
-            False
-          }
+          True
         | Fail(_) =>
           False
         }
@@ -472,10 +472,15 @@ define noa-test(): unit {
       let full-text on t1, t2 = core.text.append(t1, t2) in
       let st = new-state(full-text) in
       let result on t1, t2, st =
-        let _ = _unwrap(chunk(t1))(st) in
-        let _ = _unwrap(chunk(t2))(st) in
-        let parse-result = _unwrap(end-of-input)(st) in
-        match parse-result {
+        let p =
+          with zonk {
+            bind _ = chunk(t1) in
+            bind _ = chunk(t2) in
+            bind _ = end-of-input in
+            return(Unit)
+          }
+        in
+        match release(p, st) {
         | Pass(_) =>
           True
         | Fail(_) =>
@@ -498,9 +503,7 @@ define noa-test(): unit {
       } else {
         let st = new-state(t) in
         let result on st =
-          let p = end-of-input in
-          let parse-result = _unwrap(p)(st) in
-          match parse-result {
+          match release(end-of-input, st) {
           | Pass(_) =>
             False
           | Fail(_) =>
@@ -515,28 +518,28 @@ define noa-test(): unit {
 }
 
 define zen(): unit {
-  // noa-test();
+  noa-test();
   let my-parser =
     choice of {
       candidates = {
         [
           chunk("gaoe"),
-          choice([chunk("k")], with-label("whatever", _Parser(function (st) {
-            try _ = _unwrap(chunk("px"))(st) in
-            try _ = _unwrap(chunk("kgあ"))(st) in
-            Pass(Unit)
-          }))),
-          chunk("tあい"),
-          with-label("whatever 2", _Parser(function (st) {
-            try _ = _unwrap(chunk("pt"))(st) in
-            try _ = _unwrap(chunk("あhebc"))(st) in
-            Pass(Unit)
+          choice([chunk("k")], with-label("whatever", with zonk {
+            bind _ = chunk("px") in
+            bind _ = chunk("kgあ") in
+            return(Unit)
           })),
-          _Parser(function (st) {
-            try _ = _unwrap(chunk("pt"))(st) in
-            try _ = _unwrap(chunk("あhebc"))(st) in
-            Pass(Unit)
+          chunk("tあい"),
+          with-label("whatever 2", with zonk {
+            bind _ = chunk("pt") in
+            bind _ = chunk("あhebc") in
+            return(Unit)
           }),
+          with zonk {
+            bind _ = chunk("pt") in
+            bind _ = chunk("あhebc") in
+            return(Unit)
+          },
           chunk("abc"),
           chunk("{}"),
         ]
@@ -544,26 +547,26 @@ define zen(): unit {
       fallback = chunk("tn"),
     }
   in
-  loop(1000000, Unit, function (_, _) {
-    _try-parse(my-parser)
-  });
-  // let st = new-state(*"ptabcd\nctああhehoge \n\r  hehehetest") in
-  // let _ on st =
-  //   let _ = _unwrap(chunk("abcd\nc"))(st) in
-  //   let result = release(my-parser, st) in
-  //   tie State of {stream, cursor = Point of {row, column}} = _read(st) in
-  //   match result {
-  //   | Pass(_) =>
-  //     print("remaining text: ");
-  //     print(stream);
-  //     print("\n");
-  //     printf("0-indexed cursor point: ({}, {})\n", [%ld(*row), %ld(*column)]);
-  //     let _ = st in
-  //     print("pass!\n")
-  //   | Fail(e) =>
-  //     printf("{}\n", [report(e)])
-  //   }
-  // in
-  // let _ = st in
+  // loop(1000000, Unit, function (_, _) {
+  //   _try-parse(my-parser)
+  // });
+  let st = new-state(*"ptabcd\nctああhehoge \n\r  hehehetest") in
+  let _ on st =
+    let _ = _unwrap(chunk("abcd\nc"))(st) in
+    let result = release(my-parser, st) in
+    tie State of {stream, cursor = Point of {row, column}} = _read(st) in
+    match result {
+    | Pass(_) =>
+      print("remaining text: ");
+      print(stream);
+      print("\n");
+      printf("0-indexed cursor point: ({}, {})\n", [%ld(*row), %ld(*column)]);
+      let _ = st in
+      print("pass!\n")
+    | Fail(e) =>
+      printf("{}\n", [report(e)])
+    }
+  in
+  let _ = st in
   Unit
 }
