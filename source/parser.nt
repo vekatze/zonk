@@ -1,12 +1,8 @@
 import {
   core.rune {load-rune},
   core.rune.entity,
-  core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N, text-byte-length},
-  core.text.entity,
+  core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N},
   core.text.show {show-text},
-  noa.gen.pairs {pairs},
-  noa.gen.texts {texts},
-  noa.suite {noa},
   this.error {Error, error, report},
   this.internal {_get-new-point, _load-text-offset, _proceed, _read, _rewind-state, _set-gap-spot},
   this.point {Point, point},
@@ -388,145 +384,7 @@ inline some<a>(p: parser(a)): parser(list(a)) {
   }
 }
 
-define _try-parse(my-parser: parser(unit)): unit {
-  let st = new-state(*"abcnああhehoge \n\r  hehehetest") in
-  let _ on st =
-    let p =
-      with zonk {
-        bind _ = chunk("abc") in
-        bind _ = my-parser in
-        return(Unit)
-      }
-    in
-    // let _ = _run(chunk("abc"), st) in
-    // let result = _run(my-parser, st) in
-    let result = _run(p, st) in
-    tie State of {stream, cursor = Point of {row, column}} = _read(st) in
-    match result {
-    | Pass(_) =>
-      print("remaining text: ");
-      print(stream);
-      print("\n");
-      printf("0-indexed cursor point: ({}, {})\n", [%ld(*row), %ld(*column)]);
-      let _ = st in
-      print("pass!\n")
-    | Fail(e) =>
-      let _ = e in
-      Unit
-    }
-  in
-  let _ = st in
-  Unit
-}
-
-define noa-test(): unit {
-  noa::check(
-    "chunk(t1) against append(t1, t2) must succeed and the remaining text is t2",
-    pairs(texts, texts),
-    function (p) {
-      let Pair(t1, t2) = p in
-      let full-text on t1, t2 = core.text.append(t1, t2) in
-      let st = new-state(full-text) in
-      let parse-result on t1, t2, st =
-        let p = chunk(t1) in
-        let parse-result = run(p, st) in
-        match parse-result {
-        | Pass(_) =>
-          let result =
-            tie State of {stream} = _read(st) in
-            core.text.entity.as-entity::identity(t2, stream)
-          in
-          result
-        | Fail(_) =>
-          False
-        }
-      in
-      let _ = t1 in
-      let _ = t2 in
-      let _ = st in
-      parse-result
-    },
-  );
-  noa::check(
-    "`t1` can be parsed by (chunk(t1) → end-of-input)",
-    texts,
-    function (t) {
-      let st = new-state(t) in
-      let parse-result on t, st =
-        let p =
-          with zonk {
-            bind _ = chunk(t) in
-            bind _ = end-of-input in
-            return(Unit)
-          }
-        in
-        match run(p, st) {
-        | Pass(_) =>
-          True
-        | Fail(_) =>
-          False
-        }
-      in
-      let _ = t in
-      let _ = st in
-      parse-result
-    },
-  );
-  noa::check(
-    "`append(t1, t2)` can be parsed by `chunk(t1) → chunk(t2) → end-of-input`",
-    pairs(texts, texts),
-    function (p) {
-      let Pair(t1, t2) = p in
-      let full-text on t1, t2 = core.text.append(t1, t2) in
-      let st = new-state(full-text) in
-      let result on t1, t2, st =
-        let p =
-          with zonk {
-            bind _ = chunk(t1) in
-            bind _ = chunk(t2) in
-            bind _ = end-of-input in
-            return(Unit)
-          }
-        in
-        match run(p, st) {
-        | Pass(_) =>
-          True
-        | Fail(_) =>
-          False
-        }
-      in
-      let _ = t1 in
-      let _ = t2 in
-      let _ = st in
-      result
-    },
-  );
-  noa::check(
-    "for any non-empty text, end-of-input must fail",
-    texts,
-    function (t) {
-      let len on t = text-byte-length(t) in
-      if eq-int(len, 0) {
-        True
-      } else {
-        let st = new-state(t) in
-        let result on st =
-          match run(end-of-input, st) {
-          | Pass(_) =>
-            False
-          | Fail(_) =>
-            True
-          }
-        in
-        let _ = st in
-        result
-      }
-    },
-  )
-}
-
 define zen(): unit {
-  noa-test();
   let my-parser =
     choice of {
       candidates = {
@@ -555,9 +413,6 @@ define zen(): unit {
       fallback = chunk("tn"),
     }
   in
-  // loop(1000000, Unit, function (_, _) {
-  //   _try-parse(my-parser)
-  // });
   let st = new-state(*"ptabcd\nctああhehoge \n\r  hehehetest") in
   let _ on st =
     let _ = _unwrap(chunk("abcd\nc"))(st) in

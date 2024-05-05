@@ -1,0 +1,70 @@
+import {
+  core.control {loop},
+  this.internal {_read},
+  this.parser {_run, choice, chunk, parser, return, with-label, zonk},
+  this.point {Point},
+  this.state {State, new-state},
+}
+
+define _try-parse(p: parser(unit)): unit {
+  let st = new-state(*"abcnああhehoge \n\r  hehehetest") in
+  let _ on st =
+    let p =
+      with zonk {
+        bind _ = chunk("abc") in
+        bind _ = p in
+        return(Unit)
+      }
+    in
+    let result = _run(p, st) in
+    tie State of {stream, cursor = Point of {row, column}} = _read(st) in
+    match result {
+    | Pass(_) =>
+      print("remaining text: ");
+      print(stream);
+      print("\n");
+      printf("0-indexed cursor point: ({}, {})\n", [%ld(*row), %ld(*column)]);
+      let _ = st in
+      print("pass!\n")
+    | Fail(e) =>
+      let _ = e in
+      Unit
+    }
+  in
+  let _ = st in
+  Unit
+}
+
+define _random-bench(): unit {
+  let whatever =
+    choice of {
+      candidates = {
+        [
+          chunk("gaoe"),
+          choice([chunk("k")], with-label("whatever", with zonk {
+            bind _ = chunk("px") in
+            bind _ = chunk("kgあ") in
+            return(Unit)
+          })),
+          chunk("tあい"),
+          with-label("whatever 2", with zonk {
+            bind _ = chunk("pt") in
+            bind _ = chunk("あhebc") in
+            return(Unit)
+          }),
+          with zonk {
+            bind _ = chunk("pt") in
+            bind _ = chunk("あhebc") in
+            return(Unit)
+          },
+          chunk("abc"),
+          chunk("{}"),
+        ]
+      },
+      fallback = chunk("tn"),
+    }
+  in
+  loop(1000000, Unit, function (_, _) {
+    _try-parse(whatever)
+  })
+}
