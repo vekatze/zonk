@@ -11,6 +11,7 @@ import {
     Error,
     error,
     join,
+    report,
     set-expected,
     unexpected-end-of-input,
   },
@@ -78,7 +79,6 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
       } else {
         set-found(st-ref, 1);
         Fail(Error of {
-          // found = 1,
           expected = [],
         })
       }
@@ -483,7 +483,7 @@ define zen(): unit {
         [
           chunk("gaoe"),
           choose([chunk("k")], with-label("whatever", function (st) {
-            try _ = chunk("p")(st) in
+            try _ = chunk("px")(st) in
             try _ = chunk("kgあ")(st) in
             Pass(Unit)
           })),
@@ -508,24 +508,24 @@ define zen(): unit {
   // loop(1000000, Unit, function (_, _) {
   //   _try-parse(my-parser)
   // });
-  // let st = new-state(*"abcd\nctああhehoge \n\r  hehehetest") in
-  // let _ on st =
-  //   let _ = chunk("abcd\nc")(st) in
-  //   let result = my-parser(st) in
-  //   tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st) in
-  //   match result {
-  //   | Pass(_) =>
-  //     print("remaining text: ");
-  //     print(stream);
-  //     print("\n");
-  //     printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
-  //     let _ = st in
-  //     print("pass!\n")
-  //   | Fail(e) =>
-  //     // printf("(fail) 0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
-  //     printf("{}\n", [report(e, Pos(*row, *column), *found, stream)])
-  //   }
-  // in
-  // let _ = st in
+  let st = new-state(*"ptabcd\nctああhehoge \n\r  hehehetest") in
+  let _ on st =
+    let _ = chunk("abcd\nc")(st) in
+    let result = my-parser(st) in
+    tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st) in
+    match result {
+    | Pass(_) =>
+      print("remaining text: ");
+      print(stream);
+      print("\n");
+      printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
+      let _ = st in
+      print("pass!\n")
+    | Fail(e) =>
+      // printf("(fail) 0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
+      printf("{}\n", [report(e, Pos(*row, *column), *found, stream)])
+    }
+  in
+  let _ = st in
   Unit
 }
