@@ -4,13 +4,13 @@ import {
   core.memory {load-int, store-int},
   core.rune {load-rune},
   core.rune.entity,
-  core.text {_get-content-pointer, _get-rune, _take-N, format, is-empty, singleton, take-N},
+  core.text {_get-content-pointer, _get-rune, _take-N, format, is-empty, singleton, take-N, text-byte-length},
   core.text.entity,
   noa.gen.pairs {pairs},
   noa.gen.texts {texts},
   noa.suite {noa},
   this.error {Error, error},
-  this.parser {parser, return, zonk},
+  this.parser {parser},
   this.pos {Pos, pos},
   this.state {State, new-state, state},
 }
@@ -67,7 +67,7 @@ define end-of-input(): parser(unit) {
   }
 }
 
-define satisfy(p: (rune) -> bool): parser(rune) {
+inline satisfy(p: (rune) -> bool): parser(rune) {
   function (st-ref: &cell(state)) {
     tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
@@ -87,7 +87,13 @@ define satisfy(p: (rune) -> bool): parser(rune) {
   }
 }
 
-define chunk(t: &text): parser(unit) {
+constant any-rune: parser(rune) {
+  satisfy(function (_) {
+    True
+  })
+}
+
+inline chunk(t: &text): parser(unit) {
   function (st-ref: &cell(state)) {
     tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
     let len1 = core.text.text-byte-length(stream) in
@@ -180,6 +186,20 @@ inline drop-while(p: (rune) -> bool): parser(unit) {
   }
 }
 
+constant ascii-space: parser(unit) {
+  drop-while(
+    function (r) {
+      if core.rune.entity.as-entity::identity(r, 0x20) {
+        True
+      } else-if ule-int32(sub-int32(r, 0x9), 0x4) {
+        True
+      } else {
+        False
+      }
+    },
+  )
+}
+
 define _load-text-offset(t: &text): int {
   load-int(magic cast(&text, int, t))
 }
@@ -212,7 +232,6 @@ define attempt<a>(p: parser(a)): parser(a) {
   }
 }
 
-// co-attempt
 define look-ahead<a>(p: parser(a)): parser(a) {
   function (st-ref: &cell(state)) {
     tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
@@ -248,28 +267,17 @@ define not-followed-by<a>(p: parser(a)): parser(unit) {
   }
 }
 
-inline choice<a>(p1: parser(a), p2: parser(a)): parser(a) {
+define choose<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
   function (st-ref: &cell(state)) {
-    match p1(st-ref) {
-    | Pass(result) =>
-      Pass(result)
-    | Fail(_) =>
-      p2(st-ref)
-    }
-  }
-}
-
-define select<a>(p: parser(a), ps: list(parser(a))): parser(a) {
-  function (st-ref: &cell(state)) {
-    match p(st-ref) {
-    | Pass(result) =>
-      Pass(result)
-    | Fail(e) =>
-      match ps {
-      | Nil =>
-        Fail(e)
-      | Cons(alt, rest) =>
-        select(alt, rest)(st-ref)
+    match candidates {
+    | Nil =>
+      fallback(st-ref)
+    | Cons(cand, rest) =>
+      match cand(st-ref) {
+      | Pass(v) =>
+        Pass(v)
+      | Fail(_) =>
+        choose(rest, fallback)(st-ref)
       }
     }
   }
@@ -292,14 +300,6 @@ inline some<a>(p: parser(a)): parser(list(a)) {
     try v = p(st-ref) in
     try vs = many(p)(st-ref) in
     Pass(Cons(v, vs))
-  }
-}
-
-inline some-with<a>(p: parser(a)): parser(list(a)) {
-  with zonk {
-    bind v = p in
-    bind vs = many(p) in
-    return(Cons(v, vs))
   }
 }
 
@@ -331,24 +331,58 @@ define zen(): unit {
       }
     },
   );
-  let is-h =
-    function (r) {
-      core.rune.entity.as-entity::identity(r, 0x68)
-    }
-  in
-  let newline-p =
-    function (r) {
-      core.rune.entity.as-entity::identity(r, 0x0a)
-    }
-  in
-  let st = new-state(*"hehehetest") in
+  noa::check(
+    "chunk(t1) against t1 must succeed, then end-of-input() must also succeed",
+    texts,
+    function (t) {
+      let st = new-state(t) in
+      let parse-result on t, st =
+        let p = chunk(t) in
+        let parse-result = p(st) in
+        parse-result
+      in
+      let _ = t in
+      match parse-result {
+      | Pass(_) =>
+        let result-2 on st = end-of-input()(st) in
+        let _ = st in
+        match result-2 {
+        | Pass(_) =>
+          True
+        | Fail(_) =>
+          False
+        }
+      | Fail(_) =>
+        False
+      }
+    },
+  );
+  noa::check(
+    "for any non-empty text, end-of-input() must fail",
+    texts,
+    function (t) {
+      let len on t = text-byte-length(t) in
+      if eq-int(len, 0) {
+        True
+      } else {
+        let st = new-state(t) in
+        let parse-result on st =
+          let p = end-of-input() in
+          let parse-result = p(st) in
+          parse-result
+        in
+        let _ = st in
+        match parse-result {
+        | Pass(_) =>
+          False
+        | Fail(_) =>
+          True
+        }
+      }
+    },
+  );
+  let st = new-state(*" \n\r  hehehetest") in
   let many-he = many(chunk("he")) in
-  let hey-or-hel =
-    choice(
-      chunk("aoeu"),
-      chunk("helあ"),
-    )
-  in
   // let p = satisfy(newline-p) in
   // let until-newline =
   //   take-while(function (r) {
@@ -360,8 +394,15 @@ define zen(): unit {
   //     not(core.rune.entity.as-entity::identity(r, 0x0a))
   //   })
   // in
+  let my-parser =
+    choose of {
+      candidates = [chunk("he"), not-followed-by(chunk("te")), chunk("{}")],
+      fallback = chunk("test"),
+    }
+  in
+  let result on st = ascii-space(st) in
   let result on st = many-he(st) in
-  let result on st = not-followed-by(chunk("te"))(st) in
+  // let result on st = not-followed-by(chunk("te"))(st) in
   // let result on st = end-of-input()(st) in
   // let result on st = hey-or-hel(st) in
   // let result on st = skip-until-newline(st) in

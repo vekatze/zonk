@@ -19,3 +19,9 @@ inline return<a>(x: a): parser(a) {
     Pass(x)
   }
 }
+
+inline get(): parser(&cell(state)) {
+  function (st-ref: &cell(state)) {
+    Pass(st-ref)
+  }
+}
