@@ -19,8 +19,8 @@ define _read<a>(ch: &cell(a)): &a {
 
 inline _proceed(st-ref: &cell(state), byte-offset: int, new-point: point): unit {
   mutate(st-ref, function (st) {
-    let State of {stream, cursor = Point of {}, found} = st in
-    State of {stream = core.text._drop(byte-offset, stream), cursor = new-point, found}
+    let State of {stream, cursor = Point of {}, gap-spot} = st in
+    State of {stream = core.text._drop(byte-offset, stream), cursor = new-point, gap-spot}
   })
 }
 
@@ -42,17 +42,17 @@ define _rewind(t: text, new-from: int): text {
   core.magic.cast(int, text, from-ptr)
 }
 
-inline _rewind-state(base-offset: int, row: int, column: int, found: int): (state) -> state {
+inline _rewind-state(base-offset: int, row: int, column: int, gap-spot: int): (state) -> state {
   function (st: state) {
     let State of {stream, cursor = Point of {}} = st in
     let new-stream = _rewind(stream, base-offset) in
-    State of {stream = new-stream, cursor = Point of {row, column}, found}
+    State of {stream = new-stream, cursor = Point of {row, column}, gap-spot}
   }
 }
 
-inline _set-found(st-ref: &cell(state), new-found: int): unit {
+inline _set-gap-spot(st-ref: &cell(state), new-gap-spot: int): unit {
   mutate(st-ref, function (st) {
-    let State of {stream, cursor, found} = st in
-    State of {stream, cursor, found = max-int(found, new-found)}
+    let State of {stream, cursor, gap-spot} = st in
+    State of {stream, cursor, gap-spot = max-int(gap-spot, new-gap-spot)}
   })
 }

@@ -6,7 +6,7 @@ data state {
 | State(
     stream: text,
     cursor: point,
-    found: int,
+    gap-spot: int,
   )
 }
 
@@ -15,7 +15,7 @@ define new-state(input: text): cell(state) {
     State of {
       stream = input,
       cursor = Point of {row = 0, column = 0},
-      found = 0,
+      gap-spot = 0,
     },
   )
 }

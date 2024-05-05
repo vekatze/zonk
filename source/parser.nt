@@ -9,7 +9,7 @@ import {
   noa.gen.texts {texts},
   noa.suite {noa},
   this.error {Error, error},
-  this.internal {_get-new-point, _load-text-offset, _proceed, _read, _rewind-state, _set-found},
+  this.internal {_get-new-point, _load-text-offset, _proceed, _read, _rewind-state, _set-gap-spot},
   this.point {Point, point},
   this.stash {
     _Stash,
@@ -56,22 +56,17 @@ inline get-point(): parser(point) {
   })
 }
 
-define _show-found(size: int, stream: &text): text {
-  show-text(take-N(size, stream))
-}
-
 inline release<a>(p: parser(a), st: &cell(state)): except(error, a) {
   let parse-result = _unwrap(p)(st) in
-  tie State of {stream, cursor, found} = _read(st) in
+  tie State of {stream, cursor, gap-spot} = _read(st) in
   match parse-result {
   | Pass(v) =>
     Pass(v)
   | Fail(e) =>
-    let found-text = _show-found(*found, stream) in
     let _Stash of {expected} = e in
     Fail(
       Error of {
-        found = found-text,
+        found = show-text(take-N(*gap-spot, stream)),
         expected,
         error-location = *cursor,
       },
@@ -90,7 +85,7 @@ constant end-of-input: parser(unit) {
     if eq-int(len, 0) {
       Pass(Unit)
     } else {
-      _set-found(st-ref, 1);
+      _set-gap-spot(st-ref, 1);
       Fail(_Stash of {
         expected = [""],
       })
@@ -112,7 +107,7 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
         _proceed(st-ref, offset, new-point);
         Pass(r)
       } else {
-        _set-found(st-ref, 1);
+        _set-gap-spot(st-ref, 1);
         Fail(_Stash of {
           expected = [],
         })
@@ -150,7 +145,7 @@ inline chunk(t: &text): parser(unit) {
               let Point of {row, column} = _get-new-point(rune1, row, column) in
               consumer(add-int(index, offset), add-int(char-len, 1), row, column)
             } else {
-              _set-found(st-ref, add-int(char-len, 1));
+              _set-gap-spot(st-ref, add-int(char-len, 1));
               Fail(_Stash of {
                 expected = [t],
               })
@@ -257,8 +252,8 @@ inline attempt<a>(p: parser(a)): parser(a) {
     | Pass(result) =>
       Pass(result)
     | Fail(e) =>
-      tie State of {found} = _read(st-ref) in
-      mutate(st-ref, _rewind-state(base-offset, *row, *column, *found));
+      tie State of {gap-spot} = _read(st-ref) in
+      mutate(st-ref, _rewind-state(base-offset, *row, *column, *gap-spot));
       Fail(e)
     }
   })
@@ -266,11 +261,11 @@ inline attempt<a>(p: parser(a)): parser(a) {
 
 inline look-ahead<a>(p: parser(a)): parser(a) {
   _Parser(function (st-ref: &cell(state)) {
-    tie State of {stream, cursor = Point of {row, column}, found} = _read(st-ref) in
+    tie State of {stream, cursor = Point of {row, column}, gap-spot} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match _unwrap(p)(st-ref) {
     | Pass(result) =>
-      mutate(st-ref, _rewind-state(base-offset, *row, *column, *found));
+      mutate(st-ref, _rewind-state(base-offset, *row, *column, *gap-spot));
       Pass(result)
     | Fail(e) =>
       Fail(e)
@@ -280,24 +275,24 @@ inline look-ahead<a>(p: parser(a)): parser(a) {
 
 inline not-followed-by<a>(p: parser(a)): parser(unit) {
   _Parser(function (st-ref: &cell(state)) {
-    tie State of {stream, cursor = Point of {row, column}, found} = _read(st-ref) in
+    tie State of {stream, cursor = Point of {row, column}, gap-spot} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match _unwrap(p)(st-ref) {
     | Pass(_) =>
-      mutate(st-ref, _rewind-state(base-offset, *row, *column, *found));
+      mutate(st-ref, _rewind-state(base-offset, *row, *column, *gap-spot));
       let head-char = take-N(1, stream) in
       let b on head-char = is-empty(head-char) in
       let _ = head-char in
       if b {
         Fail(_empty-stash)
       } else {
-        _set-found(st-ref, 1);
+        _set-gap-spot(st-ref, 1);
         Fail(_Stash of {
           expected = [],
         })
       }
     | Fail(_) =>
-      mutate(st-ref, _rewind-state(base-offset, *row, *column, *found));
+      mutate(st-ref, _rewind-state(base-offset, *row, *column, *gap-spot));
       Pass(Unit)
     }
   })
@@ -307,7 +302,7 @@ define _choice<a>(
   candidates: list(parser(a)),
   fallback: parser(a),
   _stash-cand: _stash,
-  default-found: int,
+  default-gap-spot: int,
 ): parser(a) {
   _Parser(function (st-ref: &cell(state)) {
     tie State of {stream} = _read(st-ref) in
@@ -316,7 +311,7 @@ define _choice<a>(
     | Nil =>
       match _unwrap(fallback)(st-ref) {
       | Pass(v) =>
-        _set-found(st-ref, default-found);
+        _set-gap-spot(st-ref, default-gap-spot);
         Pass(v)
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
@@ -329,12 +324,12 @@ define _choice<a>(
     | Cons(cand, rest) =>
       match _unwrap(cand)(st-ref) {
       | Pass(v) =>
-        _set-found(st-ref, default-found);
+        _set-gap-spot(st-ref, default-gap-spot);
         Pass(v)
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          _unwrap(_choice(rest, fallback, _join-stash(_stash-cand, e), default-found))(st-ref)
+          _unwrap(_choice(rest, fallback, _join-stash(_stash-cand, e), default-gap-spot))(st-ref)
         } else {
           Fail(e)
         }
@@ -349,7 +344,7 @@ inline choice<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
     fallback
   | Cons(p, rest) =>
     _Parser(function (st-ref) {
-      tie State of {stream, found} = _read(st-ref) in
+      tie State of {stream, gap-spot} = _read(st-ref) in
       let old-offset = _load-text-offset(stream) in
       match _unwrap(p)(st-ref) {
       | Pass(v) =>
@@ -357,7 +352,7 @@ inline choice<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          _unwrap(_choice(rest, fallback, e, *found))(st-ref)
+          _unwrap(_choice(rest, fallback, e, *gap-spot))(st-ref)
         } else {
           Fail(e)
         }
