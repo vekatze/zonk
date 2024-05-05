@@ -36,7 +36,7 @@ define get-position(st-ref: &cell(state)): pos {
 
 constant end-of-input: parser(unit) {
   function (st-ref: &cell(state)) {
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    tie State of {stream} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
     if eq-int(len, 0) {
       Pass(Unit)
@@ -46,7 +46,6 @@ constant end-of-input: parser(unit) {
         _Error of {
           found = Rune(r),
           expected = [End-Of-Input],
-          position = Pos(*row, *column),
         }
       })
     }
@@ -58,7 +57,7 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
     tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
     if eq-int(len, 0) {
-      Fail(unexpected-end-of-input(Pos(*row, *column)))
+      Fail(unexpected-end-of-input())
     } else {
       let r = _get-rune(stream, 0) in
       if p(r) {
@@ -71,7 +70,6 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
           _Error of {
             found = Rune(r),
             expected = [],
-            position = Pos(*row, *column),
           }
         })
       }
@@ -92,7 +90,7 @@ inline chunk(t: &text): parser(unit) {
     let len1 = core.text.text-byte-length(stream) in
     let len2 = core.text.text-byte-length(t) in
     if lt-int(len1, len2) {
-      Fail(unexpected-end-of-input(Pos(*orig-row, *orig-column)))
+      Fail(unexpected-end-of-input())
     } else {
       let ptr1 = _get-content-pointer(stream) in
       let ptr2 = _get-content-pointer(t) in
@@ -113,7 +111,6 @@ inline chunk(t: &text): parser(unit) {
                 _Error of {
                   found = Range(base-offset, add-int(index, offset), stream),
                   expected = [Text-N(t)],
-                  position = Pos(*orig-row, *orig-column),
                 }
               })
             }
@@ -249,13 +246,12 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
       let head-char = take-N(1, stream) in
       let b on head-char = is-empty(head-char) in
       if b {
-        Fail(unexpected-end-of-input(Pos(*row, *column)))
+        Fail(unexpected-end-of-input())
       } else {
         Fail(function () {
           _Error of {
             found = Text(head-char),
             expected = [],
-            position = Pos(*row, *column),
           }
         })
       }
@@ -361,6 +357,8 @@ define _try-parse(my-parser: parser(unit)): unit {
       let _ = st in
       print("pass!\n")
     | Fail(e) =>
+      // dummy report
+      // let _ = e() in
       let _ = e in
       Unit
     }
@@ -517,7 +515,8 @@ define zen(): unit {
   //     let _ = st in
   //     print("pass!\n")
   //   | Fail(e) =>
-  //     printf("{}\n", [report(e)])
+  //     printf("(fail) 0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
+  //     printf("{}\n", [report(e, Pos(*row, *column))])
   //   }
   // in
   // let _ = st in
