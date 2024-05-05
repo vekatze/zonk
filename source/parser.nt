@@ -13,6 +13,7 @@ import {
     join,
     report,
     set-expected,
+    show-found,
     unexpected-end-of-input,
   },
   this.internal {_get-new-pos, _load-text-offset, _proceed, _read, _rewind-state},
@@ -20,28 +21,50 @@ import {
   this.state {State, new-state, state},
 }
 
-data my-parser(a) {
-| My-Parser(
-    runner: (input: &cell(state)) -> except(error, a),
-    expects: list(&text),
-  )
-}
-
 inline parser(a: tau): tau {
   (input: &cell(state)) -> except(error, a)
 }
 
-define get-position(st-ref: &cell(state)): pos {
-  tie State of {lastpos = Pos of {row, column}} = _read(st-ref) in
-  Pos of {row = *row, column = *column}
+inline zonk<a, b>(p: parser(a), k: (a) -> parser(b)): parser(b) {
+  function (st-ref: &cell(state)) {
+    try v1 = p(st-ref) in
+    k(v1)(st-ref)
+  }
 }
 
-inline get-found(st-ref: &cell(state)): int {
-  tie State of {found} = _read(st-ref) in
-  *found
+inline return<a>(x: a): parser(a) {
+  function (_: &cell(state)) {
+    Pass(x)
+  }
 }
 
-inline set-found(st-ref: &cell(state), new-found: int): unit {
+inline get-state(): parser(&cell(state)) {
+  function (st-ref: &cell(state)) {
+    Pass(st-ref)
+  }
+}
+
+inline get-position(): parser(pos) {
+  function (st-ref: &cell(state)) {
+    tie State of {lastpos} = _read(st-ref) in
+    Pass(*lastpos)
+  }
+}
+
+inline release<a>(p: parser(a), st: &cell(state)): except(error, a) {
+  let parse-result = p(st) in
+  tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st) in
+  match parse-result {
+  | Pass(v) =>
+    Pass(v)
+  | Fail(e) =>
+    let found-text = show-found(*found, stream) in
+    let Error of {expected} = e in
+    admit
+  }
+}
+
+inline _set-found(st-ref: &cell(state), new-found: int): unit {
   mutate(st-ref, function (st) {
     let State of {stream, lastpos, found} = st in
     State of {stream, lastpos, found = max-int(found, new-found)}
@@ -55,7 +78,7 @@ constant end-of-input: parser(unit) {
     if eq-int(len, 0) {
       Pass(Unit)
     } else {
-      set-found(st-ref, 1);
+      _set-found(st-ref, 1);
       Fail(Error of {
         expected = [""],
       })
@@ -77,7 +100,7 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
         _proceed(st-ref, offset, new-pos);
         Pass(r)
       } else {
-        set-found(st-ref, 1);
+        _set-found(st-ref, 1);
         Fail(Error of {
           expected = [],
         })
@@ -115,7 +138,7 @@ inline chunk(t: &text): parser(unit) {
               let Pos of {row, column} = _get-new-pos(rune1, row, column) in
               consumer(add-int(index, offset), add-int(char-len, 1), row, column)
             } else {
-              set-found(st-ref, add-int(char-len, 1));
+              _set-found(st-ref, add-int(char-len, 1));
               Fail(Error of {
                 expected = [t],
               })
@@ -216,12 +239,13 @@ inline with-label<a>(label: &text, p: parser(a)): parser(a) {
 
 inline attempt<a>(p: parser(a)): parser(a) {
   function (st-ref: &cell(state)) {
-    tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st-ref) in
+    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match p(st-ref) {
     | Pass(result) =>
       Pass(result)
     | Fail(e) =>
+      tie State of {found} = _read(st-ref) in
       mutate(st-ref, _rewind-state(base-offset, *row, *column, *found));
       Fail(e)
     }
@@ -255,7 +279,7 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
       if b {
         Fail(unexpected-end-of-input())
       } else {
-        set-found(st-ref, 1);
+        _set-found(st-ref, 1);
         Fail(Error of {
           expected = [],
         })
@@ -280,7 +304,7 @@ define _choose<a>(
     | Nil =>
       match fallback(st-ref) {
       | Pass(v) =>
-        set-found(st-ref, default-found);
+        _set-found(st-ref, default-found);
         Pass(v)
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
@@ -293,7 +317,7 @@ define _choose<a>(
     | Cons(cand, rest) =>
       match cand(st-ref) {
       | Pass(v) =>
-        set-found(st-ref, default-found);
+        _set-found(st-ref, default-found);
         Pass(v)
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
@@ -331,22 +355,30 @@ inline choose<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
 }
 
 inline many<a>(p: parser(a)): parser(list(a)) {
-  define self(st-ref: &cell(state)) {
-    match p(st-ref) {
-    | Pass(v) =>
-      try vs = self(st-ref) in
-      Pass(Cons(v, vs))
-    | Fail(_) =>
-      Pass([])
+  let f =
+    define self() {
+      with zonk {
+        bind st = get-state() in
+        match p(st) {
+        | Pass(v) =>
+          with zonk {
+            bind vs = self() in
+            return(Cons(v, vs))
+          }
+        | Fail(_) =>
+          return([])
+        }
+      }
     }
-  }
+  in
+  f()
 }
 
 inline some<a>(p: parser(a)): parser(list(a)) {
-  function (st-ref: &cell(state)) {
-    try v = p(st-ref) in
-    try vs = many(p)(st-ref) in
-    Pass(Cons(v, vs))
+  with zonk {
+    bind v = p in
+    bind vs = many(p) in
+    return(Cons(v, vs))
   }
 }
 
