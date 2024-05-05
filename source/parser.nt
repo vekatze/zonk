@@ -9,12 +9,12 @@ import {
   noa.suite {noa},
   this.error {
     End-Of-Input,
-    Error,
     Label,
     Range,
     Rune,
     Text,
     Text-N,
+    _Error,
     error,
     join,
     set-expected,
@@ -42,10 +42,12 @@ constant end-of-input: parser(unit) {
       Pass(Unit)
     } else {
       let r = _get-rune(stream, 0) in
-      Fail(Error of {
-        found = Rune(r),
-        expected = [End-Of-Input],
-        position = Pos(*row, *column),
+      Fail(function () {
+        _Error of {
+          found = Rune(r),
+          expected = [End-Of-Input],
+          position = Pos(*row, *column),
+        }
       })
     }
   }
@@ -65,10 +67,12 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
         _proceed(st-ref, offset, new-pos);
         Pass(r)
       } else {
-        Fail(Error of {
-          found = Rune(r),
-          expected = [],
-          position = Pos(*row, *column),
+        Fail(function () {
+          _Error of {
+            found = Rune(r),
+            expected = [],
+            position = Pos(*row, *column),
+          }
         })
       }
     }
@@ -105,10 +109,12 @@ inline chunk(t: &text): parser(unit) {
               let Pos of {row, column} = _get-new-pos(rune1, row, column) in
               consumer(add-int(index, offset), row, column)
             } else {
-              Fail(Error of {
-                found = Range(base-offset, add-int(index, offset), stream),
-                expected = [Text-N(t)],
-                position = Pos(*orig-row, *orig-column),
+              Fail(function () {
+                _Error of {
+                  found = Range(base-offset, add-int(index, offset), stream),
+                  expected = [Text-N(t)],
+                  position = Pos(*orig-row, *orig-column),
+                }
               })
             }
           }
@@ -245,10 +251,12 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
       if b {
         Fail(unexpected-end-of-input(Pos(*row, *column)))
       } else {
-        Fail(Error of {
-          found = Text(head-char),
-          expected = [],
-          position = Pos(*row, *column),
+        Fail(function () {
+          _Error of {
+            found = Text(head-char),
+            expected = [],
+            position = Pos(*row, *column),
+          }
         })
       }
     | Fail(_) =>
@@ -274,7 +282,7 @@ define _choose<a>(
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          Fail(join(e, error-cand))
+          Fail(join(error-cand, e))
         } else {
           Fail(e)
         }
@@ -286,7 +294,7 @@ define _choose<a>(
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          _choose(rest, fallback, join(e, error-cand))(st-ref)
+          _choose(rest, fallback, join(error-cand, e))(st-ref)
         } else {
           Fail(e)
         }

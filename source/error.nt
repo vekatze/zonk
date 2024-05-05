@@ -47,16 +47,22 @@ define _max-obserwation(o1: observation, o2: observation): observation {
   }
 }
 
-data error {
-| Error(
+data _error {
+| _Error(
     found: observation,
     expected: list(observation),
     position: pos,
   )
 }
 
+constant error: tau {
+  () -> _error
+}
+
 define unexpected-end-of-input(p: pos): error {
-  Error of {found = End-Of-Input, expected = [], position = p}
+  function () {
+    _Error of {found = End-Of-Input, expected = [], position = p}
+  }
 }
 
 define _unsafe-slice-N-absolute(start: int, size: int, t: &text): text {
@@ -95,30 +101,27 @@ define show-position(p: pos): text {
   format("row {}, column {}", [%ld(add-int(row, 1)), %ld(add-int(column, 1))])
 }
 
-define inject-error(e: error): error {
-  match e {
-  | Error(found, expected, position) =>
-    Error(found, expected, position)
-  }
-}
-
 define set-expected(o: observation, e: error): error {
-  match e {
-  | Error of {found, position} =>
-    Error of {found, position, expected = [o]}
+  function () {
+    match e() {
+    | _Error of {found, position} =>
+      _Error of {found, position, expected = [o]}
+    }
   }
 }
 
 inline join(e1: error, e2: error): error {
-  match e1, e2 {
-  | Error(found1, expected1, position1), Error(_, expected2, _) =>
-    Error(found1, append(expected1, expected2), position1)
+  function () {
+    match e1(), e2() {
+    | _Error(found1, expected1, position1), _Error(_, expected2, _) =>
+      _Error(found1, append(expected1, expected2), position1)
+    }
   }
 }
 
 define report(e: error): text {
-  match e {
-  | Error of {found, expected, position} =>
+  match e() {
+  | _Error of {found, expected, position} =>
     let position' = show-position(position) in
     let b on expected = is-empty(expected) in
     if b {
@@ -127,7 +130,5 @@ define report(e: error): text {
       let expected' = intercalate(*", ", map(show-observation, expected)) in
       format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [position', expected', show-observation(found)])
     }
-  | e =>
-    report(inject-error(e))
   }
 }
