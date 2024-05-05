@@ -1,10 +1,10 @@
 import {
   core.external {malloc},
-  core.int {max-int, min-int},
+  core.int {max-int},
   core.int8-array {_copy-int8-array},
   core.list {is-empty},
   core.magic,
-  core.memory {load-int, store-int},
+  core.memory {store-int},
   core.text {format, intercalate, singleton, text-byte-length},
   core.text.show {show-text, show-text-N},
   core.word,
@@ -65,14 +65,11 @@ define _unsafe-slice-N-absolute(start: int, size: int, t: &text): text {
   let ptr = core.magic.cast(&text, int, t) in
   let u = core.word.size in
   let content-ptr = add-int(ptr, add-int(mul-int(u, 2), start)) in
-  let to-ptr = add-int(ptr, u) in
-  let to = load-int(to-ptr) in
-  let new-size = min-int(size, to) in
-  let new-ptr = malloc(add-int(new-size, mul-int(u, 2))) in
+  let new-ptr = malloc(add-int(size, mul-int(u, 2))) in
   store-int(0, new-ptr);
-  store-int(new-size, add-int(new-ptr, u));
+  store-int(size, add-int(new-ptr, u));
   let new-content-ptr = add-int(new-ptr, mul-int(u, 2)) in
-  _copy-int8-array(add-int(content-ptr, start), new-content-ptr, 0, new-size);
+  _copy-int8-array(content-ptr, new-content-ptr, 0, size);
   core.magic.cast(int, text, new-ptr)
 }
 
@@ -81,7 +78,7 @@ define show-observation(o: observation): text {
   | Rune(r) =>
     show-text(singleton(r))
   | Range(from, len, stream) =>
-    _unsafe-slice-N-absolute(from, len, stream)
+    show-text(_unsafe-slice-N-absolute(from, len, stream))
   | Text(t) =>
     show-text(t)
   | Text-N(t) =>
@@ -103,7 +100,7 @@ define report(e: error): text {
   let position' = show-position(position) in
   let b on expected = is-empty(expected) in
   if b {
-    format("parse error at {}:\nunexpected {}", [position', show-observation(found)])
+    format("parse error at {}:\nunexpected:\n  {}", [position', show-observation(found)])
   } else {
     let expected' = intercalate(*", ", map(show-observation, expected)) in
     format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [position', expected', show-observation(found)])
