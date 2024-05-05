@@ -29,7 +29,7 @@ constant end-of-input: parser(unit) {
       let r = _get-rune(stream, 0) in
       Fail(Error of {
         found = Rune(r),
-        expected = Pass(End-Of-Input),
+        expected = [End-Of-Input],
         position = Pos(*row, *column),
       })
     }
@@ -52,7 +52,7 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
       } else {
         Fail(Error of {
           found = Rune(r),
-          expected = none(),
+          expected = [],
           position = Pos(*row, *column),
         })
       }
@@ -91,7 +91,7 @@ inline chunk(t: &text): parser(unit) {
             } else {
               Fail(Error of {
                 found = Rune(rune1),
-                expected = Pass(Rune(rune2)),
+                expected = [Rune(rune2)],
                 position = Pos(row, column),
               })
             }
@@ -213,7 +213,7 @@ define not-followed-by<a>(p: parser(a)): parser(unit) {
       } else {
         Fail(Error of {
           found = Text(head-char),
-          expected = none(),
+          expected = [],
           position = Pos(*row, *column),
         })
       }

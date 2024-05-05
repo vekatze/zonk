@@ -11,11 +11,11 @@ data observation {
 data error {
 | Error(
     found: observation,
-    expected: ?observation,
+    expected: list(observation),
     position: pos,
   )
 }
 
 define unexpected-end-of-input(p: pos): error {
-  Error of {found = End-Of-Input, expected = none(), position = p}
+  Error of {found = End-Of-Input, expected = [], position = p}
 }
