@@ -420,6 +420,7 @@ define zen(): unit {
           },
           chunk("abc"),
           chunk("{}"),
+          end-of-input,
         ]
       },
       fallback = chunk("tn"),

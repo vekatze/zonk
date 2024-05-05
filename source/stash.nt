@@ -4,8 +4,6 @@ import {
 
 data _stash {
 | _Stash(
-    // list of unfulfilled expectations
-    // expected: list(&text),
     expected: list(tag),
   )
 }

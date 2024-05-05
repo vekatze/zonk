@@ -7,113 +7,111 @@ import {
   this.internal {_read},
   this.parser {chunk, end-of-input, return, run, zonk},
   this.state {State, new-state},
-  this.bench,
 }
 
 define main(): unit {
-  this.bench.zen()
-  // noa::check(
-  //   "chunk(t1) against append(t1, t2) must succeed and the remaining text is t2",
-  //   pairs(texts, texts),
-  //   function (p) {
-  //     let Pair(t1, t2) = p in
-  //     let full-text on t1, t2 = core.text.append(t1, t2) in
-  //     let st = new-state(full-text) in
-  //     let parse-result on t1, t2, st =
-  //       let p = chunk(t1) in
-  //       let parse-result = run(p, st) in
-  //       match parse-result {
-  //       | Pass(_) =>
-  //         let result =
-  //           tie State of {stream} = _read(st) in
-  //           core.text.entity.as-entity::identity(t2, stream)
-  //         in
-  //         result
-  //       | Fail(_) =>
-  //         False
-  //       }
-  //     in
-  //     let _ = t1 in
-  //     let _ = t2 in
-  //     let _ = st in
-  //     parse-result
-  //   },
-  // );
-  // noa::check(
-  //   "`t1` can be parsed by (chunk(t1) → end-of-input)",
-  //   texts,
-  //   function (t) {
-  //     let st = new-state(t) in
-  //     let parse-result on t, st =
-  //       let p =
-  //         with zonk {
-  //           bind _ = chunk(t) in
-  //           bind _ = end-of-input in
-  //           return(Unit)
-  //         }
-  //       in
-  //       match run(p, st) {
-  //       | Pass(_) =>
-  //         True
-  //       | Fail(_) =>
-  //         False
-  //       }
-  //     in
-  //     let _ = t in
-  //     let _ = st in
-  //     parse-result
-  //   },
-  // );
-  // noa::check(
-  //   "`append(t1, t2)` can be parsed by `chunk(t1) → chunk(t2) → end-of-input`",
-  //   pairs(texts, texts),
-  //   function (p) {
-  //     let Pair(t1, t2) = p in
-  //     let full-text on t1, t2 = core.text.append(t1, t2) in
-  //     let st = new-state(full-text) in
-  //     let result on t1, t2, st =
-  //       let p =
-  //         with zonk {
-  //           bind _ = chunk(t1) in
-  //           bind _ = chunk(t2) in
-  //           bind _ = end-of-input in
-  //           return(Unit)
-  //         }
-  //       in
-  //       match run(p, st) {
-  //       | Pass(_) =>
-  //         True
-  //       | Fail(_) =>
-  //         False
-  //       }
-  //     in
-  //     let _ = t1 in
-  //     let _ = t2 in
-  //     let _ = st in
-  //     result
-  //   },
-  // );
-  // noa::check(
-  //   "for any non-empty text, end-of-input must fail",
-  //   texts,
-  //   function (t) {
-  //     let len on t = text-byte-length(t) in
-  //     if eq-int(len, 0) {
-  //       True
-  //     } else {
-  //       let st = new-state(t) in
-  //       let result on st =
-  //         match run(end-of-input, st) {
-  //         | Pass(_) =>
-  //           False
-  //         | Fail(_) =>
-  //           True
-  //         }
-  //       in
-  //       let _ = st in
-  //       result
-  //     }
-  //   },
-  // )
+  noa::check(
+    "chunk(t1) against append(t1, t2) must succeed and the remaining text is t2",
+    pairs(texts, texts),
+    function (p) {
+      let Pair(t1, t2) = p in
+      let full-text on t1, t2 = core.text.append(t1, t2) in
+      let st = new-state(full-text) in
+      let parse-result on t1, t2, st =
+        let p = chunk(t1) in
+        let parse-result = run(p, st) in
+        match parse-result {
+        | Pass(_) =>
+          let result =
+            tie State of {stream} = _read(st) in
+            core.text.entity.as-entity::identity(t2, stream)
+          in
+          result
+        | Fail(_) =>
+          False
+        }
+      in
+      let _ = t1 in
+      let _ = t2 in
+      let _ = st in
+      parse-result
+    },
+  );
+  noa::check(
+    "`t1` can be parsed by (chunk(t1) → end-of-input)",
+    texts,
+    function (t) {
+      let st = new-state(t) in
+      let parse-result on t, st =
+        let p =
+          with zonk {
+            bind _ = chunk(t) in
+            bind _ = end-of-input in
+            return(Unit)
+          }
+        in
+        match run(p, st) {
+        | Pass(_) =>
+          True
+        | Fail(_) =>
+          False
+        }
+      in
+      let _ = t in
+      let _ = st in
+      parse-result
+    },
+  );
+  noa::check(
+    "`append(t1, t2)` can be parsed by `chunk(t1) → chunk(t2) → end-of-input`",
+    pairs(texts, texts),
+    function (p) {
+      let Pair(t1, t2) = p in
+      let full-text on t1, t2 = core.text.append(t1, t2) in
+      let st = new-state(full-text) in
+      let result on t1, t2, st =
+        let p =
+          with zonk {
+            bind _ = chunk(t1) in
+            bind _ = chunk(t2) in
+            bind _ = end-of-input in
+            return(Unit)
+          }
+        in
+        match run(p, st) {
+        | Pass(_) =>
+          True
+        | Fail(_) =>
+          False
+        }
+      in
+      let _ = t1 in
+      let _ = t2 in
+      let _ = st in
+      result
+    },
+  );
+  noa::check(
+    "for any non-empty text, end-of-input must fail",
+    texts,
+    function (t) {
+      let len on t = text-byte-length(t) in
+      if eq-int(len, 0) {
+        True
+      } else {
+        let st = new-state(t) in
+        let result on st =
+          match run(end-of-input, st) {
+          | Pass(_) =>
+            False
+          | Fail(_) =>
+            True
+          }
+        in
+        let _ = st in
+        result
+      }
+    },
+  )
   // ...
 }
