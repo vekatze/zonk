@@ -10,11 +10,11 @@ import {
   this.error {
     End-Of-Input,
     Error,
-    Error-Mini,
     Label,
     Range,
     Rune,
     Text,
+    Text-N,
     error,
     join,
     set-expected,
@@ -102,9 +102,9 @@ inline chunk(t: &text): parser(unit) {
               let Pos of {row, column} = _get-new-pos(rune1, row, column) in
               consumer(add-int(index, offset), row, column)
             } else {
-              Fail(Error-Mini of {
+              Fail(Error of {
                 found = Range(base-offset, add-int(index, offset), stream),
-                expected-text = t,
+                expected = [Text-N(t)],
                 position = Pos(*orig-row, *orig-column),
               })
             }
@@ -195,8 +195,6 @@ inline with-label<a>(label: &text, p: parser(a)): parser(a) {
       let new-offset = _load-text-offset(stream) in
       if eq-int(base-offset, new-offset) {
         Fail(set-expected(Label(*label), e))
-        // let Error of {found, position} = e in
-        // Fail(Error of {found, position, expected = [Label(*label)]})
       } else {
         Fail(e)
       }
