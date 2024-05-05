@@ -1,5 +1,5 @@
 import {
-  this.foundation {zen},
+  this.parser {zen},
 }
 
 define main(): unit {
