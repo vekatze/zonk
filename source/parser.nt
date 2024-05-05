@@ -1,4 +1,5 @@
 import {
+  core.int {max-int},
   core.rune {load-rune},
   core.rune.entity,
   core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N, text-byte-length},
@@ -10,7 +11,6 @@ import {
     Error,
     error,
     join,
-    report,
     set-expected,
     unexpected-end-of-input,
   },
@@ -35,6 +35,18 @@ define get-position(st-ref: &cell(state)): pos {
   Pos of {row = *row, column = *column}
 }
 
+inline get-found(st-ref: &cell(state)): int {
+  tie State of {found} = _read(st-ref) in
+  *found
+}
+
+inline set-found(st-ref: &cell(state), new-found: int): unit {
+  mutate(st-ref, function (st) {
+    let State of {stream, lastpos, found} = st in
+    State of {stream, lastpos, found = max-int(found, new-found)}
+  })
+}
+
 constant end-of-input: parser(unit) {
   function (st-ref: &cell(state)) {
     tie State of {stream} = _read(st-ref) in
@@ -42,8 +54,8 @@ constant end-of-input: parser(unit) {
     if eq-int(len, 0) {
       Pass(Unit)
     } else {
+      set-found(st-ref, 1);
       Fail(Error of {
-        found = 1,
         expected = [""],
       })
     }
@@ -64,8 +76,9 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
         _proceed(st-ref, offset, new-pos);
         Pass(r)
       } else {
+        set-found(st-ref, 1);
         Fail(Error of {
-          found = 1,
+          // found = 1,
           expected = [],
         })
       }
@@ -102,8 +115,8 @@ inline chunk(t: &text): parser(unit) {
               let Pos of {row, column} = _get-new-pos(rune1, row, column) in
               consumer(add-int(index, offset), add-int(char-len, 1), row, column)
             } else {
+              set-found(st-ref, add-int(char-len, 1));
               Fail(Error of {
-                found = add-int(char-len, 1),
                 expected = [t],
               })
             }
@@ -203,13 +216,13 @@ inline with-label<a>(label: &text, p: parser(a)): parser(a) {
 
 inline attempt<a>(p: parser(a)): parser(a) {
   function (st-ref: &cell(state)) {
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match p(st-ref) {
     | Pass(result) =>
       Pass(result)
     | Fail(e) =>
-      mutate(st-ref, _rewind-state(base-offset, *row, *column));
+      mutate(st-ref, _rewind-state(base-offset, *row, *column, *found));
       Fail(e)
     }
   }
@@ -217,11 +230,11 @@ inline attempt<a>(p: parser(a)): parser(a) {
 
 inline look-ahead<a>(p: parser(a)): parser(a) {
   function (st-ref: &cell(state)) {
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match p(st-ref) {
     | Pass(result) =>
-      mutate(st-ref, _rewind-state(base-offset, *row, *column));
+      mutate(st-ref, _rewind-state(base-offset, *row, *column, *found));
       Pass(result)
     | Fail(e) =>
       Fail(e)
@@ -231,24 +244,24 @@ inline look-ahead<a>(p: parser(a)): parser(a) {
 
 inline not-followed-by<a>(p: parser(a)): parser(unit) {
   function (st-ref: &cell(state)) {
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match p(st-ref) {
     | Pass(_) =>
-      mutate(st-ref, _rewind-state(base-offset, *row, *column));
+      mutate(st-ref, _rewind-state(base-offset, *row, *column, *found));
       let head-char = take-N(1, stream) in
       let b on head-char = is-empty(head-char) in
       let _ = head-char in
       if b {
         Fail(unexpected-end-of-input())
       } else {
+        set-found(st-ref, 1);
         Fail(Error of {
-          found = 1,
           expected = [],
         })
       }
     | Fail(_) =>
-      mutate(st-ref, _rewind-state(base-offset, *row, *column));
+      mutate(st-ref, _rewind-state(base-offset, *row, *column, *found));
       Pass(Unit)
     }
   }
@@ -258,6 +271,7 @@ define _choose<a>(
   candidates: list(parser(a)),
   fallback: parser(a),
   error-cand: error,
+  default-found: int,
 ): parser(a) {
   function (st-ref: &cell(state)) {
     tie State of {stream} = _read(st-ref) in
@@ -266,6 +280,7 @@ define _choose<a>(
     | Nil =>
       match fallback(st-ref) {
       | Pass(v) =>
+        set-found(st-ref, default-found);
         Pass(v)
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
@@ -278,11 +293,12 @@ define _choose<a>(
     | Cons(cand, rest) =>
       match cand(st-ref) {
       | Pass(v) =>
+        set-found(st-ref, default-found);
         Pass(v)
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          _choose(rest, fallback, join(error-cand, e))(st-ref)
+          _choose(rest, fallback, join(error-cand, e), default-found)(st-ref)
         } else {
           Fail(e)
         }
@@ -297,7 +313,7 @@ inline choose<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
     fallback
   | Cons(p, rest) =>
     function (st-ref) {
-      tie State of {stream} = _read(st-ref) in
+      tie State of {stream, found} = _read(st-ref) in
       let old-offset = _load-text-offset(stream) in
       match p(st-ref) {
       | Pass(v) =>
@@ -305,7 +321,7 @@ inline choose<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
       | Fail(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          _choose(rest, fallback, e)(st-ref)
+          _choose(rest, fallback, e, *found)(st-ref)
         } else {
           Fail(e)
         }
@@ -460,6 +476,7 @@ define noa-test(): unit {
 }
 
 define zen(): unit {
+  noa-test();
   let my-parser =
     choose of {
       candidates = {
@@ -485,30 +502,30 @@ define zen(): unit {
           chunk("{}"),
         ]
       },
-      fallback = chunk("tk"),
+      fallback = chunk("tn"),
     }
   in
   // loop(1000000, Unit, function (_, _) {
   //   _try-parse(my-parser)
   // });
-  let st = new-state(*"abcd\nctkああhehoge \n\r  hehehetest") in
-  let _ on st =
-    let _ = chunk("abcd\nc")(st) in
-    let result = my-parser(st) in
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
-    match result {
-    | Pass(_) =>
-      print("remaining text: ");
-      print(stream);
-      print("\n");
-      printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
-      let _ = st in
-      print("pass!\n")
-    | Fail(e) =>
-      // printf("(fail) 0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
-      printf("{}\n", [report(e, Pos(*row, *column), stream)])
-    }
-  in
-  let _ = st in
+  // let st = new-state(*"abcd\nctああhehoge \n\r  hehehetest") in
+  // let _ on st =
+  //   let _ = chunk("abcd\nc")(st) in
+  //   let result = my-parser(st) in
+  //   tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st) in
+  //   match result {
+  //   | Pass(_) =>
+  //     print("remaining text: ");
+  //     print(stream);
+  //     print("\n");
+  //     printf("0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
+  //     let _ = st in
+  //     print("pass!\n")
+  //   | Fail(e) =>
+  //     // printf("(fail) 0-indexed cursor position: ({}, {})\n", [%ld(*row), %ld(*column)]);
+  //     printf("{}\n", [report(e, Pos(*row, *column), *found, stream)])
+  //   }
+  // in
+  // let _ = st in
   Unit
 }
