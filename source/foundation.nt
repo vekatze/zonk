@@ -1,24 +1,17 @@
 import {
   core.control {discard},
-  core.magic,
-  core.memory {load-int, store-int},
   core.rune {load-rune},
   core.rune.entity,
-  core.text {_get-content-pointer, _get-rune, _take-N, format, is-empty, singleton, take-N, text-byte-length},
+  core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N, text-byte-length},
   core.text.entity,
   noa.gen.pairs {pairs},
   noa.gen.texts {texts},
   noa.suite {noa},
-  this.error {Error, error},
+  this.error {End-Of-Input, Error, Rune, Text, error, unexpected-end-of-input},
+  this.internal {_get-new-pos, _load-text-offset, _proceed, _read, _rewind-state},
   this.parser {parser},
   this.pos {Pos, pos},
   this.state {State, new-state, state},
-}
-
-define _read<a>(ch: &cell(a)): &a {
-  let ch = core.magic.cast(&cell(a), int, ch) in
-  let val-base = load-int(ch) in
-  core.magic.cast(int, &a, val-base)
 }
 
 define get-position(st-ref: &cell(state)): pos {
@@ -26,29 +19,7 @@ define get-position(st-ref: &cell(state)): pos {
   Pos of {row = *row, column = *column}
 }
 
-inline _proceed(st-ref: &cell(state), byte-offset: int, new-pos: pos): unit {
-  mutate(st-ref, function (st) {
-    let State of {stream, lastpos = Pos of {}} = st in
-    State of {
-      stream = core.text._drop(byte-offset, stream),
-      lastpos = new-pos,
-    }
-  })
-}
-
-constant _newline: rune {
-  0x0a
-}
-
-inline _get-new-pos(r: rune, row: int, column: int): pos {
-  if core.rune.entity.as-entity::identity(r, _newline) {
-    Pos of {row = add-int(row, 1), column = 0}
-  } else {
-    Pos of {row, column = add-int(column, 1)}
-  }
-}
-
-define end-of-input(): parser(unit) {
+constant end-of-input: parser(unit) {
   function (st-ref: &cell(state)) {
     tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
@@ -56,13 +27,11 @@ define end-of-input(): parser(unit) {
       Pass(Unit)
     } else {
       let r = _get-rune(stream, 0) in
-      Fail(Error(
-        format(
-          "unexpected character: {}, expecting: end of input",
-          [singleton(r)],
-        ),
-        Pos(*row, *column),
-      ))
+      Fail(Error of {
+        found = Rune(r),
+        expected = Pass(End-Of-Input),
+        position = Pos(*row, *column),
+      })
     }
   }
 }
@@ -72,7 +41,7 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
     tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
     if eq-int(len, 0) {
-      Fail(Error(*"unexpected end of input", Pos(*row, *column)))
+      Fail(unexpected-end-of-input(Pos(*row, *column)))
     } else {
       let r = _get-rune(stream, 0) in
       if p(r) {
@@ -81,7 +50,11 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
         _proceed(st-ref, offset, new-pos);
         Pass(r)
       } else {
-        Fail(Error(format("`satisfy` against {} failed", [singleton(r)]), Pos(*row, *column)))
+        Fail(Error of {
+          found = Rune(r),
+          expected = none(),
+          position = Pos(*row, *column),
+        })
       }
     }
   }
@@ -99,7 +72,7 @@ inline chunk(t: &text): parser(unit) {
     let len1 = core.text.text-byte-length(stream) in
     let len2 = core.text.text-byte-length(t) in
     if lt-int(len1, len2) {
-      Fail(Error(*"unexpected end of input", Pos(*row, *column)))
+      Fail(unexpected-end-of-input(Pos(*row, *column)))
     } else {
       let ptr1 = _get-content-pointer(stream) in
       let ptr2 = _get-content-pointer(t) in
@@ -116,13 +89,11 @@ inline chunk(t: &text): parser(unit) {
               let Pos of {row, column} = _get-new-pos(rune1, row, column) in
               consumer(add-int(index, offset), row, column)
             } else {
-              Fail(Error(
-                format(
-                  "unexpected character: {}, expecting: {}",
-                  [singleton(rune1), singleton(rune2)],
-                ),
-                Pos(row, column),
-              ))
+              Fail(Error of {
+                found = Rune(rune1),
+                expected = Pass(Rune(rune2)),
+                position = Pos(row, column),
+              })
             }
           }
         }
@@ -200,24 +171,6 @@ constant ascii-space: parser(unit) {
   )
 }
 
-define _load-text-offset(t: &text): int {
-  load-int(magic cast(&text, int, t))
-}
-
-define _rewind(t: text, new-from: int): text {
-  let from-ptr = core.magic.cast(text, int, t) in
-  store-int(new-from, from-ptr);
-  core.magic.cast(int, text, from-ptr)
-}
-
-define _rewind-state(base-offset: int, row: int, column: int): (state) -> state {
-  function (st: state) {
-    let State of {stream, lastpos = Pos of {}} = st in
-    let new-stream = _rewind(stream, base-offset) in
-    State of {stream = new-stream, lastpos = Pos of {row, column}}
-  }
-}
-
 define attempt<a>(p: parser(a)): parser(a) {
   function (st-ref: &cell(state)) {
     tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
@@ -256,9 +209,13 @@ define not-followed-by<a>(p: parser(a)): parser(unit) {
       let head-char = take-N(1, stream) in
       let b on head-char = is-empty(head-char) in
       if b {
-        Fail(Error(*"unexpected end of input", Pos(*row, *column)))
+        Fail(unexpected-end-of-input(Pos(*row, *column)))
       } else {
-        Fail(Error(format("unexpected {}", [head-char]), Pos(*row, *column)))
+        Fail(Error of {
+          found = Text(head-char),
+          expected = none(),
+          position = Pos(*row, *column),
+        })
       }
     | Fail(_) =>
       mutate(st-ref, _rewind-state(base-offset, *row, *column));
@@ -332,7 +289,7 @@ define zen(): unit {
     },
   );
   noa::check(
-    "chunk(t1) against t1 must succeed, then end-of-input() must also succeed",
+    "`t1` can be parsed by (chunk(t1) → end-of-input)",
     texts,
     function (t) {
       let st = new-state(t) in
@@ -344,7 +301,7 @@ define zen(): unit {
       let _ = t in
       match parse-result {
       | Pass(_) =>
-        let result-2 on st = end-of-input()(st) in
+        let result-2 on st = end-of-input(st) in
         let _ = st in
         match result-2 {
         | Pass(_) =>
@@ -358,7 +315,31 @@ define zen(): unit {
     },
   );
   noa::check(
-    "for any non-empty text, end-of-input() must fail",
+    "`append(t1, t2)` can be parsed by `chunk(t1) → chunk(t2) → end-of-input`",
+    pairs(texts, texts),
+    function (p) {
+      let Pair(t1, t2) = p in
+      let full-text on t1, t2 = core.text.append(t1, t2) in
+      let st = new-state(full-text) in
+      let parse-result on t1, t2, st =
+        let _ = chunk(t1)(st) in
+        let _ = chunk(t2)(st) in
+        let parse-result = end-of-input(st) in
+        parse-result
+      in
+      let _ = t1 in
+      let _ = t2 in
+      let _ = st in
+      match parse-result {
+      | Pass(_) =>
+        True
+      | Fail(_) =>
+        False
+      }
+    },
+  );
+  noa::check(
+    "for any non-empty text, end-of-input must fail",
     texts,
     function (t) {
       let len on t = text-byte-length(t) in
@@ -367,7 +348,7 @@ define zen(): unit {
       } else {
         let st = new-state(t) in
         let parse-result on st =
-          let p = end-of-input() in
+          let p = end-of-input in
           let parse-result = p(st) in
           parse-result
         in
@@ -419,7 +400,7 @@ define zen(): unit {
     in
     let _ = st in
     print("pass!\n")
-  | Fail(Error(content, _)) =>
-    printf("fail: {}\n", [content])
+  | Fail(_) =>
+    print("fail!\n")
   }
 }

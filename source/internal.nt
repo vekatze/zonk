@@ -1,0 +1,53 @@
+import {
+  core.magic,
+  core.memory {load-int, store-int},
+  core.rune.entity,
+  this.pos {Pos, pos},
+  this.state {State, state},
+}
+
+constant _newline: rune {
+  0x0a
+}
+
+define _read<a>(ch: &cell(a)): &a {
+  let ch = core.magic.cast(&cell(a), int, ch) in
+  let val-base = load-int(ch) in
+  core.magic.cast(int, &a, val-base)
+}
+
+inline _proceed(st-ref: &cell(state), byte-offset: int, new-pos: pos): unit {
+  mutate(st-ref, function (st) {
+    let State of {stream, lastpos = Pos of {}} = st in
+    State of {
+      stream = core.text._drop(byte-offset, stream),
+      lastpos = new-pos,
+    }
+  })
+}
+
+inline _get-new-pos(r: rune, row: int, column: int): pos {
+  if core.rune.entity.as-entity::identity(r, _newline) {
+    Pos of {row = add-int(row, 1), column = 0}
+  } else {
+    Pos of {row, column = add-int(column, 1)}
+  }
+}
+
+define _load-text-offset(t: &text): int {
+  load-int(magic cast(&text, int, t))
+}
+
+define _rewind(t: text, new-from: int): text {
+  let from-ptr = core.magic.cast(text, int, t) in
+  store-int(new-from, from-ptr);
+  core.magic.cast(int, text, from-ptr)
+}
+
+define _rewind-state(base-offset: int, row: int, column: int): (state) -> state {
+  function (st: state) {
+    let State of {stream, lastpos = Pos of {}} = st in
+    let new-stream = _rewind(stream, base-offset) in
+    State of {stream = new-stream, lastpos = Pos of {row, column}}
+  }
+}

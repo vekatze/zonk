@@ -2,9 +2,20 @@ import {
   this.pos {pos},
 }
 
+data observation {
+| Rune(rune)
+| Text(text)
+| End-Of-Input
+}
+
 data error {
 | Error(
-    content: text,
+    found: observation,
+    expected: ?observation,
     position: pos,
   )
+}
+
+define unexpected-end-of-input(p: pos): error {
+  Error of {found = End-Of-Input, expected = none(), position = p}
 }
