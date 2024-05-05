@@ -45,8 +45,8 @@ inline _get-state(): parser(&cell(state)) {
 
 inline get-position(): parser(pos) {
   function (st-ref: &cell(state)) {
-    tie State of {lastpos} = _read(st-ref) in
-    Pass(*lastpos)
+    tie State of {cursor} = _read(st-ref) in
+    Pass(*cursor)
   }
 }
 
@@ -56,7 +56,7 @@ define _show-found(size: int, stream: &text): text {
 
 define release<a>(p: parser(a), st: &cell(state)): except(error, a) {
   let parse-result = p(st) in
-  tie State of {stream, lastpos, found} = _read(st) in
+  tie State of {stream, cursor, found} = _read(st) in
   match parse-result {
   | Pass(v) =>
     Pass(v)
@@ -67,7 +67,7 @@ define release<a>(p: parser(a), st: &cell(state)): except(error, a) {
       Error of {
         found = found-text,
         expected,
-        position = *lastpos,
+        position = *cursor,
       },
     )
   }
@@ -90,7 +90,7 @@ constant end-of-input: parser(unit) {
 
 inline satisfy(p: (rune) -> bool): parser(rune) {
   function (st-ref: &cell(state)) {
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    tie State of {stream, cursor = Pos of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
     if eq-int(len, 0) {
       Fail(_empty-stash)
@@ -119,7 +119,7 @@ constant any-rune: parser(rune) {
 
 inline chunk(t: &text): parser(unit) {
   function (st-ref: &cell(state)) {
-    tie State of {stream, lastpos = Pos of {row = orig-row, column = orig-column}} = _read(st-ref) in
+    tie State of {stream, cursor = Pos of {row = orig-row, column = orig-column}} = _read(st-ref) in
     let len1 = core.text.text-byte-length(stream) in
     let len2 = core.text.text-byte-length(t) in
     if lt-int(len1, len2) {
@@ -155,7 +155,7 @@ inline chunk(t: &text): parser(unit) {
 
 inline take-while(p: (rune) -> bool): parser(text) {
   function (st-ref: &cell(state)) {
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    tie State of {stream, cursor = Pos of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
     if eq-int(len, 0) {
       Pass(*stream)
@@ -182,7 +182,7 @@ inline take-while(p: (rune) -> bool): parser(text) {
 
 inline drop-while(p: (rune) -> bool): parser(unit) {
   function (st-ref: &cell(state)) {
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    tie State of {stream, cursor = Pos of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
     if eq-int(len, 0) {
       Pass(Unit)
@@ -241,7 +241,7 @@ inline with-label<a>(label: &text, p: parser(a)): parser(a) {
 
 inline attempt<a>(p: parser(a)): parser(a) {
   function (st-ref: &cell(state)) {
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st-ref) in
+    tie State of {stream, cursor = Pos of {row, column}} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match p(st-ref) {
     | Pass(result) =>
@@ -256,7 +256,7 @@ inline attempt<a>(p: parser(a)): parser(a) {
 
 inline look-ahead<a>(p: parser(a)): parser(a) {
   function (st-ref: &cell(state)) {
-    tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st-ref) in
+    tie State of {stream, cursor = Pos of {row, column}, found} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match p(st-ref) {
     | Pass(result) =>
@@ -270,7 +270,7 @@ inline look-ahead<a>(p: parser(a)): parser(a) {
 
 inline not-followed-by<a>(p: parser(a)): parser(unit) {
   function (st-ref: &cell(state)) {
-    tie State of {stream, lastpos = Pos of {row, column}, found} = _read(st-ref) in
+    tie State of {stream, cursor = Pos of {row, column}, found} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match p(st-ref) {
     | Pass(_) =>
@@ -389,7 +389,7 @@ define _try-parse(my-parser: parser(unit)): unit {
   let _ on st =
     let _ = chunk("abc")(st) in
     let result = my-parser(st) in
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
+    tie State of {stream, cursor = Pos of {row, column}} = _read(st) in
     match result {
     | Pass(_) =>
       print("remaining text: ");
@@ -546,7 +546,7 @@ define zen(): unit {
   let _ on st =
     let _ = chunk("abcd\nc")(st) in
     let result = release(my-parser, st) in
-    tie State of {stream, lastpos = Pos of {row, column}} = _read(st) in
+    tie State of {stream, cursor = Pos of {row, column}} = _read(st) in
     match result {
     | Pass(_) =>
       print("remaining text: ");

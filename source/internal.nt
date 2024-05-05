@@ -19,8 +19,8 @@ define _read<a>(ch: &cell(a)): &a {
 
 inline _proceed(st-ref: &cell(state), byte-offset: int, new-pos: pos): unit {
   mutate(st-ref, function (st) {
-    let State of {stream, lastpos = Pos of {}, found} = st in
-    State of {stream = core.text._drop(byte-offset, stream), lastpos = new-pos, found}
+    let State of {stream, cursor = Pos of {}, found} = st in
+    State of {stream = core.text._drop(byte-offset, stream), cursor = new-pos, found}
   })
 }
 
@@ -44,15 +44,15 @@ define _rewind(t: text, new-from: int): text {
 
 inline _rewind-state(base-offset: int, row: int, column: int, found: int): (state) -> state {
   function (st: state) {
-    let State of {stream, lastpos = Pos of {}} = st in
+    let State of {stream, cursor = Pos of {}} = st in
     let new-stream = _rewind(stream, base-offset) in
-    State of {stream = new-stream, lastpos = Pos of {row, column}, found}
+    State of {stream = new-stream, cursor = Pos of {row, column}, found}
   }
 }
 
 define _set-found(st-ref: &cell(state), new-found: int): unit {
   mutate(st-ref, function (st) {
-    let State of {stream, lastpos, found} = st in
-    State of {stream, lastpos, found = max-int(found, new-found)}
+    let State of {stream, cursor, found} = st in
+    State of {stream, cursor, found = max-int(found, new-found)}
   })
 }

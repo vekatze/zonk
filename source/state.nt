@@ -5,7 +5,7 @@ import {
 data state {
 | State(
     stream: text,
-    lastpos: pos,
+    cursor: pos,
     found: int,
   )
 }
@@ -14,7 +14,7 @@ define new-state(input: text): cell(state) {
   new-cell(
     State of {
       stream = input,
-      lastpos = Pos of {row = 0, column = 0},
+      cursor = Pos of {row = 0, column = 0},
       found = 0,
     },
   )
