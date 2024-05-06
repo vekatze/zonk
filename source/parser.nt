@@ -234,7 +234,7 @@ constant ascii-space: parser(unit) {
   )
 }
 
-inline with-label<a>(label: &text, p: parser(a)): parser(a) {
+inline label<a>(l: &text, p: parser(a)): parser(a) {
   _Parser(function (st-ref: &cell(state)) {
     tie State of {stream} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
@@ -246,7 +246,7 @@ inline with-label<a>(label: &text, p: parser(a)): parser(a) {
       if eq-int(base-offset, new-offset) {
         Fail(_set-expected(
           function () {
-            [Label(label)]
+            [Label(l)]
           },
           e,
         ))
@@ -428,13 +428,13 @@ define zen(): unit {
       candidates = {
         [
           chunk("gaoe"),
-          choice([chunk("k")], with-label("whatever", with zonk {
+          choice([chunk("k")], label("whatever", with zonk {
             bind _ = chunk("px") in
             bind _ = chunk("kgあ") in
             return(Unit)
           })),
           chunk("tあい"),
-          with-label("whatever 2", with zonk {
+          label("whatever 2", with zonk {
             bind _ = chunk("pt") in
             bind _ = chunk("あhebc") in
             return(Unit)

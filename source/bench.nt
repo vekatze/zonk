@@ -1,7 +1,7 @@
 import {
   core.control {loop},
   this.internal {_read},
-  this.parser {_run, choice, chunk, parser, return, with-label, zonk},
+  this.parser {_run, choice, chunk, label, parser, return, zonk},
   this.point {Point},
   this.state {State, new-state},
 }
@@ -41,13 +41,13 @@ define _bench(): unit {
       candidates = {
         [
           chunk("gaoe"),
-          choice([chunk("k")], with-label("whatever", with zonk {
+          choice([chunk("k")], label("whatever", with zonk {
             bind _ = chunk("px") in
             bind _ = chunk("kgあ") in
             return(Unit)
           })),
           chunk("tあい"),
-          with-label("whatever 2", with zonk {
+          label("whatever 2", with zonk {
             bind _ = chunk("pt") in
             bind _ = chunk("あhebc") in
             return(Unit)
