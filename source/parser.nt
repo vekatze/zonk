@@ -63,7 +63,7 @@ inline run<a>(p: parser(a), st: &cell(state)): except(error, a) {
     Fail(
       Error of {
         found = show-text(take-N(*gap-spot, stream)),
-        expected,
+        expected = expected(),
         error-location = *cursor,
       },
     )
@@ -83,7 +83,11 @@ constant end-of-input: parser(unit) {
     } else {
       _set-gap-spot(st-ref, 1);
       Fail(_Stash of {
-        expected = [Label("end of input")],
+        expected = {
+          function () {
+            [Label("end of input")]
+          }
+        },
       })
     }
   })
@@ -105,7 +109,11 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
       } else {
         _set-gap-spot(st-ref, 1);
         Fail(_Stash of {
-          expected = [],
+          expected = {
+            function () {
+              []
+            }
+          },
         })
       }
     }
@@ -143,7 +151,11 @@ inline chunk(t: &text): parser(unit) {
             } else {
               _set-gap-spot(st-ref, add-int(char-len, 1));
               Fail(_Stash of {
-                expected = [Raw-Text(t)],
+                expected = {
+                  function () {
+                    [Raw-Text(t)]
+                  }
+                },
               })
             }
           }
@@ -232,7 +244,12 @@ inline with-label<a>(label: &text, p: parser(a)): parser(a) {
     | Fail(e) =>
       let new-offset = _load-text-offset(stream) in
       if eq-int(base-offset, new-offset) {
-        Fail(_set-expected([Label(label)], e))
+        Fail(_set-expected(
+          function () {
+            [Label(label)]
+          },
+          e,
+        ))
       } else {
         Fail(e)
       }
@@ -246,7 +263,12 @@ inline hidden<a>(p: parser(a)): parser(a) {
     | Pass(result) =>
       Pass(result)
     | Fail(e) =>
-      Fail(_set-expected([], e))
+      Fail(_set-expected(
+        function () {
+          []
+        },
+        e,
+      ))
     }
   })
 }
@@ -295,7 +317,11 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
       } else {
         _set-gap-spot(st-ref, 1);
         Fail(_Stash of {
-          expected = [],
+          expected = {
+            function () {
+              []
+            }
+          },
         })
       }
     | Fail(_) =>

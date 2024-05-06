@@ -4,15 +4,21 @@ import {
 
 data _stash {
 | _Stash(
-    expected: list(tag),
+    expected: () -> list(tag),
   )
 }
 
 constant _empty-stash: _stash {
-  _Stash of {expected = []}
+  _Stash of {
+    expected = {
+      function () {
+        []
+      }
+    },
+  }
 }
 
-inline _set-expected(es: list(tag), s: _stash): _stash {
+inline _set-expected(es: () -> list(tag), s: _stash): _stash {
   match s {
   | _Stash of {} =>
     _Stash of {expected = es}
@@ -22,6 +28,8 @@ inline _set-expected(es: list(tag), s: _stash): _stash {
 inline _join-stash(e1: _stash, e2: _stash): _stash {
   match e1, e2 {
   | _Stash(expected1), _Stash(expected2) =>
-    _Stash(append(expected1, expected2))
+    _Stash(function () {
+      append(expected1(), expected2())
+    })
   }
 }
