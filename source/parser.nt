@@ -170,12 +170,15 @@ inline take-while(p: (rune) -> bool): parser(text) {
   _Parser(function (st-ref: &cell(state)) {
     tie State of {stream, cursor = Point of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
-    if eq-int(len, 0) {
-      Pass(*stream)
-    } else {
-      let ptr1 = _get-content-pointer(stream) in
-      let f =
-        define consumer(index: int, row: int, column: int): text {
+    let ptr1 = _get-content-pointer(stream) in
+    let f =
+      define consumer(index: int, row: int, column: int): text {
+        let is-tail = ge-int(index, len) in
+        if is-tail {
+          let result = _take-N(index, stream) in
+          _proceed(st-ref, index, Point of {row, column});
+          result
+        } else {
           let r = load-rune(add-int(ptr1, index)) in
           if p(r) {
             let offset = core.rune.size(r) in
@@ -187,9 +190,9 @@ inline take-while(p: (rune) -> bool): parser(text) {
             result
           }
         }
-      in
-      Pass(f(0, *row, *column))
-    }
+      }
+    in
+    Pass(f(0, *row, *column))
   })
 }
 
@@ -197,12 +200,14 @@ inline drop-while(p: (rune) -> bool): parser(unit) {
   _Parser(function (st-ref: &cell(state)) {
     tie State of {stream, cursor = Point of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
-    if eq-int(len, 0) {
-      Pass(Unit)
-    } else {
-      let ptr1 = _get-content-pointer(stream) in
-      let f =
-        define consumer(index: int, row: int, column: int): unit {
+    let ptr1 = _get-content-pointer(stream) in
+    let f =
+      define consumer(index: int, row: int, column: int): unit {
+        let is-tail = ge-int(index, len) in
+        if is-tail {
+          _proceed(st-ref, index, Point of {row, column});
+          Unit
+        } else {
           let r = load-rune(add-int(ptr1, index)) in
           if p(r) {
             let offset = core.rune.size(r) in
@@ -213,10 +218,10 @@ inline drop-while(p: (rune) -> bool): parser(unit) {
             Unit
           }
         }
-      in
-      f(0, *row, *column);
-      Pass(Unit)
-    }
+      }
+    in
+    f(0, *row, *column);
+    Pass(Unit)
   })
 }
 
