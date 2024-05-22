@@ -1,19 +1,21 @@
 {
   target {
-    test "test.nt",
+    test {
+      main "test.nt",
+    },
   },
   dependency {
     core {
-      digest "URHaRyVrHOwvulrflTHLa8WNoRwPMl54Hnrk-CG4qFk",
+      digest "OFjMSEj_TlNUOGBp3-r8HinLhYPsu4xkChTgd91RQt0",
       mirror [
-        "https://github.com/vekatze/neut-core/raw/main/archive/0-48-2.tar.zst",
+        "https://github.com/vekatze/neut-core/raw/main/archive/0-48-3.tar.zst",
       ],
       enable-preset true,
     },
     noa {
-      digest "Uhg03rX3HiVtUa1cnnNZf23oJD_QZlX6QqeV8smNJO4",
+      digest "_LGtkpr4pQawCKbKNyq6jMgDKZUIR5q7Ed3WntiDRq8",
       mirror [
-        "https://github.com/vekatze/noa/raw/main/archive/0-3-2.tar.zst",
+        "https://github.com/vekatze/noa/raw/main/archive/0-3-4.tar.zst",
       ],
       enable-preset false,
     },
