@@ -8,7 +8,7 @@ import {
 }
 
 constant _newline: rune {
-  0x0a
+  `\n`
 }
 
 define _read<a>(ch: &cell(a)): &a {

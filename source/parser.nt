@@ -18,10 +18,10 @@ import {
 }
 
 data parser(a) {
-| _Parser((input: &cell(state)) -> except(_stash, a))
+| _Parser((input: &cell(state)) -> either(_stash, a))
 }
 
-inline _unwrap<a>(p: parser(a)): (input: &cell(state)) -> except(_stash, a) {
+inline _unwrap<a>(p: parser(a)): (input: &cell(state)) -> either(_stash, a) {
   let _Parser(f) = p in
   f
 }
@@ -35,32 +35,32 @@ inline zonk<a, b>(p: parser(a), k: (a) -> parser(b)): parser(b) {
 
 inline return<a>(x: a): parser(a) {
   _Parser(function (_: &cell(state)) {
-    Pass(x)
+    Right(x)
   })
 }
 
 inline _get-state(): parser(&cell(state)) {
   _Parser(function (st-ref: &cell(state)) {
-    Pass(st-ref)
+    Right(st-ref)
   })
 }
 
 inline get-point(): parser(point) {
   _Parser(function (st-ref: &cell(state)) {
     tie State of {cursor} = _read(st-ref) in
-    Pass(*cursor)
+    Right(*cursor)
   })
 }
 
-inline run<a>(p: parser(a), st: &cell(state)): except(error, a) {
+inline run<a>(p: parser(a), st: &cell(state)): either(error, a) {
   let parse-result = _unwrap(p)(st) in
   tie State of {stream, cursor, gap-spot} = _read(st) in
   match parse-result {
-  | Pass(v) =>
-    Pass(v)
-  | Fail(e) =>
+  | Right(v) =>
+    Right(v)
+  | Left(e) =>
     let _Stash of {expected} = e in
-    Fail(
+    Left(
       Error of {
         found = show-text(take-N(*gap-spot, stream)),
         expected = expected(),
@@ -70,7 +70,7 @@ inline run<a>(p: parser(a), st: &cell(state)): except(error, a) {
   }
 }
 
-inline _run<a>(p: parser(a), st: &cell(state)): except(_stash, a) {
+inline _run<a>(p: parser(a), st: &cell(state)): either(_stash, a) {
   _unwrap(p)(st)
 }
 
@@ -79,10 +79,10 @@ constant end-of-input: parser(unit) {
     tie State of {stream} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
     if eq-int(len, 0) {
-      Pass(Unit)
+      Right(Unit)
     } else {
       _set-gap-spot(st-ref, 1);
-      Fail(_Stash of {
+      Left(_Stash of {
         expected = {
           function () {
             [Label("end of input")]
@@ -98,17 +98,17 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
     tie State of {stream, cursor = Point of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
     if eq-int(len, 0) {
-      Fail(_empty-stash)
+      Left(_empty-stash)
     } else {
       let r = _get-rune(stream, 0) in
       if p(r) {
         let new-point = _get-new-point(r, *row, *column) in
         let offset = core.rune.size(r) in
         _proceed(st-ref, offset, new-point);
-        Pass(r)
+        Right(r)
       } else {
         _set-gap-spot(st-ref, 1);
-        Fail(_Stash of {
+        Left(_Stash of {
           expected = {
             function () {
               []
@@ -132,15 +132,15 @@ inline chunk(t: &text): parser(unit) {
     let len1 = core.text.text-byte-length(stream) in
     let len2 = core.text.text-byte-length(t) in
     if lt-int(len1, len2) {
-      Fail(_empty-stash)
+      Left(_empty-stash)
     } else {
       let ptr1 = _get-content-pointer(stream) in
       let ptr2 = _get-content-pointer(t) in
       let f =
-        define consumer(index: int, char-len: int, row: int, column: int): except(_stash, unit) {
+        define consumer(index: int, char-len: int, row: int, column: int): either(_stash, unit) {
           if eq-int(index, len2) {
             _proceed(st-ref, len2, Point of {row, column});
-            Pass(Unit)
+            Right(Unit)
           } else {
             let rune1 = load-rune(add-int(ptr1, index)) in
             let rune2 = load-rune(add-int(ptr2, index)) in
@@ -150,7 +150,7 @@ inline chunk(t: &text): parser(unit) {
               consumer(add-int(index, offset), add-int(char-len, 1), row, column)
             } else {
               _set-gap-spot(st-ref, add-int(char-len, 1));
-              Fail(_Stash of {
+              Left(_Stash of {
                 expected = {
                   function () {
                     [Raw-Text(t)]
@@ -192,7 +192,7 @@ inline take-while(p: (rune) -> bool): parser(text) {
         }
       }
     in
-    Pass(f(0, *row, *column))
+    Right(f(0, *row, *column))
   })
 }
 
@@ -221,16 +221,16 @@ inline drop-while(p: (rune) -> bool): parser(unit) {
       }
     in
     f(0, *row, *column);
-    Pass(Unit)
+    Right(Unit)
   })
 }
 
 constant ascii-space: parser(unit) {
   drop-while(
     function (r) {
-      if core.rune.entity.as-entity::identity(r, 0x20) {
+      if core.rune.entity.as-entity::identity(r, ` `) {
         True
-      } else-if ule-int32(sub-int32(r, 0x9), 0x4) {
+      } else-if ule-int32(sub-int32(magic cast(rune, int32, r), 0x9), 0x4) {
         True
       } else {
         False
@@ -244,19 +244,19 @@ inline label<a>(l: &text, p: parser(a)): parser(a) {
     tie State of {stream} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match _unwrap(p)(st-ref) {
-    | Pass(result) =>
-      Pass(result)
-    | Fail(e) =>
+    | Right(result) =>
+      Right(result)
+    | Left(e) =>
       let new-offset = _load-text-offset(stream) in
       if eq-int(base-offset, new-offset) {
-        Fail(_set-expected(
+        Left(_set-expected(
           function () {
             [Label(l)]
           },
           e,
         ))
       } else {
-        Fail(e)
+        Left(e)
       }
     }
   })
@@ -265,10 +265,10 @@ inline label<a>(l: &text, p: parser(a)): parser(a) {
 inline hidden<a>(p: parser(a)): parser(a) {
   _Parser(function (st-ref: &cell(state)) {
     match _unwrap(p)(st-ref) {
-    | Pass(result) =>
-      Pass(result)
-    | Fail(e) =>
-      Fail(_set-expected(
+    | Right(result) =>
+      Right(result)
+    | Left(e) =>
+      Left(_set-expected(
         function () {
           []
         },
@@ -283,12 +283,12 @@ inline attempt<a>(p: parser(a)): parser(a) {
     tie State of {stream, cursor = Point of {row, column}} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match _unwrap(p)(st-ref) {
-    | Pass(result) =>
-      Pass(result)
-    | Fail(e) =>
+    | Right(result) =>
+      Right(result)
+    | Left(e) =>
       tie State of {gap-spot} = _read(st-ref) in
       mutate(st-ref, _rewind-state(base-offset, *row, *column, *gap-spot));
-      Fail(e)
+      Left(e)
     }
   })
 }
@@ -298,11 +298,11 @@ inline look-ahead<a>(p: parser(a)): parser(a) {
     tie State of {stream, cursor = Point of {row, column}, gap-spot} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match _unwrap(p)(st-ref) {
-    | Pass(result) =>
+    | Right(result) =>
       mutate(st-ref, _rewind-state(base-offset, *row, *column, *gap-spot));
-      Pass(result)
-    | Fail(e) =>
-      Fail(e)
+      Right(result)
+    | Left(e) =>
+      Left(e)
     }
   })
 }
@@ -312,16 +312,16 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
     tie State of {stream, cursor = Point of {row, column}, gap-spot} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match _unwrap(p)(st-ref) {
-    | Pass(_) =>
+    | Right(_) =>
       mutate(st-ref, _rewind-state(base-offset, *row, *column, *gap-spot));
       let head-char = take-N(1, stream) in
       let b on head-char = is-empty(head-char) in
       let _ = head-char in
       if b {
-        Fail(_empty-stash)
+        Left(_empty-stash)
       } else {
         _set-gap-spot(st-ref, 1);
-        Fail(_Stash of {
+        Left(_Stash of {
           expected = {
             function () {
               []
@@ -329,9 +329,9 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
           },
         })
       }
-    | Fail(_) =>
+    | Left(_) =>
       mutate(st-ref, _rewind-state(base-offset, *row, *column, *gap-spot));
-      Pass(Unit)
+      Right(Unit)
     }
   })
 }
@@ -348,28 +348,28 @@ define _choice<a>(
     match candidates {
     | Nil =>
       match _unwrap(fallback)(st-ref) {
-      | Pass(v) =>
+      | Right(v) =>
         _set-gap-spot(st-ref, default-gap-spot);
-        Pass(v)
-      | Fail(e) =>
+        Right(v)
+      | Left(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          Fail(_join-stash(_stash-cand, e))
+          Left(_join-stash(_stash-cand, e))
         } else {
-          Fail(e)
+          Left(e)
         }
       }
     | Cons(cand, rest) =>
       match _unwrap(cand)(st-ref) {
-      | Pass(v) =>
+      | Right(v) =>
         _set-gap-spot(st-ref, default-gap-spot);
-        Pass(v)
-      | Fail(e) =>
+        Right(v)
+      | Left(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
           _unwrap(_choice(rest, fallback, _join-stash(_stash-cand, e), default-gap-spot))(st-ref)
         } else {
-          Fail(e)
+          Left(e)
         }
       }
     }
@@ -385,14 +385,14 @@ inline choice<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
       tie State of {stream, gap-spot} = _read(st-ref) in
       let old-offset = _load-text-offset(stream) in
       match _unwrap(p)(st-ref) {
-      | Pass(v) =>
-        Pass(v)
-      | Fail(e) =>
+      | Right(v) =>
+        Right(v)
+      | Left(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
           _unwrap(_choice(rest, fallback, e, *gap-spot))(st-ref)
         } else {
-          Fail(e)
+          Left(e)
         }
       }
     })
@@ -405,12 +405,12 @@ inline many<a>(p: parser(a)): parser(list(a)) {
       with zonk {
         bind st = _get-state() in
         match _unwrap(p)(st) {
-        | Pass(v) =>
+        | Right(v) =>
           with zonk {
             bind vs = self() in
             return(Cons(v, vs))
           }
-        | Fail(_) =>
+        | Left(_) =>
           return([])
         }
       }
@@ -463,14 +463,14 @@ define zen(): unit {
     let result = run(my-parser, st) in
     tie State of {stream, cursor = Point of {row, column}} = _read(st) in
     match result {
-    | Pass(_) =>
+    | Right(_) =>
       print("remaining text: ");
       print(stream);
       print("\n");
       printf("0-indexed cursor point: ({}, {})\n", [%ld(*row), %ld(*column)]);
       let _ = st in
       print("pass!\n")
-    | Fail(e) =>
+    | Left(e) =>
       printf("{}\n", [report(e)])
     }
   in

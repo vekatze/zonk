@@ -19,14 +19,14 @@ define _try-parse(p: parser(unit)): unit {
     let result = _run(p, st) in
     tie State of {stream, cursor = Point of {row, column}} = _read(st) in
     match result {
-    | Pass(_) =>
+    | Right(_) =>
       print("remaining text: ");
       print(stream);
       print("\n");
       printf("0-indexed cursor point: ({}, {})\n", [%ld(*row), %ld(*column)]);
       let _ = st in
       print("pass!\n")
-    | Fail(e) =>
+    | Left(e) =>
       let _ = e in
       Unit
     }
@@ -64,7 +64,7 @@ define _bench(): unit {
       fallback = chunk("tn"),
     }
   in
-  loop(1000000, Unit, function (_, _) {
+  loop(1000000, function (_) {
     _try-parse(whatever)
   })
 }

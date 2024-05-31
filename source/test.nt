@@ -21,13 +21,13 @@ define main(): unit {
         let p = chunk(t1) in
         let parse-result = run(p, st) in
         match parse-result {
-        | Pass(_) =>
+        | Right(_) =>
           let result =
             tie State of {stream} = _read(st) in
             core.text.entity.as-entity::identity(t2, stream)
           in
           result
-        | Fail(_) =>
+        | Left(_) =>
           False
         }
       in
@@ -51,9 +51,9 @@ define main(): unit {
           }
         in
         match run(p, st) {
-        | Pass(_) =>
+        | Right(_) =>
           True
-        | Fail(_) =>
+        | Left(_) =>
           False
         }
       in
@@ -79,9 +79,9 @@ define main(): unit {
           }
         in
         match run(p, st) {
-        | Pass(_) =>
+        | Right(_) =>
           True
-        | Fail(_) =>
+        | Left(_) =>
           False
         }
       in
@@ -102,9 +102,9 @@ define main(): unit {
         let st = new-state(t) in
         let result on st =
           match run(end-of-input, st) {
-          | Pass(_) =>
+          | Right(_) =>
             False
-          | Fail(_) =>
+          | Left(_) =>
             True
           }
         in
@@ -139,9 +139,9 @@ define zen(): unit {
   let result on some-input =
     // run the parser
     match run(sample-parser, some-input) {
-    | Pass(_) =>
+    | Right(_) =>
       print("pass\n")
-    | Fail(_) =>
+    | Left(_) =>
       print("fail\n")
     }
   in
