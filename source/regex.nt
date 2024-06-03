@@ -1,0 +1,118 @@
+import {
+  core.list {for-each},
+  core.rune.entity {eq-rune},
+  this.parser {
+    attempt,
+    choice,
+    chunk,
+    end-of-input,
+    many,
+    parser,
+    return,
+    run,
+    satisfy,
+    zonk,
+  },
+  this.state {new-state},
+}
+
+data regex {
+| Any(list(rune))
+| Chunk(&text)
+| Choose(candidates: list(regex), fallback: regex)
+| Join(list(regex))
+| Repeat(regex)
+}
+
+define _from-regex(r: regex): parser(unit) {
+  match r {
+  | Any(rs) =>
+    with zonk {
+      bind _ =
+        satisfy(function (r) {
+          let bs =
+            for-each(rs, function (r') {
+              eq-rune(r, r')
+            })
+          in
+          any(bs)
+        })
+      in
+      return(Unit)
+    }
+  | Chunk(t) =>
+    chunk(t)
+  | Choose(xs, fallback) =>
+    let xs' = map(_from-regex, xs) in
+    let fallback' = _from-regex(fallback) in
+    attempt(choice(xs', fallback'))
+  | Join(xs) =>
+    let xs' = map(_from-regex, xs) in
+    let go =
+      define loop(xs: list(parser(unit))): parser(unit) {
+        match xs {
+        | Nil =>
+          _from-regex(Any([]))
+        | Cons(x, Nil) =>
+          x
+        | Cons(x, xs) =>
+          with zonk {
+            bind _ = x in
+            loop(xs)
+          }
+        }
+      }
+    in
+    attempt(go(xs'))
+  | Repeat(r) =>
+    with zonk {
+      bind _ = many(attempt(_from-regex(r))) in
+      return(Unit)
+    }
+  }
+}
+
+inline recognize(r: regex, input: text): bool {
+  let p =
+    with zonk {
+      bind _ = _from-regex(r) in
+      end-of-input
+    }
+  in
+  let base = new-state(input) in
+  let result on base =
+    match run(p, base) {
+    | Left(_) =>
+      False
+    | Right(_) =>
+      True
+    }
+  in
+  let _ = base in
+  result
+}
+
+define zen(): unit {
+  let reg =
+    Repeat(
+      Join([
+        Choose(
+          [
+            Chunk("pqr"),
+            Chunk("H"),
+            Any([`P`, `あ`, `Γ`]),
+          ],
+          Chunk("abc"),
+        ),
+        Chunk(":"),
+        Choose([Chunk("AAAA")], Chunk("XX")),
+        Chunk(", "),
+      ]),
+    )
+  in
+  if recognize(reg, *"abc:XX, あ:AAAA, Γ:XX, ") {
+    print("True\n")
+  } else {
+    print("False\n")
+  }
+}
