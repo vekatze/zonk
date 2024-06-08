@@ -14,7 +14,7 @@ import {
     _stash,
   },
   this.state {State, new-state, state},
-  this.tag {Label, Raw-Text},
+  this.tag {Label, Raw-Text, tag},
 }
 
 data parser(a) {
@@ -72,6 +72,18 @@ inline run<a>(p: parser(a), st: &cell(state)): either(error, a) {
 
 inline _run<a>(p: parser(a), st: &cell(state)): either(_stash, a) {
   _unwrap(p)(st)
+}
+
+define fail<a>(expected: list(tag)): parser(a) {
+  _Parser(function (_: &cell(state)) {
+    Left(_Stash of {
+      expected = {
+        function () {
+          expected
+        }
+      },
+    })
+  })
 }
 
 constant end-of-input: parser(unit) {
