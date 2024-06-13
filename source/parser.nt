@@ -1,6 +1,5 @@
 import {
   core.rune {load-rune},
-  core.rune.entity,
   core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N},
   core.text.show {show-text},
   this.error {Error, error, report},
@@ -157,7 +156,7 @@ inline chunk(t: &text): parser(unit) {
             let rune1 = load-rune(add-int(ptr1, index)) in
             let rune2 = load-rune(add-int(ptr2, index)) in
             let offset = core.rune.size(rune1) in
-            if core.rune.entity.as-entity::identity(rune1, rune2) {
+            if eq-rune(rune1, rune2) {
               let Point of {row, column} = _get-new-point(rune1, row, column) in
               consumer(add-int(index, offset), add-int(char-len, 1), row, column)
             } else {
@@ -240,7 +239,7 @@ inline drop-while(p: (rune) -> bool): parser(unit) {
 constant ascii-space: parser(unit) {
   drop-while(
     function (r) {
-      if core.rune.entity.as-entity::identity(r, ` `) {
+      if eq-rune(r, ` `) {
         True
       } else-if ule-int32(sub-int32(magic cast(rune, int32, r), 0x9), 0x4) {
         True

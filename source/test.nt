@@ -1,6 +1,5 @@
 import {
   core.text {text-byte-length},
-  core.text.entity,
   noa.gen.pairs {pairs},
   noa.gen.texts {texts},
   noa.suite {noa},
@@ -24,7 +23,7 @@ define main(): unit {
         | Right(_) =>
           let result =
             tie State of {stream} = _read(st) in
-            core.text.entity.as-entity::identity(t2, stream)
+            eq-text(t2, stream)
           in
           result
         | Left(_) =>

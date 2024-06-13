@@ -1,6 +1,4 @@
 import {
-  core.list {for-each},
-  core.rune.entity {eq-rune},
   this.parser {
     attempt,
     choice,

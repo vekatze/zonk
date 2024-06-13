@@ -2,7 +2,6 @@ import {
   core.int {max-int},
   core.magic,
   core.memory {load-int, store-int},
-  core.rune.entity,
   this.point {Point, point},
   this.state {State, state},
 }
@@ -25,7 +24,7 @@ inline _proceed(st-ref: &cell(state), byte-offset: int, new-point: point): unit 
 }
 
 inline _get-new-point(r: rune, row: int, column: int): point {
-  if core.rune.entity.as-entity::identity(r, _newline) {
+  if eq-rune(r, _newline) {
     Point of {row = add-int(row, 1), column = 0}
   } else {
     Point of {row, column = add-int(column, 1)}
