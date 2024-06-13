@@ -318,6 +318,17 @@ inline look-ahead<a>(p: parser(a)): parser(a) {
   })
 }
 
+define optional<a>(p: parser(a)): parser(?a) {
+  _Parser(function (st-ref: &cell(state)) {
+    match _unwrap(p)(st-ref) {
+    | Right(result) =>
+      Right(Right(result))
+    | Left(_) =>
+      Right(Left(Unit))
+    }
+  })
+}
+
 inline not-followed-by<a>(p: parser(a)): parser(unit) {
   _Parser(function (st-ref: &cell(state)) {
     tie State of {stream, cursor = Point of {row, column}, gap-spot} = _read(st-ref) in
@@ -468,23 +479,19 @@ define zen(): unit {
       fallback = chunk("tn"),
     }
   in
-  let st = new-state(*"pqabcd\nctああhehoge \n\r  hehehetest") in
-  let _ on st =
-    let _ = _unwrap(chunk("abcd\nc"))(st) in
-    let result = run(my-parser, st) in
-    tie State of {stream, cursor = Point of {row, column}} = _read(st) in
-    match result {
-    | Right(_) =>
-      print("remaining text: ");
-      print(stream);
-      print("\n");
-      printf("0-indexed cursor point: ({}, {})\n", [%ld(*row), %ld(*column)]);
-      let _ = st in
-      print("pass!\n")
-    | Left(e) =>
-      printf("{}\n", [report(e)])
-    }
-  in
-  let _ = st in
-  Unit
+  pin st = new-state(*"pqabcd\nctああhehoge \n\r  hehehetest") in
+  let _ = _unwrap(chunk("abcd\nc"))(st) in
+  let result = run(my-parser, st) in
+  tie State of {stream, cursor = Point of {row, column}} = _read(st) in
+  match result {
+  | Right(val) =>
+    print("remaining text: ");
+    print(stream);
+    print("\n");
+    printf("0-indexed cursor point: ({}, {})\n", [%ld(*row), %ld(*column)]);
+    let _ = st in
+    print("pass!\n")
+  | Left(e) =>
+    printf("{}\n", [report(e)])
+  }
 }
