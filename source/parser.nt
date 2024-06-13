@@ -484,7 +484,7 @@ define zen(): unit {
   let result = run(my-parser, st) in
   tie State of {stream, cursor = Point of {row, column}} = _read(st) in
   match result {
-  | Right(val) =>
+  | Right(_) =>
     print("remaining text: ");
     print(stream);
     print("\n");
