@@ -318,7 +318,7 @@ inline look-ahead<a>(p: parser(a)): parser(a) {
   })
 }
 
-define optional<a>(p: parser(a)): parser(?a) {
+inline optional<a>(p: parser(a)): parser(?a) {
   _Parser(function (st-ref: &cell(state)) {
     match _unwrap(p)(st-ref) {
     | Right(result) =>
