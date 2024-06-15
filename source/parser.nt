@@ -329,6 +329,17 @@ inline optional<a>(p: parser(a)): parser(?a) {
   })
 }
 
+inline branch<a>(p1: parser(a), p2: parser(a)): parser(a) {
+  _Parser(function (st-ref: &cell(state)) {
+    match _unwrap(p1)(st-ref) {
+    | Right(result) =>
+      Right(result)
+    | Left(_) =>
+      _unwrap(p2)(st-ref)
+    }
+  })
+}
+
 inline not-followed-by<a>(p: parser(a)): parser(unit) {
   _Parser(function (st-ref: &cell(state)) {
     tie State of {stream, cursor = Point of {row, column}, gap-spot} = _read(st-ref) in
@@ -441,10 +452,10 @@ inline many<a>(p: parser(a)): parser(list(a)) {
   f()
 }
 
-inline some<a>(p: parser(a)): parser(list(a)) {
+inline some<a>(!p: parser(a)): parser(list(a)) {
   with zonk {
-    bind v = p in
-    bind vs = many(p) in
+    bind v = !p in
+    bind vs = many(!p) in
     return(Cons(v, vs))
   }
 }
