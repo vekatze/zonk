@@ -61,7 +61,7 @@ inline run<a>(p: parser(a), st: &cell(state)): either(error, a) {
     let _Stash of {expected} = e in
     Left(
       Error of {
-        found = show-text(take-N(*gap-spot, stream)),
+        found = show-text(take-N(stream, *gap-spot)),
         expected = expected(),
         error-location = *cursor,
       },
@@ -186,7 +186,7 @@ inline take-while(p: (rune) -> bool): parser(text) {
       define consumer(index: int, row: int, column: int): text {
         let is-tail = ge-int(index, len) in
         if is-tail {
-          let result = _take-N(index, stream) in
+          let result = _take-N(stream, index) in
           _proceed(st-ref, index, Point of {row, column});
           result
         } else {
@@ -196,7 +196,7 @@ inline take-while(p: (rune) -> bool): parser(text) {
             let Point of {row, column} = _get-new-point(r, row, column) in
             consumer(add-int(index, offset), row, column)
           } else {
-            let result = _take-N(index, stream) in
+            let result = _take-N(stream, index) in
             _proceed(st-ref, index, Point of {row, column});
             result
           }
@@ -347,7 +347,7 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
     match _unwrap(p)(st-ref) {
     | Right(_) =>
       mutate(st-ref, _rewind-state(base-offset, *row, *column, *gap-spot));
-      let head-char = take-N(1, stream) in
+      let head-char = take-N(stream, 1) in
       let b on head-char = is-empty(head-char) in
       let _ = head-char in
       if b {

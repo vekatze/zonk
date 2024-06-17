@@ -41,11 +41,11 @@ define _from-regex(r: regex): parser(unit) {
   | Chunk(t) =>
     chunk(t)
   | Choose(xs, fallback) =>
-    let xs' = map(_from-regex, xs) in
+    let xs' = for-each(xs, _from-regex) in
     let fallback' = _from-regex(fallback) in
     attempt(choice(xs', fallback'))
   | Join(xs) =>
-    let xs' = map(_from-regex, xs) in
+    let xs' = for-each(xs, _from-regex) in
     let go =
       define loop(xs: list(parser(unit))): parser(unit) {
         match xs {

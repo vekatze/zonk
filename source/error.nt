@@ -20,7 +20,7 @@ define report(e: error): text {
   if b {
     format("parse error at {}:\nunexpected:\n  {}", [error-location', found])
   } else {
-    let expected' = intercalate(*", ", map(show-tag, expected)) in
+    let expected' = intercalate(for-each(expected, show-tag), *", ") in
     format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [error-location', expected', found])
   }
 }

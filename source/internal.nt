@@ -19,7 +19,7 @@ define _read<a>(ch: &cell(a)): &a {
 inline _proceed(st-ref: &cell(state), byte-offset: int, new-point: point): unit {
   mutate(st-ref, function (st) {
     let State of {stream, cursor = Point of {}, gap-spot} = st in
-    State of {stream = core.text._drop(byte-offset, stream), cursor = new-point, gap-spot}
+    State of {stream = core.text._drop(stream, byte-offset), cursor = new-point, gap-spot}
   })
 }
 
