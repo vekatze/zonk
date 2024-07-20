@@ -13,9 +13,9 @@
       enable-preset true,
     },
     noa {
-      digest "d_WAv-n2aUzi2Omn_5hQMc5ZJQVPRXwhO5di2fHJ9Jc",
+      digest "tD3YBT4UDBCtdCttK_QztfWLuA0JsIzQmyb36dVdQuo",
       mirror [
-        "https://github.com/vekatze/noa/raw/main/archive/0-3-15.tar.zst",
+        "https://github.com/vekatze/noa/raw/main/archive/0-3-16.tar.zst",
       ],
     },
   },
