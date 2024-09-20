@@ -177,7 +177,7 @@ inline chunk(t: &text): parser(unit) {
   })
 }
 
-inline take-while(p: (rune) -> bool): parser(text) {
+inline take-while(!p: (rune) -> bool): parser(text) {
   _Parser(function (st-ref: &cell(state)) {
     tie State of {stream, cursor = Point of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
@@ -191,7 +191,7 @@ inline take-while(p: (rune) -> bool): parser(text) {
           result
         } else {
           let r = load-rune(add-int(ptr1, index)) in
-          if p(r) {
+          if !p(r) {
             let offset = core.rune.size(r) in
             let Point of {row, column} = _get-new-point(r, row, column) in
             consumer(add-int(index, offset), row, column)
@@ -207,7 +207,7 @@ inline take-while(p: (rune) -> bool): parser(text) {
   })
 }
 
-inline drop-while(p: (rune) -> bool): parser(unit) {
+inline drop-while(!p: (rune) -> bool): parser(unit) {
   _Parser(function (st-ref: &cell(state)) {
     tie State of {stream, cursor = Point of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
@@ -220,7 +220,7 @@ inline drop-while(p: (rune) -> bool): parser(unit) {
           Unit
         } else {
           let r = load-rune(add-int(ptr1, index)) in
-          if p(r) {
+          if !p(r) {
             let offset = core.rune.size(r) in
             let Point of {row, column} = _get-new-point(r, row, column) in
             consumer(add-int(index, offset), row, column)
@@ -432,12 +432,12 @@ inline choice<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
   }
 }
 
-inline many<a>(p: parser(a)): parser(list(a)) {
+inline many<a>(!p: parser(a)): parser(list(a)) {
   let f =
     define self() {
       with zonk {
         bind st = _get-state() in
-        match _unwrap(p)(st) {
+        match _unwrap(!p)(st) {
         | Right(v) =>
           with zonk {
             bind vs = self() in
