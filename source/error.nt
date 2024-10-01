@@ -1,5 +1,5 @@
 import {
-  core.list {is-empty},
+  core.list {for-each, is-empty},
   core.text {format, intercalate},
   this.point {point, show-point},
   this.tag {show-tag, tag},

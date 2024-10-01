@@ -1,4 +1,5 @@
 import {
+  core.list {any, for-each},
   this.parser {
     attempt,
     choice,

@@ -1,4 +1,5 @@
 import {
+  core.cell {cell, mutate},
   core.int {max-int},
   core.magic,
   core.memory {load-int, store-int},

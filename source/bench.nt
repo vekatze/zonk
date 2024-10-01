@@ -1,5 +1,6 @@
 import {
   core.control {loop},
+  core.int.show {show-int},
   this.internal {_read},
   this.parser {_run, choice, chunk, label, parser, return, zonk},
   this.point {Point},
@@ -23,7 +24,7 @@ define _try-parse(p: parser(unit)): unit {
       print("remaining text: ");
       print(stream);
       print("\n");
-      printf("0-indexed cursor point: ({}, {})\n", [%ld(*row), %ld(*column)]);
+      printf("0-indexed cursor point: ({}, {})\n", [show-int(*row), show-int(*column)]);
       let _ = st in
       print("pass!\n")
     | Left(e) =>

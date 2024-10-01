@@ -1,4 +1,6 @@
 import {
+  core.cell {cell, mutate},
+  core.int.show {show-int},
   core.rune {load-rune},
   core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N},
   core.text.show {show-text},
@@ -499,7 +501,7 @@ define zen(): unit {
     print("remaining text: ");
     print(stream);
     print("\n");
-    printf("0-indexed cursor point: ({}, {})\n", [%ld(*row), %ld(*column)]);
+    printf("0-indexed cursor point: ({}, {})\n", [show-int(*row), show-int(*column)]);
     let _ = st in
     print("pass!\n")
   | Left(e) =>

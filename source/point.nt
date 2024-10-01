@@ -1,4 +1,5 @@
 import {
+  core.int.show {show-int},
   core.text {format},
 }
 
@@ -11,5 +12,5 @@ data point {
 
 define show-point(p: point): text {
   let Point of {row, column} = p in
-  format("row {}, column {}", [%ld(add-int(row, 1)), %ld(add-int(column, 1))])
+  format("row {}, column {}", [show-int(add-int(row, 1)), show-int(add-int(column, 1))])
 }

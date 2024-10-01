@@ -1,4 +1,5 @@
 import {
+  core.list {append},
   this.tag {tag},
 }
 
