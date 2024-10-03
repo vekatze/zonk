@@ -1,6 +1,7 @@
 import {
   core.cell {cell, mutate},
   core.int.show {show-int},
+  core.pointer {shift},
   core.rune {load-rune},
   core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N},
   core.text.show {show-text},
@@ -155,8 +156,8 @@ inline chunk(t: &text): parser(unit) {
             _proceed(st-ref, len2, Point of {row, column});
             Right(Unit)
           } else {
-            let rune1 = load-rune(add-int(ptr1, index)) in
-            let rune2 = load-rune(add-int(ptr2, index)) in
+            let rune1 = load-rune(shift(ptr1, index)) in
+            let rune2 = load-rune(shift(ptr2, index)) in
             let offset = core.rune.size(rune1) in
             if eq-rune(rune1, rune2) {
               let Point of {row, column} = _get-new-point(rune1, row, column) in
@@ -192,7 +193,7 @@ inline take-while(!p: (rune) -> bool): parser(text) {
           _proceed(st-ref, index, Point of {row, column});
           result
         } else {
-          let r = load-rune(add-int(ptr1, index)) in
+          let r = load-rune(shift(ptr1, index)) in
           if !p(r) {
             let offset = core.rune.size(r) in
             let Point of {row, column} = _get-new-point(r, row, column) in
@@ -221,7 +222,7 @@ inline drop-while(!p: (rune) -> bool): parser(unit) {
           _proceed(st-ref, index, Point of {row, column});
           Unit
         } else {
-          let r = load-rune(add-int(ptr1, index)) in
+          let r = load-rune(shift(ptr1, index)) in
           if !p(r) {
             let offset = core.rune.size(r) in
             let Point of {row, column} = _get-new-point(r, row, column) in

@@ -3,6 +3,7 @@ import {
   core.int {max-int},
   core.magic,
   core.memory {load-int, store-int},
+  core.pointer {pointer},
   this.point {Point, point},
   this.state {State, state},
 }
@@ -12,7 +13,7 @@ constant _newline: rune {
 }
 
 define _read<a>(ch: &cell(a)): &a {
-  let ch = core.magic.cast(&cell(a), int, ch) in
+  let ch = core.magic.cast(&cell(a), pointer, ch) in
   let val-base = load-int(ch) in
   core.magic.cast(int, &a, val-base)
 }
@@ -33,13 +34,13 @@ inline _get-new-point(r: rune, row: int, column: int): point {
 }
 
 define _load-text-offset(t: &text): int {
-  load-int(magic cast(&text, int, t))
+  load-int(magic cast(&text, pointer, t))
 }
 
 define _rewind(t: text, new-from: int): text {
-  let from-ptr = core.magic.cast(text, int, t) in
+  let from-ptr = core.magic.cast(text, pointer, t) in
   store-int(new-from, from-ptr);
-  core.magic.cast(int, text, from-ptr)
+  core.magic.cast(pointer, text, from-ptr)
 }
 
 inline _rewind-state(base-offset: int, row: int, column: int, gap-spot: int): (state) -> state {
