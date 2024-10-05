@@ -41,6 +41,14 @@ inline return<a>(x: a): parser(a) {
   })
 }
 
+define report-unexpected-input<a>(expected-item-label: &text): parser(a) {
+  _Parser(function (_: &cell(state)) {
+    Left(_Stash(function () {
+      [Label(expected-item-label)]
+    }))
+  })
+}
+
 inline _get-state(): parser(&cell(state)) {
   _Parser(function (st-ref: &cell(state)) {
     Right(st-ref)
