@@ -1,6 +1,7 @@
 import {
   core.float.parse {parse-float},
   core.float.show {show-float},
+  core.function {compose},
   core.int.parse {parse-int},
   core.int.show {show-int},
   core.list {any, reverse},
@@ -49,6 +50,10 @@ define _is-float-rune(r: rune): bool {
     eq-rune(r, `+`),
     eq-rune(r, `-`),
   ])
+}
+
+inline read-symbol(): parser(text) {
+  take-while(compose(not, _is-space))
 }
 
 inline read-int(): parser(int) {
