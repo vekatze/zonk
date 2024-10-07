@@ -2,6 +2,12 @@
 
 `zonk` is a parser combinator for the [Neut](https://vekatze.github.io/neut/) programming language.
 
+## Installation
+
+```sh
+neut get zonk https://github.com/vekatze/zonk/raw/main/archive/0-1-25.tar.zst
+```
+
 ## Example
 
 Executing `zen` in the following example should output `pass`:
