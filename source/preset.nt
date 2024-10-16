@@ -5,6 +5,7 @@ import {
   core.int.parse {parse-int},
   core.int.show {show-int},
   core.list {any, reverse},
+  core.magic,
   core.memory {store-float, store-int},
   core.pointer {shift},
   core.vector {_Vector-Info, _get-vector-info, vector},
@@ -109,6 +110,38 @@ define _store-float(vec: &vector(float), index: int, value: float): unit {
   let _Vector-Info of {content-ptr, word-size} = _get-vector-info(vec) in
   let elem-address = shift(content-ptr, mul-int(word-size, index)) in
   store-float(value, elem-address)
+}
+
+define _store-value<a>(vec: &vector(a), index: int, value: a): unit {
+  let _Vector-Info of {content-ptr, word-size} = _get-vector-info(vec) in
+  let elem-address = shift(content-ptr, mul-int(word-size, index)) in
+  store-int(core.magic.cast(a, int, value), elem-address)
+}
+
+inline read-vector<a>(size: int, !p: parser(a)): parser(vector(a)) {
+  let base =
+    core.vector.create(size, function (_) {
+      core.magic.cast(int, a, 0)
+    })
+  in
+  let f =
+    define self(cursor: int, base: vector(a)): parser(vector(a)) {
+      if ge-int(cursor, size) {
+        return(base)
+      } else {
+        with zonk {
+          bind v = !p in
+          bind _ = skip-space() in
+          let _ on base = _store-value(base, cursor, v) in
+          self(add-int(cursor, 1), base)
+        }
+      }
+    }
+  in
+  with zonk {
+    bind result = f(0, base) in
+    return(result)
+  }
 }
 
 define read-int-vector(size: int): parser(vector(int)) {
