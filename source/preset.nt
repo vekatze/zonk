@@ -54,12 +54,17 @@ define _is-float-rune(r: rune): bool {
 }
 
 inline read-symbol(): parser(text) {
-  take-while(compose(not, _is-space))
+  with zonk {
+    bind result = take-while(compose(not, _is-space)) in
+    bind _ = skip-space() in
+    return(result)
+  }
 }
 
 inline read-int(): parser(int) {
   with zonk {
     bind num-text = take-while(_is-integer-rune) in
+    bind _ = skip-space() in
     let none-or-int on num-text = parse-int(num-text) in
     match none-or-int {
     | Left(_) =>
@@ -73,6 +78,7 @@ inline read-int(): parser(int) {
 inline read-float(): parser(float) {
   with zonk {
     bind num-text = take-while(_is-float-rune) in
+    bind _ = skip-space() in
     let none-or-float on num-text = parse-float(num-text) in
     match none-or-float {
     | Left(_) =>
@@ -91,7 +97,6 @@ define read-int-list(size: int): parser(list(int)) {
       } else {
         with zonk {
           bind v = read-int() in
-          bind _ = skip-space() in
           self(sub-int(cursor, 1), Cons(v, acc))
         }
       }
@@ -216,9 +221,7 @@ define read-float-vector(size: int): parser(vector(float)) {
 constant sample-parser: parser(unit) {
   with zonk {
     bind v1 = read-int() in
-    bind _ = skip-space() in
     bind v2 = read-int() in
-    bind _ = skip-space() in
     bind xs = read-float-vector(v1) in
     printf("{}, {}\n", [show-int(v1), show-int(v2)]);
     core.vector.for(xs, function (x) {
