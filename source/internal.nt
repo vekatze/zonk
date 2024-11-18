@@ -3,7 +3,6 @@ import {
   core.int {max-int},
   core.magic,
   core.memory {load-int, store-int},
-  core.pointer {pointer},
   this.point {Point, point},
   this.state {State, state},
 }

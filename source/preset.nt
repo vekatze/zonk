@@ -224,7 +224,7 @@ constant sample-parser: parser(unit) {
     bind v2 = read-int() in
     bind xs = read-float-vector(v1) in
     printf("{}, {}\n", [show-int(v1), show-int(v2)]);
-    core.vector.for(xs, function (x) {
+    core.vector.for(xs, function (x, _) {
       printf("{} ", [show-float(x)])
     });
     return(Unit)
