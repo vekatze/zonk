@@ -13,9 +13,15 @@
       enable-preset true,
     },
     noa {
-      digest "H5zMj1OraGtdzHINlnQwG9onoe10vaiGBN7Y-K5BLbM",
+      digest "CuISCHHlQEPvZacs-Sn2qx-bVWi0xYXF2ujE6MkIygQ",
       mirror [
-        "https://github.com/vekatze/noa/raw/main/archive/0-3-28.tar.zst",
+        "https://github.com/vekatze/noa/raw/main/archive/0-3-29.tar.zst",
+      ],
+    },
+    ansi {
+      digest "ICXNhf3k-ZzLkVHpynSQKO5zUpGp3CYGy91p5aQf39c",
+      mirror [
+        "https://github.com/vekatze/ansi-terminal/raw/main/archive/0-4-22.tar.zst",
       ],
     },
   },
