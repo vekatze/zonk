@@ -2,26 +2,29 @@
   target {
     test {
       main "test.nt",
+      build-option [
+        "-fsanitize=address",
+      ],
     },
   },
   dependency {
     core {
-      digest "dCgsuKr4LkLpOi-oAO4RVoeWEI21htuBYXrIpcoauvc",
+      digest "D2GAOKIzIcXb0dBdev6RHCZMzhzfhu6LCQpCqfr5ItQ",
       mirror [
-        "https://github.com/vekatze/neut-core/raw/main/archive/0-50-33.tar.zst",
+        "https://github.com/vekatze/neut-core/raw/main/archive/0-50-35.tar.zst",
       ],
       enable-preset true,
     },
     noa {
-      digest "CuISCHHlQEPvZacs-Sn2qx-bVWi0xYXF2ujE6MkIygQ",
+      digest "Ts4UIv6x4FpfLcUXcILPEn5pmWe7c4weGYOMsB7s_VQ",
       mirror [
-        "https://github.com/vekatze/noa/raw/main/archive/0-3-29.tar.zst",
+        "https://github.com/vekatze/noa/raw/main/archive/0-3-30.tar.zst",
       ],
     },
     ansi {
-      digest "ICXNhf3k-ZzLkVHpynSQKO5zUpGp3CYGy91p5aQf39c",
+      digest "nbxXHnLIGQ2E7ZcmXA-990yupK58vXRA8AOb0yiTvRA",
       mirror [
-        "https://github.com/vekatze/ansi-terminal/raw/main/archive/0-4-22.tar.zst",
+        "https://github.com/vekatze/ansi-terminal/raw/main/archive/0-4-23.tar.zst",
       ],
     },
   },
