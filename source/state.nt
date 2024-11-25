@@ -1,5 +1,5 @@
 import {
-  core.cell {cell},
+  core.cell {new-cell},
   this.point {Point, point},
 }
 

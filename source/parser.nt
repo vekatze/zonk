@@ -1,5 +1,5 @@
 import {
-  core.cell {cell, mutate},
+  core.cell {mutate},
   core.int.show {show-int},
   core.pointer {shift},
   core.rune {load-rune},
