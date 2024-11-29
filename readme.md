@@ -75,7 +75,7 @@ inline look-ahead<a>(p: parser(a)): parser(a)
 define fail<a>(expected: list(tag)): parser(a)
 
 // `optional(p)` is the same as `p` if `p` succeeds.
-// `optional(p)` suppresses the error of `p` and results in none() if `p` fails.
+// `optional(p)` suppresses the error of `p` and results in none if `p` fails.
 inline optional<a>(p: parser(a)): parser(?a)
 
 // Executes `p1`. If it succeeds, `branch(p1, p2)` returns the result of `p1`.

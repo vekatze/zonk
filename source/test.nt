@@ -114,7 +114,7 @@ define main(): unit {
   // ...
 }
 
-constant sample-parser: parser(unit) {
+inline sample-parser: parser(unit) {
   // construct a parser
   with zonk {
     // accepts: foo

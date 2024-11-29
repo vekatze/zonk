@@ -7,7 +7,7 @@ import {
   this.state {State, state},
 }
 
-constant _newline: rune {
+inline _newline: rune {
   `\n`
 }
 

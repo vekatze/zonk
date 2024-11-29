@@ -96,7 +96,7 @@ define fail<a>(expected: list(tag)): parser(a) {
   })
 }
 
-constant end-of-input: parser(unit) {
+inline end-of-input: parser(unit) {
   _Parser(function (st-ref: &cell(state)) {
     tie State of {stream} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
@@ -142,7 +142,7 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
   })
 }
 
-constant any-rune: parser(rune) {
+inline any-rune: parser(rune) {
   satisfy(function (_) {
     True
   })
@@ -247,7 +247,7 @@ inline drop-while(!p: (rune) -> bool): parser(unit) {
   })
 }
 
-constant ascii-space: parser(unit) {
+inline ascii-space: parser(unit) {
   drop-while(
     function (r) {
       if eq-rune(r, ` `) {

@@ -218,7 +218,7 @@ define read-float-vector(size: int): parser(vector(float)) {
   }
 }
 
-constant sample-parser: parser(unit) {
+inline sample-parser: parser(unit) {
   with zonk {
     bind v1 = read-int() in
     bind v2 = read-int() in

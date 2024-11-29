@@ -9,7 +9,7 @@ data _stash {
   )
 }
 
-constant _empty-stash: _stash {
+inline _empty-stash: _stash {
   _Stash of {
     expected = {
       function () {

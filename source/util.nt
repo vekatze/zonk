@@ -6,13 +6,13 @@ import {
 
 define _to-option<a, b>(e: either(a, b)): ?b {
   catch _ = e in
-  none()
+  none
 }
 
 inline _lift-meta<a>(f: (a) -> meta a, x: ?a): meta ?a {
   match x {
   | Left(_) =>
-    box {none()}
+    box {none}
   | Right(v) =>
     box {
       Right(
