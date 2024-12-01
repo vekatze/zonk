@@ -37,13 +37,13 @@ define report(e: error): text
 
 ```neut
 // Succeeds only at the end of the input.
-constant end-of-input: parser(unit)
+inline end-of-input: parser(unit)
 
 // Succeeds only when the head rune of the remaining stream satisfies `p`.
 inline satisfy(p: (rune) -> bool): parser(rune)
 
 // Reads any single rune from the remaining stream.
-constant any-rune: parser(rune)
+inline any-rune: parser(rune)
 
 // Succeeds only when the head of the remaining stream is equal to `t`.
 inline chunk(t: &text): parser(unit)
@@ -55,7 +55,7 @@ inline take-while(!p: (rune) -> bool): parser(text)
 inline drop-while(!p: (rune) -> bool): parser(unit)
 
 // Skips ascii spaces.
-constant ascii-space: parser(unit)
+inline ascii-space: parser(unit)
 
 // Executes the parser `p`, overriding the (possible) error message with `l`.
 inline label<a>(l: &text, p: parser(a)): parser(a)
@@ -158,7 +158,7 @@ inline get-point(): parser(point)
 Executing `zen` in the following example should output `pass`:
 
 ```neut
-constant sample-parser: parser(unit) {
+inline sample-parser: parser(unit) {
   // construct a parser
   with zonk {
     // accepts: foo
