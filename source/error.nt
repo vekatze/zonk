@@ -6,7 +6,7 @@ import {
 }
 
 data error {
-| Error(
+| Parse-Error(
     found: text,
     expected: list(tag),
     error-location: point,
@@ -14,7 +14,7 @@ data error {
 }
 
 define report(e: error): text {
-  let Error of {found, expected, error-location} = e in
+  let Parse-Error of {found, expected, error-location} = e in
   let error-location' = show-point(error-location) in
   let b on expected = is-empty(expected) in
   if b {

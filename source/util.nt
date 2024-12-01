@@ -1,21 +1,17 @@
 import {
+  core.except {to-option},
   core.file.descriptor {stdin},
   this.parser {parser, run},
   this.state {new-state},
 }
 
-define _to-option<a, b>(e: either(a, b)): ?b {
-  catch _ = e in
-  none
-}
-
 inline _lift-meta<a>(f: (a) -> meta a, x: ?a): meta ?a {
   match x {
-  | Left(_) =>
+  | Error(_) =>
     box {none}
-  | Right(v) =>
+  | OK(v) =>
     box {
-      Right(
+      OK(
         letbox tmp = f(v) in
         tmp,
       )
@@ -24,9 +20,9 @@ inline _lift-meta<a>(f: (a) -> meta a, x: ?a): meta ?a {
 }
 
 define read-stdin<a>(p: parser(a), buffer-size: int, nes: (a) -> meta a): ?a {
-  try content = _to-option(core.text.io.read(stdin, buffer-size)) in
+  try content = to-option(core.text.io.read(stdin, buffer-size)) in
   let input-text = new-state(content) in
-  letbox-T input-or-none on input-text = _lift-meta(nes, _to-option(run(p, input-text))) in
+  letbox-T input-or-none on input-text = _lift-meta(nes, to-option(run(p, input-text))) in
   let _ = input-text in
   input-or-none
 }

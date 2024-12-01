@@ -81,9 +81,9 @@ inline recognize(r: regex, input: text): bool {
   let base = new-state(input) in
   let result on base =
     match run(p, base) {
-    | Left(_) =>
+    | Error(_) =>
       False
-    | Right(_) =>
+    | OK(_) =>
       True
     }
   in

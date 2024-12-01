@@ -27,7 +27,7 @@ inline return<a>(x: a): parser(a)
 define new-state(input: text): cell(state)
 
 // Executes parser, setting `st` as the initial input stream.
-inline run<a>(p: parser(a), st: &cell(state)): either(error, a)
+inline run<a>(p: parser(a), st: &cell(state)): except(error, a)
 
 // Converts an error into a human-readable text.
 define report(e: error): text

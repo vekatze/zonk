@@ -20,14 +20,14 @@ define _try-parse(p: parser(unit)): unit {
     let result = _run(p, st) in
     tie State of {stream, cursor = Point of {row, column}} = _read(st) in
     match result {
-    | Right(_) =>
+    | OK(_) =>
       print("remaining text: ");
       print(stream);
       print("\n");
       printf("0-indexed cursor point: ({}, {})\n", [show-int(*row), show-int(*column)]);
       let _ = st in
       print("pass!\n")
-    | Left(e) =>
+    | Error(e) =>
       let _ = e in
       Unit
     }
