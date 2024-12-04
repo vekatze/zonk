@@ -1,5 +1,5 @@
 import {
-  core.except {to-option},
+  core.either {to-option},
   core.file.descriptor {stdin},
   this.parser {parser, run},
   this.state {new-state},
@@ -7,11 +7,11 @@ import {
 
 inline _lift-meta<a>(f: (a) -> meta a, x: ?a): meta ?a {
   match x {
-  | Error(_) =>
+  | Left(_) =>
     box {none}
-  | OK(v) =>
+  | Right(v) =>
     box {
-      OK(
+      Right(
         letbox tmp = f(v) in
         tmp,
       )

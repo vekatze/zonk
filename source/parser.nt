@@ -20,10 +20,10 @@ import {
 }
 
 data parser(a) {
-| _Parser((input: &cell(state)) -> except(_stash, a))
+| _Parser((input: &cell(state)) -> either(_stash, a))
 }
 
-inline _unwrap<a>(p: parser(a)): (input: &cell(state)) -> except(_stash, a) {
+inline _unwrap<a>(p: parser(a)): (input: &cell(state)) -> either(_stash, a) {
   let _Parser(f) = p in
   f
 }
@@ -37,13 +37,13 @@ inline zonk<a, b>(p: parser(a), k: (a) -> parser(b)): parser(b) {
 
 inline return<a>(x: a): parser(a) {
   _Parser(function (_: &cell(state)) {
-    OK(x)
+    Right(x)
   })
 }
 
 define report-unexpected-input<a>(expected-item-label: &text): parser(a) {
   _Parser(function (_: &cell(state)) {
-    Error(_Stash(function () {
+    Left(_Stash(function () {
       [Label(expected-item-label)]
     }))
   })
@@ -51,26 +51,26 @@ define report-unexpected-input<a>(expected-item-label: &text): parser(a) {
 
 inline _get-state(): parser(&cell(state)) {
   _Parser(function (st-ref: &cell(state)) {
-    OK(st-ref)
+    Right(st-ref)
   })
 }
 
 inline get-point(): parser(point) {
   _Parser(function (st-ref: &cell(state)) {
     tie State of {cursor} = _read(st-ref) in
-    OK(*cursor)
+    Right(*cursor)
   })
 }
 
-inline run<a>(p: parser(a), st: &cell(state)): except(error, a) {
+inline run<a>(p: parser(a), st: &cell(state)): either(error, a) {
   let parse-result = _unwrap(p)(st) in
   tie State of {stream, cursor, gap-spot} = _read(st) in
   match parse-result {
-  | OK(v) =>
-    OK(v)
-  | Error(e) =>
+  | Right(v) =>
+    Right(v)
+  | Left(e) =>
     let _Stash of {expected} = e in
-    Error(
+    Left(
       Parse-Error of {
         found = show-text(take-N(stream, *gap-spot)),
         expected = expected(),
@@ -80,13 +80,13 @@ inline run<a>(p: parser(a), st: &cell(state)): except(error, a) {
   }
 }
 
-inline _run<a>(p: parser(a), st: &cell(state)): except(_stash, a) {
+inline _run<a>(p: parser(a), st: &cell(state)): either(_stash, a) {
   _unwrap(p)(st)
 }
 
 define fail<a>(expected: list(tag)): parser(a) {
   _Parser(function (_: &cell(state)) {
-    Error(_Stash of {
+    Left(_Stash of {
       expected = {
         function () {
           expected
@@ -101,10 +101,10 @@ inline end-of-input: parser(unit) {
     tie State of {stream} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
     if eq-int(len, 0) {
-      OK(Unit)
+      Right(Unit)
     } else {
       _set-gap-spot(st-ref, 1);
-      Error(_Stash of {
+      Left(_Stash of {
         expected = {
           function () {
             [Label("end of input")]
@@ -120,17 +120,17 @@ inline satisfy(p: (rune) -> bool): parser(rune) {
     tie State of {stream, cursor = Point of {row, column}} = _read(st-ref) in
     let len = core.text.text-byte-length(stream) in
     if eq-int(len, 0) {
-      Error(_empty-stash)
+      Left(_empty-stash)
     } else {
       let r = _get-rune(stream, 0) in
       if p(r) {
         let new-point = _get-new-point(r, *row, *column) in
         let offset = core.rune.size(r) in
         _proceed(st-ref, offset, new-point);
-        OK(r)
+        Right(r)
       } else {
         _set-gap-spot(st-ref, 1);
-        Error(_Stash of {
+        Left(_Stash of {
           expected = {
             function () {
               []
@@ -154,15 +154,15 @@ inline chunk(t: &text): parser(unit) {
     let len1 = core.text.text-byte-length(stream) in
     let len2 = core.text.text-byte-length(t) in
     if lt-int(len1, len2) {
-      Error(_empty-stash)
+      Left(_empty-stash)
     } else {
       let ptr1 = _get-content-pointer(stream) in
       let ptr2 = _get-content-pointer(t) in
       let f =
-        define consumer(index: int, char-len: int, row: int, column: int): except(_stash, unit) {
+        define consumer(index: int, char-len: int, row: int, column: int): either(_stash, unit) {
           if eq-int(index, len2) {
             _proceed(st-ref, len2, Point of {row, column});
-            OK(Unit)
+            Right(Unit)
           } else {
             let rune1 = load-rune(shift(ptr1, index)) in
             let rune2 = load-rune(shift(ptr2, index)) in
@@ -172,7 +172,7 @@ inline chunk(t: &text): parser(unit) {
               consumer(add-int(index, offset), add-int(char-len, 1), row, column)
             } else {
               _set-gap-spot(st-ref, add-int(char-len, 1));
-              Error(_Stash of {
+              Left(_Stash of {
                 expected = {
                   function () {
                     [Raw-Text(t)]
@@ -214,7 +214,7 @@ inline take-while(!p: (rune) -> bool): parser(text) {
         }
       }
     in
-    OK(f(0, *row, *column))
+    Right(f(0, *row, *column))
   })
 }
 
@@ -243,7 +243,7 @@ inline drop-while(!p: (rune) -> bool): parser(unit) {
       }
     in
     f(0, *row, *column);
-    OK(Unit)
+    Right(Unit)
   })
 }
 
@@ -266,19 +266,19 @@ inline label<a>(l: &text, p: parser(a)): parser(a) {
     tie State of {stream} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match _unwrap(p)(st-ref) {
-    | OK(result) =>
-      OK(result)
-    | Error(e) =>
+    | Right(result) =>
+      Right(result)
+    | Left(e) =>
       let new-offset = _load-text-offset(stream) in
       if eq-int(base-offset, new-offset) {
-        Error(_set-expected(
+        Left(_set-expected(
           function () {
             [Label(l)]
           },
           e,
         ))
       } else {
-        Error(e)
+        Left(e)
       }
     }
   })
@@ -287,10 +287,10 @@ inline label<a>(l: &text, p: parser(a)): parser(a) {
 inline hidden<a>(p: parser(a)): parser(a) {
   _Parser(function (st-ref: &cell(state)) {
     match _unwrap(p)(st-ref) {
-    | OK(result) =>
-      OK(result)
-    | Error(e) =>
-      Error(_set-expected(
+    | Right(result) =>
+      Right(result)
+    | Left(e) =>
+      Left(_set-expected(
         function () {
           []
         },
@@ -305,12 +305,12 @@ inline attempt<a>(p: parser(a)): parser(a) {
     tie State of {stream, cursor = Point of {row, column}} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match _unwrap(p)(st-ref) {
-    | OK(result) =>
-      OK(result)
-    | Error(e) =>
+    | Right(result) =>
+      Right(result)
+    | Left(e) =>
       tie State of {gap-spot} = _read(st-ref) in
       mutate(st-ref, _rewind-state(base-offset, *row, *column, *gap-spot));
-      Error(e)
+      Left(e)
     }
   })
 }
@@ -320,11 +320,11 @@ inline look-ahead<a>(p: parser(a)): parser(a) {
     tie State of {stream, cursor = Point of {row, column}, gap-spot} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match _unwrap(p)(st-ref) {
-    | OK(result) =>
+    | Right(result) =>
       mutate(st-ref, _rewind-state(base-offset, *row, *column, *gap-spot));
-      OK(result)
-    | Error(e) =>
-      Error(e)
+      Right(result)
+    | Left(e) =>
+      Left(e)
     }
   })
 }
@@ -332,10 +332,10 @@ inline look-ahead<a>(p: parser(a)): parser(a) {
 inline optional<a>(p: parser(a)): parser(?a) {
   _Parser(function (st-ref: &cell(state)) {
     match _unwrap(p)(st-ref) {
-    | OK(result) =>
-      OK(OK(result))
-    | Error(_) =>
-      OK(Error(Unit))
+    | Right(result) =>
+      Right(Right(result))
+    | Left(_) =>
+      Right(Left(Unit))
     }
   })
 }
@@ -343,9 +343,9 @@ inline optional<a>(p: parser(a)): parser(?a) {
 inline branch<a>(p1: parser(a), p2: parser(a)): parser(a) {
   _Parser(function (st-ref: &cell(state)) {
     match _unwrap(p1)(st-ref) {
-    | OK(result) =>
-      OK(result)
-    | Error(_) =>
+    | Right(result) =>
+      Right(result)
+    | Left(_) =>
       _unwrap(p2)(st-ref)
     }
   })
@@ -356,16 +356,16 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
     tie State of {stream, cursor = Point of {row, column}, gap-spot} = _read(st-ref) in
     let base-offset = _load-text-offset(stream) in
     match _unwrap(p)(st-ref) {
-    | OK(_) =>
+    | Right(_) =>
       mutate(st-ref, _rewind-state(base-offset, *row, *column, *gap-spot));
       let head-char = take-N(stream, 1) in
       let b on head-char = is-empty(head-char) in
       let _ = head-char in
       if b {
-        Error(_empty-stash)
+        Left(_empty-stash)
       } else {
         _set-gap-spot(st-ref, 1);
-        Error(_Stash of {
+        Left(_Stash of {
           expected = {
             function () {
               []
@@ -373,9 +373,9 @@ inline not-followed-by<a>(p: parser(a)): parser(unit) {
           },
         })
       }
-    | Error(_) =>
+    | Left(_) =>
       mutate(st-ref, _rewind-state(base-offset, *row, *column, *gap-spot));
-      OK(Unit)
+      Right(Unit)
     }
   })
 }
@@ -392,28 +392,28 @@ define _choice<a>(
     match candidates {
     | Nil =>
       match _unwrap(fallback)(st-ref) {
-      | OK(v) =>
+      | Right(v) =>
         _set-gap-spot(st-ref, default-gap-spot);
-        OK(v)
-      | Error(e) =>
+        Right(v)
+      | Left(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
-          Error(_join-stash(_stash-cand, e))
+          Left(_join-stash(_stash-cand, e))
         } else {
-          Error(e)
+          Left(e)
         }
       }
     | Cons(cand, rest) =>
       match _unwrap(cand)(st-ref) {
-      | OK(v) =>
+      | Right(v) =>
         _set-gap-spot(st-ref, default-gap-spot);
-        OK(v)
-      | Error(e) =>
+        Right(v)
+      | Left(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
           _unwrap(_choice(rest, fallback, _join-stash(_stash-cand, e), default-gap-spot))(st-ref)
         } else {
-          Error(e)
+          Left(e)
         }
       }
     }
@@ -429,14 +429,14 @@ inline choice<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a) {
       tie State of {stream, gap-spot} = _read(st-ref) in
       let old-offset = _load-text-offset(stream) in
       match _unwrap(p)(st-ref) {
-      | OK(v) =>
-        OK(v)
-      | Error(e) =>
+      | Right(v) =>
+        Right(v)
+      | Left(e) =>
         let new-offset = _load-text-offset(stream) in
         if eq-int(old-offset, new-offset) {
           _unwrap(_choice(rest, fallback, e, *gap-spot))(st-ref)
         } else {
-          Error(e)
+          Left(e)
         }
       }
     })
@@ -449,12 +449,12 @@ inline many<a>(!p: parser(a)): parser(list(a)) {
       with zonk {
         bind st = _get-state() in
         match _unwrap(!p)(st) {
-        | OK(v) =>
+        | Right(v) =>
           with zonk {
             bind vs = self() in
             return(Cons(v, vs))
           }
-        | Error(_) =>
+        | Left(_) =>
           return([])
         }
       }
@@ -506,14 +506,14 @@ define zen(): unit {
   let result = run(my-parser, st) in
   tie State of {stream, cursor = Point of {row, column}} = _read(st) in
   match result {
-  | OK(_) =>
+  | Right(_) =>
     print("remaining text: ");
     print(stream);
     print("\n");
     printf("0-indexed cursor point: ({}, {})\n", [show-int(*row), show-int(*column)]);
     let _ = st in
     print("pass!\n")
-  | Error(e) =>
+  | Left(e) =>
     printf("{}\n", [report(e)])
   }
 }

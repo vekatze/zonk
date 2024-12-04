@@ -67,9 +67,9 @@ inline read-int(): parser(int) {
     bind _ = skip-space() in
     let none-or-int on num-text = parse-int(num-text) in
     match none-or-int {
-    | Error(_) =>
+    | Left(_) =>
       report-unexpected-input("integer")
-    | OK(v) =>
+    | Right(v) =>
       return(v)
     }
   }
@@ -81,9 +81,9 @@ inline read-float(): parser(float) {
     bind _ = skip-space() in
     let none-or-float on num-text = parse-float(num-text) in
     match none-or-float {
-    | Error(_) =>
+    | Left(_) =>
       report-unexpected-input("float")
-    | OK(v) =>
+    | Right(v) =>
       return(v)
     }
   }
@@ -237,9 +237,9 @@ define zen(): unit {
   let result on some-input =
     // run the parser
     match run(sample-parser, some-input) {
-    | OK(_) =>
+    | Right(_) =>
       print("pass\n")
-    | Error(e) =>
+    | Left(e) =>
       printf("fail: {}\n", [report(e)])
     }
   in

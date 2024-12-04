@@ -20,13 +20,13 @@ define main(): unit {
         let p = chunk(t1) in
         let parse-result = run(p, st) in
         match parse-result {
-        | OK(_) =>
+        | Right(_) =>
           let result =
             tie State of {stream} = _read(st) in
             eq-text(t2, stream)
           in
           result
-        | Error(_) =>
+        | Left(_) =>
           False
         }
       in
@@ -51,9 +51,9 @@ define main(): unit {
           }
         in
         match run(p, st) {
-        | OK(_) =>
+        | Right(_) =>
           True
-        | Error(_) =>
+        | Left(_) =>
           False
         }
       in
@@ -77,9 +77,9 @@ define main(): unit {
           }
         in
         match run(p, st) {
-        | OK(_) =>
+        | Right(_) =>
           True
-        | Error(_) =>
+        | Left(_) =>
           False
         }
       in
@@ -100,9 +100,9 @@ define main(): unit {
         let st = new-state(t) in
         let result on st =
           match run(end-of-input, st) {
-          | OK(_) =>
+          | Right(_) =>
             False
-          | Error(_) =>
+          | Left(_) =>
             True
           }
         in
@@ -137,9 +137,9 @@ define zen(): unit {
   let result on some-input =
     // run the parser
     match run(sample-parser, some-input) {
-    | OK(_) =>
+    | Right(_) =>
       print("pass\n")
-    | Error(_) =>
+    | Left(_) =>
       print("fail\n")
     }
   in
