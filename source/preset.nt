@@ -66,6 +66,7 @@ inline read-int(): parser(int) {
     bind num-text = take-while(_is-integer-rune) in
     bind _ = skip-space() in
     let none-or-int on num-text = parse-int(num-text) in
+    let _ = num-text in
     match none-or-int {
     | Left(_) =>
       report-unexpected-input("integer")
@@ -80,6 +81,7 @@ inline read-float(): parser(float) {
     bind num-text = take-while(_is-float-rune) in
     bind _ = skip-space() in
     let none-or-float on num-text = parse-float(num-text) in
+    let _ = num-text in
     match none-or-float {
     | Left(_) =>
       report-unexpected-input("float")
