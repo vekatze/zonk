@@ -1,0 +1,11 @@
+import {
+  this.point {Point},
+  this.rule.zonk-kit {_Zonk-Kit, zonk-kit},
+}
+
+define make-zonk-kit(input-stream: text): zonk-kit {
+  let cursor-ref = new-cell(0) in
+  let cursor-point-ref = new-cell(Point(0, 0)) in
+  let gap-spot-ref = new-cell(0) in
+  _Zonk-Kit of {input-stream, cursor-ref, cursor-point-ref, gap-spot-ref}
+}

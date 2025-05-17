@@ -1,0 +1,12 @@
+import {
+  this.point {point},
+}
+
+data zonk-kit {
+| _Zonk-Kit(
+    input-stream: text,
+    cursor-ref: cell(int),
+    cursor-point-ref: cell(point),
+    gap-spot-ref: cell(int),
+  )
+}

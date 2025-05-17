@@ -1,0 +1,562 @@
+import {
+  core.cell {mutate},
+  core.int {max-int},
+  core.pointer {shift},
+  core.rune {load-rune},
+  core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N},
+  core.text.show {show-text},
+  this.error {Parse-Error, report},
+  this.move.make-zonk-kit {make-zonk-kit},
+  this.point {Point, point},
+  this.rule.zonk-kit {_Zonk-Kit, zonk-kit},
+  this.stash {
+    _Stash,
+    _empty-stash,
+    _join-stash,
+    _set-expected,
+    _stash,
+  },
+  this.tag {Label, Raw-Text, tag},
+}
+
+inline app(a) {
+  either(_stash, a)
+}
+
+inline zonk(a) {
+  (&zonk-kit) -> either(_stash, a)
+}
+
+inline _get-offset(r: rune): point {
+  if eq-rune(r, `\n`) {
+    Point of {row = 1, column = 0}
+  } else {
+    Point of {row = 0, column = 1}
+  }
+}
+
+inline _set-gap-spot(k: &zonk-kit, new-gap-spot: int): unit {
+  tie _Zonk-Kit of {gap-spot-ref} = k in
+  mutate(gap-spot-ref, function (gap-spot) {
+    max-int(gap-spot, new-gap-spot)
+  })
+}
+
+inline _proceed(k: &zonk-kit, byte-offset: int, line-offset: int, column-offset: int): unit {
+  tie _Zonk-Kit of {cursor-ref, cursor-point-ref} = k in
+  mutate(cursor-ref, function (cursor) {
+    add-int(cursor, byte-offset)
+  });
+  mutate(cursor-point-ref, function (old-point) {
+    let Point(line, column) = old-point in
+    Point(add-int(line, line-offset), add-int(column, column-offset))
+  })
+}
+
+inline _proceed-by-rune(k: &zonk-kit, r: rune): unit {
+  if eq-rune(r, `\n`) {
+    _proceed of {k, byte-offset = 1, line-offset = 1, column-offset = 0}
+  } else {
+    _proceed of {k, byte-offset = 1, line-offset = 0, column-offset = 1}
+  }
+}
+
+data _state-pack {
+| _State-Pack(
+    cursor: int,
+    cursor-point: point,
+    gap-spot: int,
+  )
+}
+
+inline _export-state(k: &zonk-kit): _state-pack {
+  tie _Zonk-Kit of {cursor-ref, cursor-point-ref, gap-spot-ref} = k in
+  let cursor = core.cell.clone(cursor-ref) in
+  let cursor-point = core.cell.clone(cursor-point-ref) in
+  let gap-spot = core.cell.clone(gap-spot-ref) in
+  _State-Pack of {cursor, cursor-point, gap-spot}
+}
+
+inline _import-state(k: &zonk-kit, s: _state-pack): unit {
+  tie _Zonk-Kit of {cursor-ref, cursor-point-ref, gap-spot-ref} = k in
+  let _State-Pack of {cursor, cursor-point, gap-spot} = s in
+  mutate(cursor-ref, function (_) {
+    cursor
+  });
+  mutate(cursor-point-ref, function (_) {
+    cursor-point
+  });
+  mutate(gap-spot-ref, function (_) {
+    gap-spot
+  })
+}
+
+define report-unexpected-input<a>(expected-item-label: &text): app(a) {
+  Left(_Stash(function () {
+    [Label(expected-item-label)]
+  }))
+}
+
+define get-point(k: &zonk-kit): point {
+  tie _Zonk-Kit of {cursor-point-ref} = k in
+  core.cell.clone(cursor-point-ref)
+}
+
+define fail<a>(expected: list(tag)): app(a) {
+  Left(_Stash of {
+    expected = {
+      function () {
+        expected
+      }
+    },
+  })
+}
+
+define end-of-input: zonk(unit) {
+  function (k) {
+    tie _Zonk-Kit of {input-stream} = k in
+    let len = core.text.text-byte-length(input-stream) in
+    if eq-int(len, 0) {
+      Right(Unit)
+    } else {
+      _set-gap-spot(k, 1);
+      Left(_Stash of {
+        expected = {
+          function () {
+            [Label("end of input")]
+          }
+        },
+      })
+    }
+  }
+}
+
+inline satisfy(p: (rune) -> bool): zonk(rune) {
+  function (k) {
+    tie _Zonk-Kit of {input-stream} = k in
+    let len = core.text.text-byte-length(input-stream) in
+    if eq-int(len, 0) {
+      Left(_empty-stash)
+    } else {
+      let r = _get-rune(input-stream, 0) in
+      if p(r) {
+        _proceed-by-rune(k, r);
+        Right(r)
+      } else {
+        _set-gap-spot(k, 1);
+        Left(_Stash of {
+          expected = {
+            function () {
+              []
+            }
+          },
+        })
+      }
+    }
+  }
+}
+
+inline any-rune: zonk(rune) {
+  satisfy(function (_) {
+    True
+  })
+}
+
+define _chunk-consumer(
+  k: &zonk-kit,
+  chunk-text: &text,
+  ptr1: pointer,
+  ptr2: pointer,
+  len2: int,
+  index: int,
+  char-len: int,
+  line-offset: int,
+  column-offset: int,
+): either(_stash, unit) {
+  if eq-int(index, len2) {
+    _proceed(k, len2, line-offset, column-offset);
+    Right(Unit)
+  } else {
+    let rune1 = load-rune(shift(ptr1, index)) in
+    let rune2 = load-rune(shift(ptr2, index)) in
+    let offset = core.rune.size(rune1) in
+    if eq-rune(rune1, rune2) {
+      let Point(l, c) = _get-offset(rune1) in
+      _chunk-consumer(
+        k,
+        chunk-text,
+        ptr1,
+        ptr2,
+        len2,
+        add-int(index, offset),
+        add-int(char-len, 1),
+        add-int(line-offset, l),
+        add-int(column-offset, c),
+      )
+    } else {
+      _set-gap-spot(k, add-int(char-len, 1));
+      Left(_Stash of {
+        expected = {
+          function () {
+            [Raw-Text(chunk-text)]
+          }
+        },
+      })
+    }
+  }
+}
+
+inline chunk(t: &text): zonk(unit) {
+  function (k) {
+    tie _Zonk-Kit of {input-stream, cursor-ref} = k in
+    let cursor = core.cell.clone(cursor-ref) in
+    let len1 = core.text.text-byte-length(input-stream) in
+    let len2 = core.text.text-byte-length(t) in
+    if lt-int(len1, len2) {
+      Left(_empty-stash)
+    } else {
+      let ptr1 = shift(_get-content-pointer(input-stream), cursor) in
+      let ptr2 = _get-content-pointer(t) in
+      _chunk-consumer(k, t, ptr1, ptr2, len2, 0, 0, 0, 0)
+    }
+  }
+}
+
+inline take-while(!p: (rune) -> bool): zonk(text) {
+  function (k) {
+    tie _Zonk-Kit of {input-stream} = k in
+    let len = core.text.text-byte-length(input-stream) in
+    let ptr1 = _get-content-pointer(input-stream) in
+    let f =
+      // todo: lift consumer to the top-level
+      define consumer(cursor-offset: int, line-offset: int, column-offset: int): text {
+        let is-tail = ge-int(cursor-offset, len) in
+        if is-tail {
+          let result = _take-N(input-stream, cursor-offset) in
+          _proceed(k, cursor-offset, line-offset, column-offset);
+          result
+        } else {
+          let r = load-rune(shift(ptr1, cursor-offset)) in
+          if !p(r) {
+            let offset = core.rune.size(r) in
+            let Point(l, c) = _get-offset(r) in
+            consumer(add-int(cursor-offset, offset), add-int(line-offset, l), add-int(column-offset, c))
+          } else {
+            let result = _take-N(input-stream, cursor-offset) in
+            _proceed(k, cursor-offset, line-offset, column-offset);
+            result
+          }
+        }
+      }
+    in
+    Right(f(0, 0, 0))
+  }
+}
+
+inline drop-while(!p: (rune) -> bool): zonk(unit) {
+  function (k) {
+    tie _Zonk-Kit of {input-stream} = k in
+    let len = core.text.text-byte-length(input-stream) in
+    let ptr1 = _get-content-pointer(input-stream) in
+    let f =
+      define consumer(cursor-offset: int, line-offset: int, column-offset: int): unit {
+        let is-tail = ge-int(cursor-offset, len) in
+        if is-tail {
+          _proceed(k, cursor-offset, line-offset, column-offset);
+          Unit
+        } else {
+          let r = load-rune(shift(ptr1, cursor-offset)) in
+          if !p(r) {
+            let offset = core.rune.size(r) in
+            let Point(l, c) = _get-offset(r) in
+            consumer(add-int(cursor-offset, offset), add-int(line-offset, l), add-int(column-offset, c))
+          } else {
+            _proceed(k, cursor-offset, line-offset, column-offset)
+          }
+        }
+      }
+    in
+    Right(f(0, 0, 0))
+  }
+}
+
+inline ascii-space: zonk(unit) {
+  drop-while(
+    function (r) {
+      if eq-rune(r, ` `) {
+        True
+      } else-if ule-int32(sub-int32(magic cast(rune, int32, r), 0x9), 0x4) {
+        True
+      } else {
+        False
+      }
+    },
+  )
+}
+
+inline label<a>(l: &text, p: zonk(a)): zonk(a) {
+  function (k) {
+    tie _Zonk-Kit of {cursor-ref} = k in
+    let orig-cursor = core.cell.clone(cursor-ref) in
+    match p(k) {
+    | Right(result) =>
+      Right(result)
+    | Left(e) =>
+      let new-cursor = core.cell.clone(cursor-ref) in
+      if eq-int(orig-cursor, new-cursor) {
+        Left(_set-expected(
+          function () {
+            [Label(l)]
+          },
+          e,
+        ))
+      } else {
+        Left(e)
+      }
+    }
+  }
+}
+
+inline hidden<a>(p: zonk(a)): zonk(a) {
+  function (k) {
+    match p(k) {
+    | Right(result) =>
+      Right(result)
+    | Left(e) =>
+      Left(_set-expected(
+        function () {
+          []
+        },
+        e,
+      ))
+    }
+  }
+}
+
+inline attempt<a>(p: zonk(a)): zonk(a) {
+  function (k) {
+    let state-pack = _export-state(k) in
+    match p(k) {
+    | Right(result) =>
+      Right(result)
+    | Left(e) =>
+      _import-state(k, state-pack);
+      Left(e)
+    }
+  }
+}
+
+inline look-ahead<a>(p: zonk(a)): zonk(a) {
+  function (k) {
+    let state-pack = _export-state(k) in
+    match p(k) {
+    | Right(result) =>
+      _import-state(k, state-pack);
+      Right(result)
+    | Left(e) =>
+      Left(e)
+    }
+  }
+}
+
+inline optional<a>(p: zonk(a)): zonk(?a) {
+  function (k) {
+    match p(k) {
+    | Right(result) =>
+      Right(Right(result))
+    | Left(_) =>
+      Right(Left(Unit))
+    }
+  }
+}
+
+inline branch<a>(p1: zonk(a), p2: zonk(a)): zonk(a) {
+  function (k) {
+    match p1(k) {
+    | Right(result) =>
+      Right(result)
+    | Left(_) =>
+      p2(k)
+    }
+  }
+}
+
+inline not-followed-by<a>(p: zonk(a)): zonk(unit) {
+  function (k) {
+    tie _Zonk-Kit of {input-stream} = k in
+    let state-pack = _export-state(k) in
+    let v = p(k) in
+    _import-state(k, state-pack);
+    match v {
+    | Right(_) =>
+      let head-char = take-N(input-stream, 1) in
+      let b on head-char = is-empty(head-char) in
+      let _ = head-char in
+      if b {
+        Left(_empty-stash)
+      } else {
+        _set-gap-spot(k, 1);
+        Left(_Stash of {
+          expected = {
+            function () {
+              []
+            }
+          },
+        })
+      }
+    | Left(_) =>
+      Right(Unit)
+    }
+  }
+}
+
+define _choice<a>(
+  k: &zonk-kit,
+  candidates: list(zonk(a)),
+  fallback: zonk(a),
+  stash-cand: _stash,
+  default-gap-spot: int,
+): either(_stash, a) {
+  tie _Zonk-Kit of {cursor-ref} = k in
+  let old-offset = core.cell.clone(cursor-ref) in
+  match candidates {
+  | Nil =>
+    match fallback(k) {
+    | Right(v) =>
+      _set-gap-spot(k, default-gap-spot);
+      Right(v)
+    | Left(e) =>
+      let new-offset = core.cell.clone(cursor-ref) in
+      if eq-int(old-offset, new-offset) {
+        Left(_join-stash(stash-cand, e))
+      } else {
+        Left(e)
+      }
+    }
+  | Cons(cand, rest) =>
+    match cand(k) {
+    | Right(v) =>
+      _set-gap-spot(k, default-gap-spot);
+      Right(v)
+    | Left(e) =>
+      let new-offset = core.cell.clone(cursor-ref) in
+      if eq-int(old-offset, new-offset) {
+        _choice(k, rest, fallback, _join-stash(stash-cand, e), default-gap-spot)
+      } else {
+        Left(e)
+      }
+    }
+  }
+}
+
+inline choice<a>(candidates: list(zonk(a)), fallback: zonk(a)): zonk(a) {
+  function (k) {
+    match candidates {
+    | Nil =>
+      fallback(k)
+    | Cons(p, rest) =>
+      tie _Zonk-Kit of {cursor-ref, gap-spot-ref} = k in
+      let old-offset = core.cell.clone(cursor-ref) in
+      match p(k) {
+      | Right(v) =>
+        Right(v)
+      | Left(e) =>
+        let new-offset = core.cell.clone(cursor-ref) in
+        if eq-int(old-offset, new-offset) {
+          let gap-spot = core.cell.clone(gap-spot-ref) in
+          _choice(k, rest, fallback, e, gap-spot)
+        } else {
+          Left(e)
+        }
+      }
+    }
+  }
+}
+
+inline many<a>(!p: (&zonk-kit) -> app(a)): zonk(list(a)) {
+  function (k) {
+    let f =
+      define self(): app(list(a)) {
+        match !p(k) {
+        | Right(v) =>
+          try vs = self() in
+          Right(Cons(v, vs))
+        | Left(_) =>
+          Right([])
+        }
+      }
+    in
+    f()
+  }
+}
+
+inline some<a>(!p: zonk(a)): zonk(list(a)) {
+  function (k) {
+    try v = !p(k) in
+    try vs = many(!p)(k) in
+    Right(Cons(v, vs))
+  }
+}
+
+define zen(): unit {
+  pin k = make-zonk-kit(*"gaoeitemtesttnapqabcd\nctああhehoge \n\r  hehehetest") in
+  let my-parser =
+    choice(
+      [
+        function (k) {
+          try _ = chunk("gaoe")(k) in
+          try _ = chunk("item")(k) in
+          Right(Unit)
+        },
+        choice([chunk("k")], label("whatever", function (k) {
+          try _ = chunk("px")(k) in
+          try _ = chunk("kgあ")(k) in
+          Right(Unit)
+        })),
+        chunk("tあい"),
+        label("whatever 2", function (k) {
+          try _ = chunk("pt")(k) in
+          try _ = chunk("あhebc")(k) in
+          Right(Unit)
+        }),
+        chunk("abc"),
+        chunk("{}"),
+        end-of-input,
+      ],
+      chunk("tn"),
+    )
+  in
+  let my-result = my-parser(k) in
+  match my-result {
+  | Left(e) =>
+    tie _Zonk-Kit of {input-stream, cursor-point-ref, gap-spot-ref} = k in
+    let cursor-point = core.cell.clone(cursor-point-ref) in
+    let gap-spot = core.cell.clone(gap-spot-ref) in
+    let _Stash of {expected} = e in
+    let e' =
+      Parse-Error of {
+        found = show-text(take-N(input-stream, gap-spot)),
+        expected = expected(),
+        error-location = cursor-point,
+      }
+    in
+    printf("left: {}\n", [report(e')])
+  | Right(_) =>
+    print("right\n")
+  }
+  // pin st = new-state(*"pqabcd\nctああhehoge \n\r  hehehetest") in
+  // let _ = _unwrap(chunk("abcd\nc"))(st) in
+  // let result = run(my-parser, st) in
+  // tie State of {stream, cursor = Point of {row, column}} = _read(st) in
+  // match result {
+  // | Right(_) =>
+  //   print("remaining text: ");
+  //   print(stream);
+  //   print("\n");
+  //   printf("0-indexed cursor point: ({}, {})\n", [show-int(*row), show-int(*column)]);
+  //   let _ = st in
+  //   print("pass!\n")
+  // | Left(e) =>
+  //   printf("{}\n", [report(e)])
+  // }
+}
