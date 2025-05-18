@@ -8,24 +8,18 @@ import {
   core.magic,
   core.memory {store-float, store-int},
   core.pointer {shift},
-  core.text {take-N},
-  core.text.show {show-text},
   core.vector {_Vector-Info, _get-vector-info, vector},
+  this.move.make-parse-error {make-parse-error},
   this.move.make-zonk-kit {make-zonk-kit},
   this.move.parse {
-    _get-column,
-    _get-gap-spot,
-    _get-line,
     drop-while,
     end-of-input,
     report-unexpected-input,
     take-while,
     zonk,
   },
-  this.rule.error {Parse-Error, report},
-  this.rule.point {Point},
+  this.rule.error {report},
   this.rule.tag {tag},
-  this.rule.zonk-kit {_Zonk-Kit},
 }
 
 define _is-space(r: rune): bool {
@@ -248,18 +242,7 @@ define zen(): unit {
   | Right(_) =>
     print("pass\n")
   | Left(e) =>
-    let expected = [e] in
-    tie _Zonk-Kit of {input-stream} = k in
-    let line = _get-line(k) in
-    let column = _get-column(k) in
-    let gap-spot = _get-gap-spot(k) in
-    let e' =
-      Parse-Error of {
-        found = show-text(take-N(input-stream, gap-spot)),
-        expected,
-        error-location = Point(line, column),
-      }
-    in
+    let e' = make-parse-error(k, e) in
     printf("fail: {}\n", [report(e')])
   }
 }

@@ -1,16 +1,24 @@
 import {
-  core.cell {borrow, mutate},
-  core.magic,
-  core.memory {load-int},
   core.pointer {shift},
   core.rune {load-rune},
-  core.text {_drop-N, _get-content-pointer, _get-rune, _slice-N, is-empty, take-N},
-  core.text.show {show-text},
+  core.text {_get-content-pointer, _get-rune, _slice-N, is-empty, take-N},
+  this.move.make-parse-error {make-parse-error},
   this.move.make-zonk-kit {make-zonk-kit},
-  this.rule.error {Parse-Error, report},
+  this.move.private.state {
+    _export-state,
+    _get-column,
+    _get-cursor,
+    _get-gap-spot,
+    _get-line,
+    _import-state,
+    _proceed,
+    _proceed-by-rune,
+    _set-gap-spot,
+  },
+  this.rule.error {report},
   this.rule.point {Point, point},
   this.rule.tag {Label, Raw-Text, tag},
-  this.rule.zonk-kit {_Position, _Zonk-Kit, position, zonk-kit},
+  this.rule.zonk-kit {_Zonk-Kit, position, zonk-kit},
 }
 
 inline zonk(a) {
@@ -23,84 +31,6 @@ inline _get-offset(r: rune): point {
   } else {
     Point of {row = 0, column = 1}
   }
-}
-
-inline _set-gap-spot(k: &zonk-kit, gap-spot: int): unit {
-  tie _Zonk-Kit of {position-ref} = k in
-  mutate(position-ref, function (position) {
-    let _Position of {cursor, line, column} = position in
-    _Position of {cursor, line, column, gap-spot}
-  })
-}
-
-define _trick-read<a>(ch: &cell(a)): &a {
-  let ch = core.magic.cast(&cell(a), pointer, ch) in
-  let val-base = load-int(ch) in
-  core.magic.cast(int, &a, val-base)
-}
-
-define _get-cursor(k: &zonk-kit): int {
-  tie _Zonk-Kit of {position-ref} = k in
-  let position = _trick-read(position-ref) in
-  tie _Position of {cursor} = position in
-  *cursor
-}
-
-define _get-gap-spot(k: &zonk-kit): int {
-  tie _Zonk-Kit of {position-ref} = k in
-  borrow(position-ref, function (position) {
-    tie _Position of {gap-spot} = position in
-    quote {*gap-spot}
-  })
-}
-
-define _get-line(k: &zonk-kit): int {
-  tie _Zonk-Kit of {position-ref} = k in
-  borrow(position-ref, function (position) {
-    tie _Position of {line} = position in
-    quote {*line}
-  })
-}
-
-define _get-column(k: &zonk-kit): int {
-  tie _Zonk-Kit of {position-ref} = k in
-  borrow(position-ref, function (position) {
-    tie _Position of {column} = position in
-    quote {*column}
-  })
-}
-
-inline _proceed(k: &zonk-kit, byte-offset: int, line-offset: int, column-offset: int): unit {
-  tie _Zonk-Kit of {position-ref} = k in
-  mutate(position-ref, function (position) {
-    let _Position of {cursor, line, column, gap-spot} = position in
-    let cursor = add-int(cursor, byte-offset) in
-    let line = add-int(line, line-offset) in
-    let column = add-int(column, column-offset) in
-    _Position of {cursor, line, column, gap-spot}
-  })
-}
-
-inline _proceed-by-rune(k: &zonk-kit, r: rune): unit {
-  if eq-rune(r, `\n`) {
-    _proceed of {k, byte-offset = 1, line-offset = 1, column-offset = 0}
-  } else {
-    let byte-offset = core.rune.size(r) in
-    _proceed of {k, byte-offset, line-offset = 0, column-offset = 1}
-  }
-}
-
-inline _export-state(k: &zonk-kit): position {
-  tie _Zonk-Kit of {position-ref} = k in
-  core.cell.clone(position-ref)
-}
-
-inline _import-state(k: &zonk-kit, new-position: position): unit {
-  tie _Zonk-Kit of {position-ref} = k in
-  mutate(position-ref, function (old-position) {
-    let _Position of {} = old-position in
-    new-position
-  })
 }
 
 define report-unexpected-input<a>(expected-item-label: &text): either(tag, a) {
@@ -493,20 +423,7 @@ define zen(): unit {
   let my-result = my-parser(k) in
   match my-result {
   | Left(e) =>
-    tie _Zonk-Kit of {input-stream} = k in
-    let cursor = _get-cursor(k) in
-    let line = _get-line(k) in
-    let column = _get-column(k) in
-    let gap-spot = _get-gap-spot(k) in
-    let expected = [e] in
-    pin foo = _drop-N(input-stream, cursor) in
-    let e' =
-      Parse-Error of {
-        expected,
-        found = show-text(take-N(foo, gap-spot)),
-        error-location = Point(line, column),
-      }
-    in
+    let e' = make-parse-error(k, e) in
     printf("left: {}\n", [report(e')])
   | Right(_) =>
     print("right\n")

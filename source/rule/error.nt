@@ -1,6 +1,5 @@
 import {
-  core.list {for-each, is-empty},
-  core.text {format, intercalate},
+  core.text {format},
   this.rule.point {point, show-point},
   this.rule.tag {show-tag, tag},
 }
@@ -8,7 +7,7 @@ import {
 data error {
 | Parse-Error(
     found: text,
-    expected: list(tag),
+    expected: tag,
     error-location: point,
   )
 }
@@ -16,11 +15,5 @@ data error {
 define report(e: error): text {
   let Parse-Error of {found, expected, error-location} = e in
   let error-location' = show-point(error-location) in
-  let b on expected = is-empty(expected) in
-  if b {
-    format("parse error at {}:\nunexpected:\n  {}", [error-location', found])
-  } else {
-    let expected' = intercalate(for-each(expected, show-tag), *", ") in
-    format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [error-location', expected', found])
-  }
+  format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [error-location', show-tag(expected), found])
 }

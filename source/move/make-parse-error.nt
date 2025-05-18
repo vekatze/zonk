@@ -1,0 +1,25 @@
+import {
+  core.text {_drop-N, take-N},
+  core.text.show {show-text},
+  this.move.private.state {_get-column, _get-cursor, _get-gap-spot, _get-line},
+  this.rule.error {Parse-Error, error},
+  this.rule.point {Point},
+  this.rule.tag {tag},
+  this.rule.zonk-kit {_Zonk-Kit, zonk-kit},
+}
+
+define make-parse-error(k: &zonk-kit, expected: tag): error {
+  tie _Zonk-Kit of {input-stream} = k in
+  let cursor = _get-cursor(k) in
+  let line = _get-line(k) in
+  let column = _get-column(k) in
+  let gap-spot = _get-gap-spot(k) in
+  let foo = _drop-N(input-stream, cursor) in
+  let bar on foo = take-N(foo, gap-spot) in
+  let _ = foo in
+  Parse-Error of {
+    expected,
+    found = show-text(bar),
+    error-location = Point(line, column),
+  }
+}

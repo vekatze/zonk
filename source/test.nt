@@ -4,7 +4,8 @@ import {
   noa.gen.texts {texts},
   noa.suite {Trope, noa},
   this.move.make-zonk-kit {make-zonk-kit},
-  this.move.parse {_get-cursor, choice, chunk, end-of-input, many, some, zonk},
+  this.move.parse {choice, chunk, end-of-input, many, some, zonk},
+  this.move.private.state,
   this.rule.zonk-kit {_Zonk-Kit},
 }
 
@@ -22,7 +23,7 @@ define main(): unit {
         match p(k) {
         | Right(_) =>
           tie _Zonk-Kit of {input-stream} = k in
-          let cursor = _get-cursor(k) in
+          let cursor = this.move.private.state._get-cursor(k) in
           pin stream' = _drop-N(input-stream, cursor) in
           let result = eq-text(t2, stream') in
           result
