@@ -11,7 +11,6 @@ import {
   core.text {take-N},
   core.text.show {show-text},
   core.vector {_Vector-Info, _get-vector-info, vector},
-  this.error {Parse-Error, report},
   this.move.make-zonk-kit {make-zonk-kit},
   this.move.parse {
     _get-column,
@@ -24,6 +23,7 @@ import {
     zonk,
   },
   this.point {Point},
+  this.rule.error {Parse-Error, report},
   this.rule.zonk-kit {_Zonk-Kit},
   this.stash {_Stash, _stash},
 }
