@@ -1,7 +1,7 @@
 import {
   core.list {for-each, is-empty},
   core.text {format, intercalate},
-  this.point {point, show-point},
+  this.rule.point {point, show-point},
   this.rule.tag {show-tag, tag},
 }
 

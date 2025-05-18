@@ -7,8 +7,8 @@ import {
   core.text {_get-content-pointer, _get-rune, _slice-N, is-empty, take-N},
   core.text.show {show-text},
   this.move.make-zonk-kit {make-zonk-kit},
-  this.point {Point, point},
   this.rule.error {Parse-Error, report},
+  this.rule.point {Point, point},
   this.rule.tag {Label, Raw-Text, tag},
   this.rule.zonk-kit {_Position, _Zonk-Kit, position, zonk-kit},
   this.stash {

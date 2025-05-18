@@ -22,8 +22,8 @@ import {
     take-while,
     zonk,
   },
-  this.point {Point},
   this.rule.error {Parse-Error, report},
+  this.rule.point {Point},
   this.rule.zonk-kit {_Zonk-Kit},
   this.stash {_Stash, _stash},
 }
