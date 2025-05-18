@@ -58,3 +58,7 @@ define _bench(): unit {
 define zen(): unit {
   _bench()
 }
+
+define main(): unit {
+  _bench()
+}

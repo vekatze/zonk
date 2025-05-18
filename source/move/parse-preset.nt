@@ -24,8 +24,8 @@ import {
   },
   this.rule.error {Parse-Error, report},
   this.rule.point {Point},
+  this.rule.stash {_Stash, _stash},
   this.rule.zonk-kit {_Zonk-Kit},
-  this.stash {_Stash, _stash},
 }
 
 define _is-space(r: rune): bool {

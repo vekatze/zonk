@@ -9,15 +9,15 @@ import {
   this.move.make-zonk-kit {make-zonk-kit},
   this.rule.error {Parse-Error, report},
   this.rule.point {Point, point},
-  this.rule.tag {Label, Raw-Text, tag},
-  this.rule.zonk-kit {_Position, _Zonk-Kit, position, zonk-kit},
-  this.stash {
+  this.rule.stash {
     _Stash,
     _empty-stash,
     _join-stash,
     _set-expected,
     _stash,
   },
+  this.rule.tag {Label, Raw-Text, tag},
+  this.rule.zonk-kit {_Position, _Zonk-Kit, position, zonk-kit},
 }
 
 inline app(a) {
