@@ -1,11 +1,11 @@
 import {
-  core.text {text-byte-length},
+  core.text {_drop-N, text-byte-length},
   noa.gen.pairs {pairs},
   noa.gen.texts {texts},
   noa.suite {Trope, noa},
-  this.internal {_read},
-  this.parser {choice, chunk, end-of-input, many, parser, return, run, some, zonk},
-  this.state {State, new-state},
+  this.move.make-zonk-kit {make-zonk-kit},
+  this.move.parse {_get-cursor, choice, chunk, end-of-input, many, some, zonk},
+  this.rule.zonk-kit {_Zonk-Kit},
 }
 
 define main(): unit {
@@ -16,16 +16,15 @@ define main(): unit {
     function (p) {
       let Pair(t1, t2) = p in
       let full-text on t1, t2 = core.text.append(t1, t2) in
-      let st = new-state(full-text) in
-      let parse-result on t1, t2, st =
+      pin k = make-zonk-kit(full-text) in
+      let parse-result on t1, t2 =
         let p = chunk(t1) in
-        let parse-result = run(p, st) in
-        match parse-result {
+        match p(k) {
         | Right(_) =>
-          let result =
-            tie State of {stream} = _read(st) in
-            eq-text(t2, stream)
-          in
+          tie _Zonk-Kit of {input-stream} = k in
+          let cursor = _get-cursor(k) in
+          pin stream' = _drop-N(input-stream, cursor) in
+          let result = eq-text(t2, stream') in
           result
         | Left(_) =>
           False
@@ -33,7 +32,6 @@ define main(): unit {
       in
       let _ = t1 in
       let _ = t2 in
-      let _ = st in
       parse-result
     },
   );
@@ -41,17 +39,17 @@ define main(): unit {
     "`t1` can be parsed by (chunk(t1) → end-of-input)",
     texts,
     function (!t) {
-      pin st = new-state(!t) in
+      pin k = make-zonk-kit(!t) in
       pin t = !t in
       let parse-result =
-        let p =
-          with zonk {
-            bind _ = chunk(t) in
-            bind _ = end-of-input in
-            return(Unit)
+        let p: zonk(unit) =
+          function (k) {
+            try _ = chunk(t)(k) in
+            try _ = end-of-input(k) in
+            Right(Unit)
           }
         in
-        match run(p, st) {
+        match p(k) {
         | Right(_) =>
           True
         | Left(_) =>
@@ -67,17 +65,17 @@ define main(): unit {
     function (p) {
       let Pair(t1, t2) = p in
       let full-text on t1, t2 = core.text.append(t1, t2) in
-      let st = new-state(full-text) in
-      let result on t1, t2, st =
-        let p =
-          with zonk {
-            bind _ = chunk(t1) in
-            bind _ = chunk(t2) in
-            bind _ = end-of-input in
-            return(Unit)
+      pin k = make-zonk-kit(full-text) in
+      let result on t1, t2 =
+        let p: zonk(unit) =
+          function (k) {
+            try _ = chunk(t1)(k) in
+            try _ = chunk(t2)(k) in
+            try _ = end-of-input(k) in
+            Right(Unit)
           }
         in
-        match run(p, st) {
+        match p(k) {
         | Right(_) =>
           True
         | Left(_) =>
@@ -86,7 +84,6 @@ define main(): unit {
       in
       let _ = t1 in
       let _ = t2 in
-      let _ = st in
       result
     },
   );
@@ -98,16 +95,15 @@ define main(): unit {
       if eq-int(len, 0) {
         True
       } else {
-        let st = new-state(t) in
-        let result on st =
-          match run(end-of-input, st) {
+        pin k = make-zonk-kit(t) in
+        let result =
+          match end-of-input(k) {
           | Right(_) =>
             False
           | Left(_) =>
             True
           }
         in
-        let _ = st in
         result
       }
     },
@@ -115,35 +111,29 @@ define main(): unit {
   // ...
 }
 
-inline sample-parser: parser(unit) {
+inline _sample-parser: zonk(unit) {
   // construct a parser
-  with zonk {
+  function (k) {
     // accepts: foo
-    bind _ = chunk("foo") in
+    try _ = chunk("foo")(k) in
     // accepts: (buz|test|bar)
-    bind _ = choice([chunk("buz"), chunk("test")], chunk("bar")) in
+    try _ = choice([chunk("buz"), chunk("test")], chunk("bar"))(k) in
     // accepts: (qux)+
-    bind _ = some(chunk("qux")) in
+    try _ = some(chunk("qux"))(k) in
     // accepts: (yo)*
-    bind _ = many(chunk("yo")) in
+    try _ = many(chunk("yo"))(k) in
     // accepts: end-of-input
-    bind _ = end-of-input in
-    return(Unit)
+    try _ = end-of-input(k) in
+    Right(Unit)
   }
 }
 
 define zen(): unit {
-  // construct an input
-  let some-input = new-state(*"foobarquxqux") in
-  let result on some-input =
-    // run the parser
-    match run(sample-parser, some-input) {
-    | Right(_) =>
-      print("pass\n")
-    | Left(_) =>
-      print("fail\n")
-    }
-  in
-  let _ = some-input in
-  result
+  pin k = make-zonk-kit(*"foobarquxquxyoyoyoyo") in
+  match _sample-parser(k) {
+  | Right(_) =>
+    print("pass\n")
+  | Left(_) =>
+    print("fail\n")
+  }
 }
