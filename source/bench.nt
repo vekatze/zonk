@@ -1,19 +1,12 @@
 import {
   core.control {loop},
   this.move.make-zonk-kit {make-zonk-kit},
-  this.move.parse {choice, chunk, label, zonk},
+  this.move.parse {attempt, branch, chunk, label, zonk},
 }
 
 define _try-parse(p: zonk(unit)): unit {
   pin k = make-zonk-kit(*"abcnああhehoge \n\r  hehehetest") in
-  let my-parser: zonk(unit) =
-    function (k) {
-      try _ = chunk("abc")(k) in
-      try _ = p(k) in
-      Right(Unit)
-    }
-  in
-  match my-parser(k) {
+  match p(k) {
   | Left(_) =>
     Unit
   | Right(_) =>
@@ -22,37 +15,51 @@ define _try-parse(p: zonk(unit)): unit {
 }
 
 define _bench(): unit {
-  let whatever =
-    choice of {
-      label = "yo",
-      candidates = {
-        [
-          chunk("gaoe"),
-          choice("yo", [chunk("k")], label("whatever", function (k) {
-            try _ = chunk("px")(k) in
-            try _ = chunk("kgあ")(k) in
-            Right(Unit)
-          })),
-          chunk("tあい"),
-          label("whatever 2", function (k) {
-            try _ = chunk("pt")(k) in
-            try _ = chunk("あhebc")(k) in
-            Right(Unit)
-          }),
-          function (k) {
-            try _ = chunk("pt")(k) in
-            try _ = chunk("あhebc")(k) in
-            Right(Unit)
-          },
-          chunk("abc"),
-          chunk("{}"),
-        ]
-      },
-      fallback = chunk("tn"),
+  let whatnot =
+    branch(
+      attempt(chunk("gaoe")),
+      branch(
+        branch(chunk("k"), label("whatever", function (k) {
+          try _ = chunk("px")(k) in
+          try _ = chunk("kgあ")(k) in
+          Right(Unit)
+        })),
+        branch(
+          attempt(chunk("tあい")),
+          branch(
+            label("whatever 2", function (k) {
+              try _ = chunk("pt")(k) in
+              try _ = chunk("あhebc")(k) in
+              Right(Unit)
+            }),
+            branch(
+              function (k) {
+                try _ = chunk("pt")(k) in
+                try _ = chunk("あhebc")(k) in
+                Right(Unit)
+              },
+              branch(
+                chunk("abc"),
+                branch(
+                  chunk("{}"),
+                  chunk("tn"),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
+  in
+  let my-parser: zonk(unit) =
+    function (k) {
+      try _ = chunk("abc")(k) in
+      try _ = whatnot(k) in
+      Right(Unit)
     }
   in
   loop(1000000, function (_) {
-    _try-parse(whatever)
+    _try-parse(my-parser)
   })
 }
 

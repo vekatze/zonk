@@ -24,7 +24,7 @@ import {
   },
   this.rule.error {Parse-Error, report},
   this.rule.point {Point},
-  this.rule.stash {_Stash, _stash},
+  this.rule.stash {_stash},
   this.rule.zonk-kit {_Zonk-Kit},
 }
 
@@ -248,7 +248,7 @@ define zen(): unit {
   | Right(_) =>
     print("pass\n")
   | Left(e) =>
-    let _Stash of {expected} = e in
+    let expected = [e] in
     tie _Zonk-Kit of {input-stream} = k in
     let line = _get-line(k) in
     let column = _get-column(k) in
@@ -256,7 +256,7 @@ define zen(): unit {
     let e' =
       Parse-Error of {
         found = show-text(take-N(input-stream, gap-spot)),
-        expected = expected(),
+        expected,
         error-location = Point(line, column),
       }
     in
