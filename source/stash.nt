@@ -1,6 +1,6 @@
 import {
   core.list {append},
-  this.tag {tag},
+  this.rule.tag {tag},
 }
 
 data _stash {

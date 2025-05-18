@@ -9,6 +9,7 @@ import {
   this.error {Parse-Error, report},
   this.move.make-zonk-kit {make-zonk-kit},
   this.point {Point, point},
+  this.rule.tag {Label, Raw-Text, tag},
   this.rule.zonk-kit {_Position, _Zonk-Kit, position, zonk-kit},
   this.stash {
     _Stash,
@@ -17,7 +18,6 @@ import {
     _set-expected,
     _stash,
   },
-  this.tag {Label, Raw-Text, tag},
 }
 
 inline app(a) {
