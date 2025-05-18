@@ -1,14 +1,14 @@
 import {
-  core.cell {mutate},
-  core.int {max-int},
+  core.cell {borrow, mutate},
   core.pointer {shift},
   core.rune {load-rune},
-  core.text {_get-content-pointer, _get-rune, _take-N, is-empty, take-N},
+  core.text {_get-content-pointer, _get-rune, _slice-N, is-empty, take-N},
   core.text.show {show-text},
   this.error {Parse-Error, report},
+  this.internal {_read},
   this.move.make-zonk-kit {make-zonk-kit},
   this.point {Point, point},
-  this.rule.zonk-kit {_Zonk-Kit, zonk-kit},
+  this.rule.zonk-kit {_Position, _Zonk-Kit, position, zonk-kit},
   this.stash {
     _Stash,
     _empty-stash,
@@ -35,21 +35,53 @@ inline _get-offset(r: rune): point {
   }
 }
 
-inline _set-gap-spot(k: &zonk-kit, new-gap-spot: int): unit {
-  tie _Zonk-Kit of {gap-spot-ref} = k in
-  mutate(gap-spot-ref, function (gap-spot) {
-    max-int(gap-spot, new-gap-spot)
+inline _set-gap-spot(k: &zonk-kit, gap-spot: int): unit {
+  tie _Zonk-Kit of {position-ref} = k in
+  mutate(position-ref, function (position) {
+    let _Position of {cursor, line, column} = position in
+    _Position of {cursor, line, column, gap-spot}
+  })
+}
+
+define _get-cursor(k: &zonk-kit): int {
+  tie _Zonk-Kit of {position-ref} = k in
+  let position = _read(position-ref) in
+  tie _Position of {cursor} = position in
+  *cursor
+}
+
+define _get-gap-spot(k: &zonk-kit): int {
+  tie _Zonk-Kit of {position-ref} = k in
+  borrow(position-ref, function (position) {
+    tie _Position of {gap-spot} = position in
+    quote {*gap-spot}
+  })
+}
+
+define _get-line(k: &zonk-kit): int {
+  tie _Zonk-Kit of {position-ref} = k in
+  borrow(position-ref, function (position) {
+    tie _Position of {line} = position in
+    quote {*line}
+  })
+}
+
+define _get-column(k: &zonk-kit): int {
+  tie _Zonk-Kit of {position-ref} = k in
+  borrow(position-ref, function (position) {
+    tie _Position of {column} = position in
+    quote {*column}
   })
 }
 
 inline _proceed(k: &zonk-kit, byte-offset: int, line-offset: int, column-offset: int): unit {
-  tie _Zonk-Kit of {cursor-ref, cursor-point-ref} = k in
-  mutate(cursor-ref, function (cursor) {
-    add-int(cursor, byte-offset)
-  });
-  mutate(cursor-point-ref, function (old-point) {
-    let Point(line, column) = old-point in
-    Point(add-int(line, line-offset), add-int(column, column-offset))
+  tie _Zonk-Kit of {position-ref} = k in
+  mutate(position-ref, function (position) {
+    let _Position of {cursor, line, column, gap-spot} = position in
+    let cursor = add-int(cursor, byte-offset) in
+    let line = add-int(line, line-offset) in
+    let column = add-int(column, column-offset) in
+    _Position of {cursor, line, column, gap-spot}
   })
 }
 
@@ -62,33 +94,16 @@ inline _proceed-by-rune(k: &zonk-kit, r: rune): unit {
   }
 }
 
-data _state-pack {
-| _State-Pack(
-    cursor: int,
-    cursor-point: point,
-    gap-spot: int,
-  )
+inline _export-state(k: &zonk-kit): position {
+  tie _Zonk-Kit of {position-ref} = k in
+  core.cell.clone(position-ref)
 }
 
-inline _export-state(k: &zonk-kit): _state-pack {
-  tie _Zonk-Kit of {cursor-ref, cursor-point-ref, gap-spot-ref} = k in
-  let cursor = core.cell.clone(cursor-ref) in
-  let cursor-point = core.cell.clone(cursor-point-ref) in
-  let gap-spot = core.cell.clone(gap-spot-ref) in
-  _State-Pack of {cursor, cursor-point, gap-spot}
-}
-
-inline _import-state(k: &zonk-kit, s: _state-pack): unit {
-  tie _Zonk-Kit of {cursor-ref, cursor-point-ref, gap-spot-ref} = k in
-  let _State-Pack of {cursor, cursor-point, gap-spot} = s in
-  mutate(cursor-ref, function (_) {
-    cursor
-  });
-  mutate(cursor-point-ref, function (_) {
-    cursor-point
-  });
-  mutate(gap-spot-ref, function (_) {
-    gap-spot
+inline _import-state(k: &zonk-kit, new-position: position): unit {
+  tie _Zonk-Kit of {position-ref} = k in
+  mutate(position-ref, function (old-position) {
+    let _Position of {} = old-position in
+    new-position
   })
 }
 
@@ -99,8 +114,9 @@ define report-unexpected-input<a>(expected-item-label: &text): app(a) {
 }
 
 define get-point(k: &zonk-kit): point {
-  tie _Zonk-Kit of {cursor-point-ref} = k in
-  core.cell.clone(cursor-point-ref)
+  let line = _get-line(k) in
+  let column = _get-column(k) in
+  Point(line, column)
 }
 
 define fail<a>(expected: list(tag)): app(a) {
@@ -115,8 +131,8 @@ define fail<a>(expected: list(tag)): app(a) {
 
 define end-of-input: zonk(unit) {
   function (k) {
-    tie _Zonk-Kit of {input-stream, cursor-ref} = k in
-    let cursor = core.cell.clone(cursor-ref) in
+    tie _Zonk-Kit of {input-stream} = k in
+    let cursor = _get-cursor(k) in
     let len = core.text.text-byte-length(input-stream) in
     if ge-int(cursor, len) {
       Right(Unit)
@@ -135,9 +151,9 @@ define end-of-input: zonk(unit) {
 
 inline satisfy(p: (rune) -> bool): zonk(rune) {
   function (k) {
-    tie _Zonk-Kit of {input-stream, cursor-ref} = k in
+    tie _Zonk-Kit of {input-stream} = k in
     let len = core.text.text-byte-length(input-stream) in
-    let cursor = core.cell.clone(cursor-ref) in
+    let cursor = _get-cursor(k) in
     if ge-int(cursor, len) {
       Left(_empty-stash)
     } else {
@@ -165,53 +181,9 @@ inline any-rune: zonk(rune) {
   })
 }
 
-define _chunk-consumer(
-  k: &zonk-kit,
-  chunk-text: &text,
-  ptr1: pointer,
-  ptr2: pointer,
-  len2: int,
-  index: int,
-  char-len: int,
-  line-offset: int,
-  column-offset: int,
-): either(_stash, unit) {
-  if eq-int(index, len2) {
-    _proceed(k, len2, line-offset, column-offset);
-    Right(Unit)
-  } else {
-    let rune1 = load-rune(shift(ptr1, index)) in
-    let rune2 = load-rune(shift(ptr2, index)) in
-    let offset = core.rune.size(rune1) in
-    if eq-rune(rune1, rune2) {
-      let Point(l, c) = _get-offset(rune1) in
-      _chunk-consumer(
-        k,
-        chunk-text,
-        ptr1,
-        ptr2,
-        len2,
-        add-int(index, offset),
-        add-int(char-len, 1),
-        add-int(line-offset, l),
-        add-int(column-offset, c),
-      )
-    } else {
-      _set-gap-spot(k, add-int(char-len, 1));
-      Left(_Stash of {
-        expected = {
-          function () {
-            [Raw-Text(chunk-text)]
-          }
-        },
-      })
-    }
-  }
-}
-
-define _chunk-body(k: &zonk-kit, chunk-text: &text): either(_stash, unit) {
-  tie _Zonk-Kit of {input-stream, cursor-ref} = k in
-  let cursor = core.cell.clone(cursor-ref) in
+inline _chunk-body(k: &zonk-kit, chunk-text: &text): either(_stash, unit) {
+  tie _Zonk-Kit of {input-stream} = k in
+  let cursor = _get-cursor(k) in
   let len1 = core.text.text-byte-length(input-stream) in
   let len2 = core.text.text-byte-length(chunk-text) in
   if lt-int(len1, len2) {
@@ -219,7 +191,44 @@ define _chunk-body(k: &zonk-kit, chunk-text: &text): either(_stash, unit) {
   } else {
     let ptr1 = shift(_get-content-pointer(input-stream), cursor) in
     let ptr2 = _get-content-pointer(chunk-text) in
-    _chunk-consumer(k, chunk-text, ptr1, ptr2, len2, 0, 0, 0, 0)
+    let f =
+      define _chunk-consumer(
+        index: int,
+        char-len: int,
+        line-offset: int,
+        column-offset: int,
+      ): either(_stash, unit) {
+        if eq-int(index, len2) {
+          _proceed(k, len2, line-offset, column-offset);
+          Right(Unit)
+        } else {
+          let rune1 = load-rune(shift(ptr1, index)) in
+          let rune2 = load-rune(shift(ptr2, index)) in
+          let offset = core.rune.size(rune1) in
+          if eq-rune(rune1, rune2) {
+            let b = eq-rune(rune1, `\n`) in
+            let l = match b {True => 1 | False => 0} in
+            let c = match b {True => 0 | False => 1} in
+            _chunk-consumer(
+              add-int(index, offset),
+              add-int(char-len, 1),
+              add-int(line-offset, l),
+              add-int(column-offset, c),
+            )
+          } else {
+            _set-gap-spot(k, add-int(char-len, 1));
+            Left(_Stash of {
+              expected = {
+                function () {
+                  [Raw-Text(chunk-text)]
+                }
+              },
+            })
+          }
+        }
+      }
+    in
+    f(0, 0, 0, 0)
   }
 }
 
@@ -233,24 +242,23 @@ inline take-while(!p: (rune) -> bool): zonk(text) {
   function (k) {
     tie _Zonk-Kit of {input-stream} = k in
     let len = core.text.text-byte-length(input-stream) in
+    let cursor = _get-cursor(k) in
     let ptr1 = _get-content-pointer(input-stream) in
     let f =
       define consumer(cursor-offset: int, line-offset: int, column-offset: int): text {
-        let is-tail = ge-int(cursor-offset, len) in
+        let is-tail = ge-int(add-int(cursor, cursor-offset), len) in
         if is-tail {
-          let result = _take-N(input-stream, cursor-offset) in
           _proceed(k, cursor-offset, line-offset, column-offset);
-          result
+          _slice-N(input-stream, cursor, cursor-offset)
         } else {
-          let r = load-rune(shift(ptr1, cursor-offset)) in
+          let r = load-rune(shift(ptr1, add-int(cursor, cursor-offset))) in
           if !p(r) {
             let offset = core.rune.size(r) in
             let Point(l, c) = _get-offset(r) in
             consumer(add-int(cursor-offset, offset), add-int(line-offset, l), add-int(column-offset, c))
           } else {
-            let result = _take-N(input-stream, cursor-offset) in
             _proceed(k, cursor-offset, line-offset, column-offset);
-            result
+            _slice-N(input-stream, cursor, cursor-offset)
           }
         }
       }
@@ -263,15 +271,15 @@ inline drop-while(!p: (rune) -> bool): zonk(unit) {
   function (k) {
     tie _Zonk-Kit of {input-stream} = k in
     let len = core.text.text-byte-length(input-stream) in
+    let cursor = _get-cursor(k) in
     let ptr1 = _get-content-pointer(input-stream) in
     let f =
       define consumer(cursor-offset: int, line-offset: int, column-offset: int): unit {
-        let is-tail = ge-int(cursor-offset, len) in
+        let is-tail = ge-int(add-int(cursor, cursor-offset), len) in
         if is-tail {
-          _proceed(k, cursor-offset, line-offset, column-offset);
-          Unit
+          _proceed(k, cursor-offset, line-offset, column-offset)
         } else {
-          let r = load-rune(shift(ptr1, cursor-offset)) in
+          let r = load-rune(shift(ptr1, add-int(cursor, cursor-offset))) in
           if !p(r) {
             let offset = core.rune.size(r) in
             let Point(l, c) = _get-offset(r) in
@@ -301,12 +309,11 @@ inline ascii-space: zonk(unit) {
 }
 
 define _label-body<a>(k: &zonk-kit, l: &text, orig-cursor: int, v: either(_stash, a)): either(_stash, a) {
-  tie _Zonk-Kit of {cursor-ref} = k in
   match v {
   | Right(result) =>
     Right(result)
   | Left(e) =>
-    let new-cursor = core.cell.clone(cursor-ref) in
+    let new-cursor = _get-cursor(k) in
     if eq-int(orig-cursor, new-cursor) {
       Left(_set-expected(
         function () {
@@ -322,8 +329,7 @@ define _label-body<a>(k: &zonk-kit, l: &text, orig-cursor: int, v: either(_stash
 
 inline label<a>(l: &text, p: zonk(a)): zonk(a) {
   function (k) {
-    tie _Zonk-Kit of {cursor-ref} = k in
-    let orig-cursor = core.cell.clone(cursor-ref) in
+    let orig-cursor = _get-cursor(k) in
     let v = p(k) in
     _label-body(k, l, orig-cursor, v)
   }
@@ -350,7 +356,7 @@ inline hidden<a>(p: zonk(a)): zonk(a) {
   }
 }
 
-define _attempt-body<a>(k: &zonk-kit, state-pack: _state-pack, v: either(_stash, a)): either(_stash, a) {
+define _attempt-body<a>(k: &zonk-kit, state-pack: position, v: either(_stash, a)): either(_stash, a) {
   match v {
   | Right(result) =>
     Right(result)
@@ -367,7 +373,7 @@ inline attempt<a>(p: zonk(a)): zonk(a) {
   }
 }
 
-define _look-ahead-body<a>(k: &zonk-kit, state-pack: _state-pack, v: either(_stash, a)): either(_stash, a) {
+define _look-ahead-body<a>(k: &zonk-kit, state-pack: position, v: either(_stash, a)): either(_stash, a) {
   match v {
   | Right(result) =>
     _import-state(k, state-pack);
@@ -410,7 +416,7 @@ inline branch<a>(p1: zonk(a), p2: zonk(a)): zonk(a) {
   }
 }
 
-define _not-followed-by-body<a>(k: &zonk-kit, state-pack: _state-pack, v: either(_stash, a)): either(_stash, unit) {
+define _not-followed-by-body<a>(k: &zonk-kit, state-pack: position, v: either(_stash, a)): either(_stash, unit) {
   _import-state(k, state-pack);
   match v {
   | Right(_) =>
@@ -449,8 +455,7 @@ define _choice<a>(
   stash-cand: _stash,
   default-gap-spot: int,
 ): either(_stash, a) {
-  tie _Zonk-Kit of {cursor-ref} = k in
-  let old-offset = core.cell.clone(cursor-ref) in
+  let old-offset = _get-cursor(k) in
   match candidates {
   | Nil =>
     match fallback(k) {
@@ -458,7 +463,7 @@ define _choice<a>(
       _set-gap-spot(k, default-gap-spot);
       Right(v)
     | Left(e) =>
-      let new-offset = core.cell.clone(cursor-ref) in
+      let new-offset = _get-cursor(k) in
       if eq-int(old-offset, new-offset) {
         Left(_join-stash(stash-cand, e))
       } else {
@@ -471,7 +476,7 @@ define _choice<a>(
       _set-gap-spot(k, default-gap-spot);
       Right(v)
     | Left(e) =>
-      let new-offset = core.cell.clone(cursor-ref) in
+      let new-offset = _get-cursor(k) in
       if eq-int(old-offset, new-offset) {
         _choice(k, rest, fallback, _join-stash(stash-cand, e), default-gap-spot)
       } else {
@@ -487,15 +492,14 @@ inline choice<a>(candidates: list(zonk(a)), fallback: zonk(a)): zonk(a) {
     | Nil =>
       fallback(k)
     | Cons(p, rest) =>
-      tie _Zonk-Kit of {cursor-ref, gap-spot-ref} = k in
-      let old-offset = core.cell.clone(cursor-ref) in
+      let old-offset = _get-cursor(k) in
       match p(k) {
       | Right(v) =>
         Right(v)
       | Left(e) =>
-        let new-offset = core.cell.clone(cursor-ref) in
+        let new-offset = _get-cursor(k) in
         if eq-int(old-offset, new-offset) {
-          let gap-spot = core.cell.clone(gap-spot-ref) in
+          let gap-spot = _get-gap-spot(k) in
           _choice(k, rest, fallback, e, gap-spot)
         } else {
           Left(e)
@@ -561,15 +565,16 @@ define zen(): unit {
   let my-result = my-parser(k) in
   match my-result {
   | Left(e) =>
-    tie _Zonk-Kit of {input-stream, cursor-point-ref, gap-spot-ref} = k in
-    let cursor-point = core.cell.clone(cursor-point-ref) in
-    let gap-spot = core.cell.clone(gap-spot-ref) in
+    tie _Zonk-Kit of {input-stream} = k in
+    let line = _get-line(k) in
+    let column = _get-column(k) in
+    let gap-spot = _get-gap-spot(k) in
     let _Stash of {expected} = e in
     let e' =
       Parse-Error of {
         found = show-text(take-N(input-stream, gap-spot)),
         expected = expected(),
-        error-location = cursor-point,
+        error-location = Point(line, column),
       }
     in
     printf("left: {}\n", [report(e')])

@@ -1,12 +1,15 @@
-import {
-  this.point {point},
+data position {
+| _Position(
+    cursor: int,
+    line: int,
+    column: int,
+    gap-spot: int,
+  )
 }
 
 data zonk-kit {
 | _Zonk-Kit(
     input-stream: text,
-    cursor-ref: cell(int),
-    cursor-point-ref: cell(point),
-    gap-spot-ref: cell(int),
+    position-ref: cell(position),
   )
 }

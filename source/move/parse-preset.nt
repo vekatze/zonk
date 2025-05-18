@@ -1,0 +1,265 @@
+import {
+  core.float.parse {parse-float},
+  core.float.show {show-float},
+  core.function {compose},
+  core.int.parse {parse-int},
+  core.int.show {show-int},
+  core.list {any, reverse},
+  core.magic,
+  core.memory {store-float, store-int},
+  core.pointer {shift},
+  core.text {take-N},
+  core.text.show {show-text},
+  core.vector {_Vector-Info, _get-vector-info, vector},
+  this.error {Parse-Error, report},
+  this.move.make-zonk-kit {make-zonk-kit},
+  this.move.parse {
+    _get-column,
+    _get-gap-spot,
+    _get-line,
+    drop-while,
+    end-of-input,
+    report-unexpected-input,
+    take-while,
+    zonk,
+  },
+  this.point {Point},
+  this.rule.zonk-kit {_Zonk-Kit},
+  this.stash {_Stash, _stash},
+}
+
+define _is-space(r: rune): bool {
+  if eq-rune(r, ` `) {
+    True
+  } else-if ule-int32(sub-int32(magic cast(rune, int32, r), 0x9), 0x4) {
+    True
+  } else {
+    False
+  }
+}
+
+define skip-space: zonk(unit) {
+  drop-while(_is-space)
+}
+
+define _any-number(r: rune): bool {
+  let b1 = le-rune(`0`, r) in
+  let b2 = le-rune(r, `9`) in
+  and(b1, b2)
+}
+
+define _is-integer-rune(r: rune): bool {
+  any([
+    _any-number(r),
+    eq-rune(r, `+`),
+    eq-rune(r, `-`),
+  ])
+}
+
+define _is-float-rune(r: rune): bool {
+  any([
+    _any-number(r),
+    eq-rune(r, `.`),
+    eq-rune(r, `e`),
+    eq-rune(r, `E`),
+    eq-rune(r, `+`),
+    eq-rune(r, `-`),
+  ])
+}
+
+inline read-symbol(): zonk(text) {
+  function (k) {
+    try result = take-while(compose(not, _is-space))(k) in
+    try _ = skip-space(k) in
+    Right(result)
+  }
+}
+
+inline read-int: zonk(int) {
+  function (k) {
+    try num-text = take-while(_is-integer-rune)(k) in
+    try _ = skip-space(k) in
+    let none-or-int on num-text = parse-int(num-text) in
+    let _ = num-text in
+    match none-or-int {
+    | Left(_) =>
+      report-unexpected-input("integer")
+    | Right(v) =>
+      Right(v)
+    }
+  }
+}
+
+inline read-float: zonk(float) {
+  function (k) {
+    try num-text = take-while(_is-float-rune)(k) in
+    try _ = skip-space(k) in
+    let none-or-float on num-text = parse-float(num-text) in
+    let _ = num-text in
+    match none-or-float {
+    | Left(_) =>
+      report-unexpected-input("float")
+    | Right(v) =>
+      Right(v)
+    }
+  }
+}
+
+define read-int-list(size: int): zonk(list(int)) {
+  function (k) {
+    let f =
+      define self(cursor: int, acc: list(int)): either(_stash, list(int)) {
+        if le-int(cursor, 0) {
+          Right(reverse(acc))
+        } else {
+          try v = read-int(k) in
+          self(sub-int(cursor, 1), Cons(v, acc))
+        }
+      }
+    in
+    f(size, Nil)
+  }
+}
+
+define _store-int(vec: &vector(int), index: int, value: int): unit {
+  let _Vector-Info of {content-ptr, word-size} = _get-vector-info(vec) in
+  let elem-address = shift(content-ptr, mul-int(word-size, index)) in
+  store-int(value, elem-address)
+}
+
+define _store-float(vec: &vector(float), index: int, value: float): unit {
+  let _Vector-Info of {content-ptr, word-size} = _get-vector-info(vec) in
+  let elem-address = shift(content-ptr, mul-int(word-size, index)) in
+  store-float(value, elem-address)
+}
+
+define _store-value<a>(vec: &vector(a), index: int, value: a): unit {
+  let _Vector-Info of {content-ptr, word-size} = _get-vector-info(vec) in
+  let elem-address = shift(content-ptr, mul-int(word-size, index)) in
+  store-int(core.magic.cast(a, int, value), elem-address)
+}
+
+inline read-vector<a>(size: int, !p: zonk(a)): zonk(vector(a)) {
+  let base =
+    core.vector.create(size, function (_) {
+      core.magic.cast(int, a, 0)
+    })
+  in
+  function (k) {
+    let f =
+      define self(cursor: int, base: vector(a)): either(_stash, vector(a)) {
+        if ge-int(cursor, size) {
+          Right(base)
+        } else {
+          try v = !p(k) in
+          try _ = skip-space(k) in
+          let _ on base = _store-value(base, cursor, v) in
+          self(add-int(cursor, 1), base)
+        }
+      }
+    in
+    try result = f(0, base) in
+    Right(result)
+  }
+}
+
+define read-int-vector(size: int): zonk(vector(int)) {
+  let base =
+    core.vector.create(size, function (_) {
+      0
+    })
+  in
+  function (k) {
+    let f =
+      define self(cursor: int, base: vector(int)): either(_stash, vector(int)) {
+        if ge-int(cursor, size) {
+          Right(base)
+        } else {
+          try v = read-int(k) in
+          try _ = skip-space(k) in
+          let _ on base = _store-int(base, cursor, v) in
+          self(add-int(cursor, 1), base)
+        }
+      }
+    in
+    try result = f(0, base) in
+    Right(result)
+  }
+}
+
+define read-float-list(size: int): zonk(list(float)) {
+  function (k) {
+    let f =
+      define self(cursor: int, acc: list(float)): either(_stash, list(float)) {
+        if le-int(cursor, 0) {
+          Right(reverse(acc))
+        } else {
+          try v = read-float(k) in
+          try _ = skip-space(k) in
+          self(sub-int(cursor, 1), Cons(v, acc))
+        }
+      }
+    in
+    f(size, Nil)
+  }
+}
+
+define read-float-vector(size: int): zonk(vector(float)) {
+  let base =
+    core.vector.create(size, function (_) {
+      0
+    })
+  in
+  function (k) {
+    let f =
+      define self(cursor: int, base: vector(float)): either(_stash, vector(float)) {
+        if ge-int(cursor, size) {
+          Right(base)
+        } else {
+          try v = read-float(k) in
+          try _ = skip-space(k) in
+          let _ on base = _store-float(base, cursor, v) in
+          self(add-int(cursor, 1), base)
+        }
+      }
+    in
+    try result = f(0, base) in
+    Right(result)
+  }
+}
+
+inline _sample-zonk: zonk(unit) {
+  function (k) {
+    try v1 = read-int(k) in
+    try v2 = read-int(k) in
+    try xs = read-float-vector(v1)(k) in
+    try _ = end-of-input(k) in
+    printf("{}, {}\n", [show-int(v1), show-int(v2)]);
+    core.vector.for(xs, function (x, _) {
+      printf("{} ", [show-float(x)])
+    });
+    Right(Unit)
+  }
+}
+
+define zen(): unit {
+  pin k = make-zonk-kit(*"6 42 \n   5 4 3 2 1 -1234") in
+  match _sample-zonk(k) {
+  | Right(_) =>
+    print("pass\n")
+  | Left(e) =>
+    let _Stash of {expected} = e in
+    tie _Zonk-Kit of {input-stream} = k in
+    let line = _get-line(k) in
+    let column = _get-column(k) in
+    let gap-spot = _get-gap-spot(k) in
+    let e' =
+      Parse-Error of {
+        found = show-text(take-N(input-stream, gap-spot)),
+        expected = expected(),
+        error-location = Point(line, column),
+      }
+    in
+    printf("fail: {}\n", [report(e')])
+  }
+}
