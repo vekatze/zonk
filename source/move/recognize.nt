@@ -7,10 +7,10 @@ import {
 
 define _from-regex(r: regex): zonk(unit) {
   match r {
-  | Any(rs) =>
+  | Any(label, rs) =>
     function (k) {
       try _ =
-        satisfy(function (r) {
+        satisfy(label, function (r) {
           let bs =
             for-each(rs, function (r') {
               eq-rune(r, r')
@@ -26,14 +26,14 @@ define _from-regex(r: regex): zonk(unit) {
   | Choose(xs, fallback) =>
     let xs' = for-each(xs, _from-regex) in
     let fallback' = _from-regex(fallback) in
-    attempt(choice(xs', fallback'))
+    attempt(choice("choose", xs', fallback'))
   | Join(xs) =>
     let xs' = for-each(xs, _from-regex) in
     let go =
       define loop(xs: list(zonk(unit))): zonk(unit) {
         match xs {
         | Nil =>
-          _from-regex(Any([]))
+          _from-regex(Any("any", []))
         | Cons(x, Nil) =>
           x
         | Cons(x, xs) =>
@@ -77,7 +77,7 @@ define zen(): unit {
           [
             Chunk("pqr"),
             Chunk("H"),
-            Any([`P`, `あ`, `Γ`]),
+            Any("Lorem ipsum", [`P`, `あ`, `Γ`]),
           ],
           Chunk("abc"),
         ),

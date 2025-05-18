@@ -117,7 +117,7 @@ inline _sample-parser: zonk(unit) {
     // accepts: foo
     try _ = chunk("foo")(k) in
     // accepts: (buz|test|bar)
-    try _ = choice([chunk("buz"), chunk("test")], chunk("bar"))(k) in
+    try _ = choice("yo", [chunk("buz"), chunk("test")], chunk("bar"))(k) in
     // accepts: (qux)+
     try _ = some(chunk("qux"))(k) in
     // accepts: (yo)*

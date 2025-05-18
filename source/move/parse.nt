@@ -12,7 +12,6 @@ import {
   this.rule.stash {
     _Stash,
     _empty-stash,
-    _join-stash,
     _set-expected,
     _stash,
   },
@@ -122,11 +121,11 @@ define get-point(k: &zonk-kit): point {
   Point(line, column)
 }
 
-define fail<a>(expected: list(tag)): either(_stash, a) {
+define fail<a>(expected: tag): either(_stash, a) {
   Left(_Stash of {
     expected = {
       function () {
-        expected
+        [expected]
       }
     },
   })
@@ -152,7 +151,7 @@ define end-of-input: zonk(unit) {
   }
 }
 
-inline satisfy(p: (rune) -> bool): zonk(rune) {
+inline satisfy(label: &text, p: (rune) -> bool): zonk(rune) {
   function (k) {
     tie _Zonk-Kit of {input-stream} = k in
     let len = core.text.text-byte-length(input-stream) in
@@ -169,7 +168,7 @@ inline satisfy(p: (rune) -> bool): zonk(rune) {
         Left(_Stash of {
           expected = {
             function () {
-              []
+              [Label(label)]
             }
           },
         })
@@ -179,7 +178,7 @@ inline satisfy(p: (rune) -> bool): zonk(rune) {
 }
 
 inline any-rune: zonk(rune) {
-  satisfy(function (_) {
+  satisfy("any character", function (_) {
     True
   })
 }
@@ -190,7 +189,13 @@ inline _chunk-body(k: &zonk-kit, chunk-text: &text): either(_stash, unit) {
   let len1 = core.text.text-byte-length(input-stream) in
   let len2 = core.text.text-byte-length(chunk-text) in
   if lt-int(len1, len2) {
-    Left(_empty-stash)
+    Left(_Stash of {
+      expected = {
+        function () {
+          [Raw-Text(chunk-text)]
+        }
+      },
+    })
   } else {
     let ptr1 = shift(_get-content-pointer(input-stream), cursor) in
     let ptr2 = _get-content-pointer(chunk-text) in
@@ -338,27 +343,6 @@ inline label<a>(l: &text, p: zonk(a)): zonk(a) {
   }
 }
 
-define _hidden-body<a>(v: either(_stash, a)): either(_stash, a) {
-  match v {
-  | Right(result) =>
-    Right(result)
-  | Left(e) =>
-    Left(_set-expected(
-      function () {
-        []
-      },
-      e,
-    ))
-  }
-}
-
-inline hidden<a>(p: zonk(a)): zonk(a) {
-  function (k) {
-    let v = p(k) in
-    _hidden-body(v)
-  }
-}
-
 define _attempt-body<a>(k: &zonk-kit, state-pack: position, v: either(_stash, a)): either(_stash, a) {
   match v {
   | Right(result) =>
@@ -408,88 +392,81 @@ inline optional<a>(p: zonk(a)): zonk(?a) {
   }
 }
 
-inline branch<a>(p1: zonk(a), p2: zonk(a)): zonk(a) {
-  function (k) {
-    match p1(k) {
-    | Right(result) =>
-      Right(result)
-    | Left(_) =>
-      p2(k)
-    }
-  }
-}
-
-define _not-followed-by-body<a>(k: &zonk-kit, state-pack: position, v: either(_stash, a)): either(_stash, unit) {
+// inline branch<a>(p1: zonk(a), p2: zonk(a)): zonk(a) {
+//   function (k) {
+//     match p1(k) {
+//     | Right(result) =>
+//       Right(result)
+//     | Left(_) =>
+//       p2(k)
+//     }
+//   }
+// }
+define _not-followed-by-body<a>(
+  k: &zonk-kit,
+  label: &text,
+  state-pack: position,
+  v: either(_stash, a),
+): either(_stash, unit) {
   _import-state(k, state-pack);
   match v {
+  | Left(_) =>
+    Right(Unit)
   | Right(_) =>
     tie _Zonk-Kit of {input-stream} = k in
     let head-char = take-N(input-stream, 1) in
     let b on head-char = is-empty(head-char) in
     let _ = head-char in
     if b {
-      Left(_empty-stash)
+      Left(_Stash(function () {
+        [Label(label)]
+      }))
     } else {
       _set-gap-spot(k, 1);
-      Left(_Stash of {
-        expected = {
-          function () {
-            []
-          }
-        },
-      })
+      Left(_Stash(function () {
+        [Label(label)]
+      }))
     }
-  | Left(_) =>
-    Right(Unit)
   }
 }
 
-inline not-followed-by<a>(p: zonk(a)): zonk(unit) {
+inline not-followed-by<a>(label: &text, p: zonk(a)): zonk(unit) {
   function (k) {
     let state-pack = _export-state(k) in
-    _not-followed-by-body(k, state-pack, p(k))
+    _not-followed-by-body(k, label, state-pack, p(k))
   }
 }
 
 define _choice<a>(
   k: &zonk-kit,
+  label: &text,
   candidates: list(zonk(a)),
   fallback: zonk(a),
-  stash-cand: _stash,
   default-gap-spot: int,
 ): either(_stash, a) {
-  let old-offset = _get-cursor(k) in
   match candidates {
   | Nil =>
     match fallback(k) {
     | Right(v) =>
       _set-gap-spot(k, default-gap-spot);
       Right(v)
-    | Left(e) =>
-      let new-offset = _get-cursor(k) in
-      if eq-int(old-offset, new-offset) {
-        Left(_join-stash(stash-cand, e))
-      } else {
-        Left(e)
-      }
+    | Left(_) =>
+      Left(_Stash(function () {
+        [Label(label)]
+      }))
     }
   | Cons(cand, rest) =>
     match cand(k) {
     | Right(v) =>
       _set-gap-spot(k, default-gap-spot);
       Right(v)
-    | Left(e) =>
-      let new-offset = _get-cursor(k) in
-      if eq-int(old-offset, new-offset) {
-        _choice(k, rest, fallback, _join-stash(stash-cand, e), default-gap-spot)
-      } else {
-        Left(e)
-      }
+    | Left(_) =>
+      _choice(k, label, rest, fallback, default-gap-spot)
     }
   }
 }
 
-inline choice<a>(candidates: list(zonk(a)), fallback: zonk(a)): zonk(a) {
+inline choice<a>(label: &text, candidates: list(zonk(a)), fallback: zonk(a)): zonk(a) {
   function (k) {
     match candidates {
     | Nil =>
@@ -503,7 +480,7 @@ inline choice<a>(candidates: list(zonk(a)), fallback: zonk(a)): zonk(a) {
         let new-offset = _get-cursor(k) in
         if eq-int(old-offset, new-offset) {
           let gap-spot = _get-gap-spot(k) in
-          _choice(k, rest, fallback, e, gap-spot)
+          _choice(k, label, rest, fallback, gap-spot)
         } else {
           Left(e)
         }
@@ -540,13 +517,14 @@ inline some<a>(!p: zonk(a)): zonk(list(a)) {
 define zen(): unit {
   let my-parser =
     choice(
+      "foo",
       [
         function (k) {
           try _ = chunk("gaoe")(k) in
           try _ = chunk("item")(k) in
           Right(Unit)
         },
-        choice([chunk("k")], label("whatever", function (k) {
+        choice("item", [chunk("k")], label("whatever", function (k) {
           try _ = chunk("px")(k) in
           try _ = chunk("kgあ")(k) in
           Right(Unit)

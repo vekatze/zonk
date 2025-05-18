@@ -1,5 +1,5 @@
 data regex {
-| Any(list(rune))
+| Any(label: &text, runes: list(rune))
 | Chunk(&text)
 | Choose(candidates: list(regex), fallback: regex)
 | Join(list(regex))

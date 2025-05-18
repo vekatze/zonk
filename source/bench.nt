@@ -24,10 +24,11 @@ define _try-parse(p: zonk(unit)): unit {
 define _bench(): unit {
   let whatever =
     choice of {
+      label = "yo",
       candidates = {
         [
           chunk("gaoe"),
-          choice([chunk("k")], label("whatever", function (k) {
+          choice("yo", [chunk("k")], label("whatever", function (k) {
             try _ = chunk("px")(k) in
             try _ = chunk("kgあ")(k) in
             Right(Unit)
