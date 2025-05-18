@@ -24,7 +24,7 @@ import {
   },
   this.rule.error {Parse-Error, report},
   this.rule.point {Point},
-  this.rule.stash {_stash},
+  this.rule.tag {tag},
   this.rule.zonk-kit {_Zonk-Kit},
 }
 
@@ -108,7 +108,7 @@ inline read-float: zonk(float) {
 define read-int-list(size: int): zonk(list(int)) {
   function (k) {
     let f =
-      define self(cursor: int, acc: list(int)): either(_stash, list(int)) {
+      define self(cursor: int, acc: list(int)): either(tag, list(int)) {
         if le-int(cursor, 0) {
           Right(reverse(acc))
         } else {
@@ -147,7 +147,7 @@ inline read-vector<a>(size: int, !p: zonk(a)): zonk(vector(a)) {
   in
   function (k) {
     let f =
-      define self(cursor: int, base: vector(a)): either(_stash, vector(a)) {
+      define self(cursor: int, base: vector(a)): either(tag, vector(a)) {
         if ge-int(cursor, size) {
           Right(base)
         } else {
@@ -171,7 +171,7 @@ define read-int-vector(size: int): zonk(vector(int)) {
   in
   function (k) {
     let f =
-      define self(cursor: int, base: vector(int)): either(_stash, vector(int)) {
+      define self(cursor: int, base: vector(int)): either(tag, vector(int)) {
         if ge-int(cursor, size) {
           Right(base)
         } else {
@@ -190,7 +190,7 @@ define read-int-vector(size: int): zonk(vector(int)) {
 define read-float-list(size: int): zonk(list(float)) {
   function (k) {
     let f =
-      define self(cursor: int, acc: list(float)): either(_stash, list(float)) {
+      define self(cursor: int, acc: list(float)): either(tag, list(float)) {
         if le-int(cursor, 0) {
           Right(reverse(acc))
         } else {
@@ -212,7 +212,7 @@ define read-float-vector(size: int): zonk(vector(float)) {
   in
   function (k) {
     let f =
-      define self(cursor: int, base: vector(float)): either(_stash, vector(float)) {
+      define self(cursor: int, base: vector(float)): either(tag, vector(float)) {
         if ge-int(cursor, size) {
           Right(base)
         } else {

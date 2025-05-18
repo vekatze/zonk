@@ -9,13 +9,12 @@ import {
   this.move.make-zonk-kit {make-zonk-kit},
   this.rule.error {Parse-Error, report},
   this.rule.point {Point, point},
-  this.rule.stash {_stash},
   this.rule.tag {Label, Raw-Text, tag},
   this.rule.zonk-kit {_Position, _Zonk-Kit, position, zonk-kit},
 }
 
 inline zonk(a) {
-  (&zonk-kit) -> either(_stash, a)
+  (&zonk-kit) -> either(tag, a)
 }
 
 inline _get-offset(r: rune): point {
@@ -104,7 +103,7 @@ inline _import-state(k: &zonk-kit, new-position: position): unit {
   })
 }
 
-define report-unexpected-input<a>(expected-item-label: &text): either(_stash, a) {
+define report-unexpected-input<a>(expected-item-label: &text): either(tag, a) {
   Left(Label(expected-item-label))
 }
 
@@ -114,7 +113,7 @@ define get-point(k: &zonk-kit): point {
   Point(line, column)
 }
 
-define fail<a>(expected: tag): either(_stash, a) {
+define fail<a>(expected: tag): either(tag, a) {
   Left(expected)
 }
 
@@ -296,7 +295,7 @@ inline label<a>(l: &text, p: zonk(a)): zonk(a) {
   }
 }
 
-define _attempt-body<a>(k: &zonk-kit, state-pack: position, v: either(_stash, a)): either(_stash, a) {
+define _attempt-body<a>(k: &zonk-kit, state-pack: position, v: either(tag, a)): either(tag, a) {
   match v {
   | Right(result) =>
     Right(result)
@@ -313,7 +312,7 @@ inline attempt<a>(p: zonk(a)): zonk(a) {
   }
 }
 
-define _look-ahead-body<a>(k: &zonk-kit, state-pack: position, v: either(_stash, a)): either(_stash, a) {
+define _look-ahead-body<a>(k: &zonk-kit, state-pack: position, v: either(tag, a)): either(tag, a) {
   match v {
   | Right(result) =>
     _import-state(k, state-pack);
@@ -330,7 +329,7 @@ inline look-ahead<a>(p: zonk(a)): zonk(a) {
   }
 }
 
-define _optional-body<a>(v: either(_stash, a)): either(_stash, ?a) {
+define _optional-body<a>(v: either(tag, a)): either(tag, ?a) {
   match v {
   | Right(result) =>
     Right(Right(result))
@@ -360,8 +359,8 @@ define _not-followed-by-body<a>(
   k: &zonk-kit,
   label: &text,
   state-pack: position,
-  v: either(_stash, a),
-): either(_stash, unit) {
+  v: either(tag, a),
+): either(tag, unit) {
   _import-state(k, state-pack);
   match v {
   | Left(_) =>
@@ -393,7 +392,7 @@ define _choice<a>(
   candidates: list(zonk(a)),
   fallback: zonk(a),
   default-gap-spot: int,
-): either(_stash, a) {
+): either(tag, a) {
   match candidates {
   | Nil =>
     match fallback(k) {
@@ -440,7 +439,7 @@ inline choice<a>(label: &text, candidates: list(zonk(a)), fallback: zonk(a)): zo
 inline many<a>(!p: zonk(a)): zonk(list(a)) {
   function (k) {
     let f =
-      define self(): either(_stash, list(a)) {
+      define self(): either(tag, list(a)) {
         match !p(k) {
         | Right(v) =>
           try vs = self() in

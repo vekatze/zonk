@@ -1,7 +1,0 @@
-import {
-  this.rule.tag {tag},
-}
-
-inline _stash: type {
-  tag
-}
