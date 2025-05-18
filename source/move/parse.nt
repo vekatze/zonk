@@ -4,7 +4,7 @@ import {
   core.memory {load-int},
   core.pointer {shift},
   core.rune {load-rune},
-  core.text {_get-content-pointer, _get-rune, _slice-N, is-empty, take-N},
+  core.text {_drop-N, _get-content-pointer, _get-rune, _slice-N, is-empty, take-N},
   core.text.show {show-text},
   this.move.make-zonk-kit {make-zonk-kit},
   this.rule.error {Parse-Error, report},
@@ -568,19 +568,21 @@ define zen(): unit {
       chunk("tn"),
     )
   in
-  pin k = make-zonk-kit(*"gaoeitemtesttnapqabcd\nctああhehoge \n\r  hehehetest") in
+  pin k = make-zonk-kit(*"gaoeiteemtesttnapqabcd\nctああhehoge \n\r  hehehetest") in
   let my-result = my-parser(k) in
   match my-result {
   | Left(e) =>
     tie _Zonk-Kit of {input-stream} = k in
+    let cursor = _get-cursor(k) in
     let line = _get-line(k) in
     let column = _get-column(k) in
     let gap-spot = _get-gap-spot(k) in
     let _Stash of {expected} = e in
+    pin foo = _drop-N(input-stream, cursor) in
     let e' =
       Parse-Error of {
-        found = show-text(take-N(input-stream, gap-spot)),
         expected = expected(),
+        found = show-text(take-N(foo, gap-spot)),
         error-location = Point(line, column),
       }
     in
