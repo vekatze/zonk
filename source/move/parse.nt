@@ -1,11 +1,12 @@
 import {
   core.cell {borrow, mutate},
+  core.magic,
+  core.memory {load-int},
   core.pointer {shift},
   core.rune {load-rune},
   core.text {_get-content-pointer, _get-rune, _slice-N, is-empty, take-N},
   core.text.show {show-text},
   this.error {Parse-Error, report},
-  this.internal {_read},
   this.move.make-zonk-kit {make-zonk-kit},
   this.point {Point, point},
   this.rule.zonk-kit {_Position, _Zonk-Kit, position, zonk-kit},
@@ -43,9 +44,15 @@ inline _set-gap-spot(k: &zonk-kit, gap-spot: int): unit {
   })
 }
 
+define _trick-read<a>(ch: &cell(a)): &a {
+  let ch = core.magic.cast(&cell(a), pointer, ch) in
+  let val-base = load-int(ch) in
+  core.magic.cast(int, &a, val-base)
+}
+
 define _get-cursor(k: &zonk-kit): int {
   tie _Zonk-Kit of {position-ref} = k in
-  let position = _read(position-ref) in
+  let position = _trick-read(position-ref) in
   tie _Position of {cursor} = position in
   *cursor
 }
