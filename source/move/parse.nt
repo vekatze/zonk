@@ -20,10 +20,6 @@ import {
   this.rule.zonk-kit {_Position, _Zonk-Kit, position, zonk-kit},
 }
 
-inline app(a) {
-  either(_stash, a)
-}
-
 inline zonk(a) {
   (&zonk-kit) -> either(_stash, a)
 }
@@ -114,7 +110,7 @@ inline _import-state(k: &zonk-kit, new-position: position): unit {
   })
 }
 
-define report-unexpected-input<a>(expected-item-label: &text): app(a) {
+define report-unexpected-input<a>(expected-item-label: &text): either(_stash, a) {
   Left(_Stash(function () {
     [Label(expected-item-label)]
   }))
@@ -126,7 +122,7 @@ define get-point(k: &zonk-kit): point {
   Point(line, column)
 }
 
-define fail<a>(expected: list(tag)): app(a) {
+define fail<a>(expected: list(tag)): either(_stash, a) {
   Left(_Stash of {
     expected = {
       function () {
@@ -519,7 +515,7 @@ inline choice<a>(candidates: list(zonk(a)), fallback: zonk(a)): zonk(a) {
 inline many<a>(!p: zonk(a)): zonk(list(a)) {
   function (k) {
     let f =
-      define self(): app(list(a)) {
+      define self(): either(_stash, list(a)) {
         match !p(k) {
         | Right(v) =>
           try vs = self() in
