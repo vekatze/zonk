@@ -57,7 +57,8 @@ inline _proceed-by-rune(k: &zonk-kit, r: rune): unit {
   if eq-rune(r, `\n`) {
     _proceed of {k, byte-offset = 1, line-offset = 1, column-offset = 0}
   } else {
-    _proceed of {k, byte-offset = 1, line-offset = 0, column-offset = 1}
+    let byte-offset = core.rune.size(r) in
+    _proceed of {k, byte-offset, line-offset = 0, column-offset = 1}
   }
 }
 
@@ -114,9 +115,10 @@ define fail<a>(expected: list(tag)): app(a) {
 
 define end-of-input: zonk(unit) {
   function (k) {
-    tie _Zonk-Kit of {input-stream} = k in
+    tie _Zonk-Kit of {input-stream, cursor-ref} = k in
+    let cursor = core.cell.clone(cursor-ref) in
     let len = core.text.text-byte-length(input-stream) in
-    if eq-int(len, 0) {
+    if ge-int(cursor, len) {
       Right(Unit)
     } else {
       _set-gap-spot(k, 1);
@@ -133,12 +135,13 @@ define end-of-input: zonk(unit) {
 
 inline satisfy(p: (rune) -> bool): zonk(rune) {
   function (k) {
-    tie _Zonk-Kit of {input-stream} = k in
+    tie _Zonk-Kit of {input-stream, cursor-ref} = k in
     let len = core.text.text-byte-length(input-stream) in
-    if eq-int(len, 0) {
+    let cursor = core.cell.clone(cursor-ref) in
+    if ge-int(cursor, len) {
       Left(_empty-stash)
     } else {
-      let r = _get-rune(input-stream, 0) in
+      let r = _get-rune(input-stream, cursor) in
       if p(r) {
         _proceed-by-rune(k, r);
         Right(r)
@@ -502,7 +505,7 @@ inline choice<a>(candidates: list(zonk(a)), fallback: zonk(a)): zonk(a) {
   }
 }
 
-inline many<a>(!p: (&zonk-kit) -> app(a)): zonk(list(a)) {
+inline many<a>(!p: zonk(a)): zonk(list(a)) {
   function (k) {
     let f =
       define self(): app(list(a)) {

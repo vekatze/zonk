@@ -1,0 +1,95 @@
+import {
+  core.list {any, for-each},
+  this.move.make-zonk-kit {make-zonk-kit},
+  this.move.parse {attempt, choice, chunk, end-of-input, many, satisfy, zonk},
+  this.rule.regex {Any, Choose, Chunk, Join, Repeat, regex},
+}
+
+define _from-regex(r: regex): zonk(unit) {
+  match r {
+  | Any(rs) =>
+    function (k) {
+      try _ =
+        satisfy(function (r) {
+          let bs =
+            for-each(rs, function (r') {
+              eq-rune(r, r')
+            })
+          in
+          any(bs)
+        })(k)
+      in
+      Right(Unit)
+    }
+  | Chunk(t) =>
+    chunk(t)
+  | Choose(xs, fallback) =>
+    let xs' = for-each(xs, _from-regex) in
+    let fallback' = _from-regex(fallback) in
+    attempt(choice(xs', fallback'))
+  | Join(xs) =>
+    let xs' = for-each(xs, _from-regex) in
+    let go =
+      define loop(xs: list(zonk(unit))): zonk(unit) {
+        match xs {
+        | Nil =>
+          _from-regex(Any([]))
+        | Cons(x, Nil) =>
+          x
+        | Cons(x, xs) =>
+          function (k) {
+            try _ = x(k) in
+            loop(xs)(k)
+          }
+        }
+      }
+    in
+    attempt(go(xs'))
+  | Repeat(r) =>
+    function (k) {
+      try _ = many(attempt(_from-regex(r)))(k) in
+      Right(Unit)
+    }
+  }
+}
+
+inline recognize(r: regex, input: text): bool {
+  let p =
+    function (k) {
+      try _ = _from-regex(r)(k) in
+      end-of-input(k)
+    }
+  in
+  pin base = make-zonk-kit(input) in
+  match p(base) {
+  | Right(_) =>
+    True
+  | Left(_) =>
+    False
+  }
+}
+
+define zen(): unit {
+  let reg =
+    Repeat(
+      Join([
+        Choose(
+          [
+            Chunk("pqr"),
+            Chunk("H"),
+            Any([`P`, `あ`, `Γ`]),
+          ],
+          Chunk("abc"),
+        ),
+        Chunk(":"),
+        Choose([Chunk("AAAA")], Chunk("XX")),
+        Chunk(", "),
+      ]),
+    )
+  in
+  if recognize(reg, *"abc:XX, あ:AAAA, Γ:XX, ") {
+    print("True\n")
+  } else {
+    print("False\n")
+  }
+}
