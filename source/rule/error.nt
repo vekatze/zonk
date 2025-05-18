@@ -4,7 +4,7 @@ import {
   this.rule.tag {show-tag, tag},
 }
 
-data error {
+data parse-error {
 | Parse-Error(
     found: text,
     expected: tag,
@@ -12,7 +12,7 @@ data error {
   )
 }
 
-define report(e: error): text {
+define report(e: parse-error): text {
   let Parse-Error of {found, expected, error-location} = e in
   let error-location' = show-point(error-location) in
   format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [error-location', show-tag(expected), found])
