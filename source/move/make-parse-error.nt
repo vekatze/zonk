@@ -14,12 +14,12 @@ define make-parse-error(k: &zonk-kit, expected: tag): parse-error {
   let line = _get-line(k) in
   let column = _get-column(k) in
   let gap-spot = _get-gap-spot(k) in
-  let foo = _drop-N(input-stream, cursor) in
-  let bar on foo = take-N(foo, gap-spot) in
-  let _ = foo in
+  let input-stream' = _drop-N(input-stream, cursor) in
+  let found on input-stream' = show-text(take-N(input-stream', gap-spot)) in
+  let _ = input-stream' in
   Parse-Error of {
     expected,
-    found = show-text(bar),
+    found,
     error-location = Point(line, column),
   }
 }

@@ -33,9 +33,9 @@ define _from-regex(r: regex): zonk(unit) {
       define loop(xs: list(zonk(unit))): zonk(unit) {
         match xs {
         | Nil =>
-          _from-regex(Any("any", []))
-        | Cons(x, Nil) =>
-          x
+          function (_) {
+            Right(Unit)
+          }
         | Cons(x, xs) =>
           function (k) {
             try _ = x(k) in
