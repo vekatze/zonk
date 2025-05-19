@@ -1,6 +1,6 @@
 import {
   core.text {format},
-  this.rule.expected-item {expected-item, show-expected-item},
+  this.rule.expected-item {_show-expected-item, expected-item},
   this.rule.point {point, show-point},
 }
 
@@ -15,5 +15,5 @@ data parse-error {
 define report(e: parse-error): text {
   let Parse-Error of {found, expected, error-location} = e in
   let error-location' = show-point(error-location) in
-  format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [error-location', show-expected-item(expected), found])
+  format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", [error-location', _show-expected-item(expected), found])
 }

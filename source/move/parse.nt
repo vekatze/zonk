@@ -15,7 +15,7 @@ import {
     _proceed-by-rune,
     _set-gap-size,
   },
-  this.rule.error {parse-error, report},
+  this.rule.error {report},
   this.rule.expected-item {_Label, _Raw-Text, expected-item},
   this.rule.point {Point, point},
   this.rule.zonk-kit {_Zonk-Kit, position, zonk-kit},
@@ -27,15 +27,6 @@ inline parsed(a): type {
 
 inline zonk(a) {
   (&zonk-kit) -> parsed(a)
-}
-
-define run<a>(k: &zonk-kit, p: zonk(a)): either(parse-error, a) {
-  match p(k) {
-  | Right(result) =>
-    Right(result)
-  | Left(e) =>
-    Left(make-parse-error(k, e))
-  }
 }
 
 inline _get-offset(r: rune): point {

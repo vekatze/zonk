@@ -7,7 +7,7 @@ data expected-item {
 | _Label(&text)
 }
 
-define show-expected-item(k: expected-item): text {
+define _show-expected-item(k: expected-item): text {
   match k {
   | _Raw-Text(t) =>
     show-text-N(t)
