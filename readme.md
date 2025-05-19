@@ -13,23 +13,24 @@ neut get zonk https://github.com/vekatze/zonk/raw/main/archive/0-1-39.tar.zst
 ### Main Definitions
 
 ```neut
-// A monadic parser.
-data parser(a)
+// An opaque type that holds information needed to execute parsers
+data zonk-kit
 
-// Monadic bind.
-inline zonk<a, b>(p: parser(a), k: (a) -> parser(b)): parser(b)
+// An opaque type that holds expected items
+data expected-item
 
-// Monadic return.
-inline return<a>(x: a): parser(a)
+// The type of parsers
+inline zonk(a) {
+  (&zonk-kit) -> either(expected-item, a)
+}
 
-// Creates a parser state from the input string.
-// Use this with `run`.
-define new-state(input: text): cell(state)
+// Creates a zonk-kit for given text
+define make-zonk-kit(input-stream: text): zonk-kit
 
-// Executes parser, setting `st` as the initial input stream.
-inline run<a>(p: parser(a), st: &cell(state)): either(error, a)
+// Converts an opaque `expected-item` to a parse error
+define make-parse-error(k: &zonk-kit, expected: expected-item): parse-error
 
-// Converts an error into a human-readable text.
+// Converts a parse error into a human-readable text
 define report(e: error): text
 ```
 
@@ -37,65 +38,62 @@ define report(e: error): text
 
 ```neut
 // Succeeds only at the end of the input.
-inline end-of-input: parser(unit)
+inline end-of-input: zonk(unit)
 
 // Succeeds only when the head rune of the remaining stream satisfies `p`.
-inline satisfy(p: (rune) -> bool): parser(rune)
+// The variable `label` is used when reporting errors.
+inline satisfy(label: &text, p: (rune) -> bool): zonk(rune)
 
 // Reads any single rune from the remaining stream.
-inline any-rune: parser(rune)
+inline any-rune: zonk(rune)
 
 // Succeeds only when the head of the remaining stream is equal to `t`.
-inline chunk(t: &text): parser(unit)
+inline chunk(t: &text): zonk(unit)
 
 // Consumes the input stream while `!p` is true.
-inline take-while(!p: (rune) -> bool): parser(text)
+inline take-while(!p: (rune) -> bool): zonk(text)
 
 // Discards the input stream while `!p` is true.
-inline drop-while(!p: (rune) -> bool): parser(unit)
+inline drop-while(!p: (rune) -> bool): zonk(unit)
 
 // Skips ascii spaces.
-inline ascii-space: parser(unit)
+inline ascii-space: zonk(unit)
 
-// Executes the parser `p`, overriding the (possible) error message with `l`.
-inline label<a>(l: &text, p: parser(a)): parser(a)
-
-// Executing the parser `p`, suppressing any possible error messages.
-inline hidden<a>(p: parser(a)): parser(a)
+// Executes `p`, overriding the (possible) error message with `l`.
+inline label<a>(l: &text, p: zonk(a)): zonk(a)
 
 // `attempt(p)` is the same as `p` if `p` succeeds.
 // `attempt(p)` rewinds the input stream if `p` fails.
-inline attempt<a>(p: parser(a)): parser(a)
+inline attempt<a>(p: zonk(a)): zonk(a)
 
 // `look-ahead(p)` rewinds the input stream if `p` succeeds.
 // `look-ahead(p)` is the same as `p` if `p` fails.
-inline look-ahead<a>(p: parser(a)): parser(a)
-
-// A parser that always fails, reporting the expected inputs.
-define fail<a>(expected: list(tag)): parser(a)
+inline look-ahead<a>(p: zonk(a)): zonk(a)
 
 // `optional(p)` is the same as `p` if `p` succeeds.
 // `optional(p)` suppresses the error of `p` and results in none if `p` fails.
-inline optional<a>(p: parser(a)): parser(?a)
+inline optional<a>(p: zonk(a)): zonk(?a)
 
 // Executes `p1`. If it succeeds, `branch(p1, p2)` returns the result of `p1`.
 // If it fails, executes p2.
-inline branch<a>(p1: parser(a), p2: parser(a)): parser(a)
+inline branch<a>(p1: zonk(a), p2: zonk(a)): zonk(a)
 
 // Succeeds only when `p` can parse the head of the input stream.
 // `not-followed-by` does not consume the input stream.
-inline not-followed-by<a>(p: parser(a)): parser(unit)
+// The variable `label` is used when reporting errors.
+inline not-followed-by<a>(label: &text, p: zonk(a)): zonk(unit)
 
-// Tries list on parsers one by one.
-inline choice<a>(candidates: list(parser(a)), fallback: parser(a)): parser(a)
+// Tries given parsers one by one.
+// The variable `label` is used when reporting errors.
+inline choice<a>(label: &text, candidates: list(zonk(a)), fallback: zonk(a)): zonk(a)
 
 // Parses the input stream using `!p` iteratively until it fails.
 // This parser never fails.
-inline many<a>(!p: parser(a)): parser(list(a))
+inline many<a>(!p: zonk(a)): zonk(list(a))
 
 // Parses the input stream using `!p` iteratively until it fails.
 // This parser succeeds only if `!p` successfully parse the input stream at least once.
-inline some<a>(!p: parser(a)): parser(list(a))
+inline some<a>(!p: zonk(a)): zonk(list(a))
 ```
 
 ### Presets
@@ -103,39 +101,40 @@ inline some<a>(!p: parser(a)): parser(list(a))
 ```neut
 // A regex type
 data regex {
-| Any(list(rune))
-| Chunk(&text)
-| Choose(candidates: list(regex), fallback: regex)
-| Join(list(regex))
-| Repeat(regex)
+| Any(label: &text, runes: list(rune))
+| Chunk(chunk-text: &text)
+| Choose(label: &text, candidates: list(regex), fallback: regex)
+| Join(components: list(regex))
+| Repeat(component: regex)
+| End-Of-Input
 }
 
 // Returns True only if the regex `r` recognizes `input`.
 inline recognize(r: regex, input: text): bool
 
 // Skips space characters.
-define skip-space(): parser(unit)
+define skip-space(): zonk(unit)
 
 // Parses a symbol.
-inline read-symbol(): parser(text)
+inline read-symbol(): zonk(text)
 
 // Parses an integer.
-inline read-int(): parser(int)
+inline read-int(): zonk(int)
 
 // Parses a float.
-inline read-float(): parser(float)
+inline read-float(): zonk(float)
 
 // Parses integers separated by space characters and stores them into a list.
-define read-int-list(size: int): parser(list(int))
+define read-int-list(size: int): zonk(list(int))
 
 // Parses integers separated by space characters and stores them into a vector.
-define read-int-vector(size: int): parser(vector(int))
+define read-int-vector(size: int): zonk(vector(int))
 
 // A float-version of `read-int-list`.
-define read-float-list(size: int): parser(list(float))
+define read-float-list(size: int): zonk(list(float))
 
 // A float-version of `read-int-vector`.
-define read-float-vector(size: int): parser(vector(float))
+define read-float-vector(size: int): zonk(vector(float))
 ```
 
 ### Utils
@@ -150,7 +149,7 @@ data point {
 }
 
 // Gets the current reading position.
-inline get-point(): parser(point)
+define get-point(k: &zonk-kit): point
 ```
 
 ## Example
@@ -158,36 +157,41 @@ inline get-point(): parser(point)
 Executing `zen` in the following example should output `pass`:
 
 ```neut
-inline sample-parser: parser(unit) {
-  // construct a parser
-  with zonk {
+inline _sample-parser: zonk(unit) {
+  // constructs a parser
+  function (k) {
     // accepts: foo
-    bind _ = chunk("foo") in
+    try _ = chunk("foo")(k) in
     // accepts: (buz|test|bar)
-    bind _ = choice([chunk("buz"), chunk("test")], chunk("bar")) in
+    try _ = choice("buz, test, or bar", [chunk("buz"), chunk("test")], chunk("bar"))(k) in
     // accepts: (qux)+
-    bind _ = some(chunk("qux")) in
+    try _ = some(chunk("qux"))(k) in
     // accepts: (yo)*
-    bind _ = many(chunk("yo")) in
+    try _ = many(chunk("yo"))(k) in
     // accepts: end-of-input
-    bind _ = end-of-input in
-    return(Unit)
+    try _ = end-of-input(k) in
+    Right(Unit)
   }
 }
 
 define zen(): unit {
-  // construct an input
-  let some-input = new-state(*"foobarquxqux") in
-  let result on some-input =
-    // run the parser
-    match run(sample-parser, some-input) {
-    | Pass(_) =>
-      print("pass\n")
-    | Fail(_) =>
-      print("fail\n")
-    }
-  in
-  let _ = some-input in
-  result
+  pin k = make-zonk-kit(*"foobarquxquxyoyoyoyo") in
+  match _sample-parser(k) {
+  | Right(_) =>
+    print("pass\n")
+  | Left(_) =>
+    let err = make-parse-error(k, e) in
+    printf("fail: {}\n", [report(err)])
+  }
 }
+```
+
+If you rewrite the input as `fooXXXXquxquxyoyoyoyo`, the output will be as follows:
+
+```text
+fail: parse error at row 1, column 4:
+expected:
+  buz, test, or bar
+found:
+  "XXXX"
 ```
