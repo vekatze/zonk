@@ -106,10 +106,10 @@ define _chunk-body(k: &zonk-kit, chunk-text: &text): int {
   } else {
     let ptr1 = shift(_get-content-pointer(input-stream), cursor) in
     let ptr2 = _get-content-pointer(chunk-text) in
+    let chunk-len = core.text.length(chunk-text) in
     let f =
       define _chunk-consumer(
         index: int,
-        char-len: int,
         line-offset: int,
         column-offset: int,
       ): int {
@@ -126,18 +126,17 @@ define _chunk-body(k: &zonk-kit, chunk-text: &text): int {
             let c = match b {True => 0 | False => 1} in
             _chunk-consumer(
               add-int(index, offset),
-              add-int(char-len, 1),
               add-int(line-offset, l),
               add-int(column-offset, c),
             )
           } else {
-            _set-gap-spot(k, add-int(char-len, 1));
+            _set-gap-spot(k, chunk-len);
             -1
           }
         }
       }
     in
-    f(0, 0, 0, 0)
+    f(0, 0, 0)
   }
 }
 
