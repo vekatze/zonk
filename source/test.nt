@@ -3,9 +3,11 @@ import {
   noa.gen.pairs {pairs},
   noa.gen.texts {texts},
   noa.suite {Trope, noa},
+  this.move.make-parse-error {make-parse-error},
   this.move.make-zonk-kit {make-zonk-kit},
   this.move.parse {choice, chunk, end-of-input, many, some, zonk},
   this.move.private.state,
+  this.rule.error {report},
   this.rule.zonk-kit {_Zonk-Kit},
 }
 
@@ -113,12 +115,12 @@ define main(): unit {
 }
 
 inline _sample-parser: zonk(unit) {
-  // construct a parser
+  // constructs a parser
   function (k) {
     // accepts: foo
     try _ = chunk("foo")(k) in
     // accepts: (buz|test|bar)
-    try _ = choice("yo", [chunk("buz"), chunk("test")], chunk("bar"))(k) in
+    try _ = choice("buz, test, or bar", [chunk("buz"), chunk("test")], chunk("bar"))(k) in
     // accepts: (qux)+
     try _ = some(chunk("qux"))(k) in
     // accepts: (yo)*
@@ -130,11 +132,12 @@ inline _sample-parser: zonk(unit) {
 }
 
 define zen(): unit {
-  pin k = make-zonk-kit(*"foobarquxquxyoyoyoyo") in
+  pin k = make-zonk-kit(*"fooXXXXquxquxyoyoyoyo") in
   match _sample-parser(k) {
   | Right(_) =>
     print("pass\n")
-  | Left(_) =>
-    print("fail\n")
+  | Left(e) =>
+    let err = make-parse-error(k, e) in
+    printf("fail: {}\n", [report(err)])
   }
 }
