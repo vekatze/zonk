@@ -1,7 +1,7 @@
 import {
   core.pointer {shift},
   core.rune {load-rune},
-  core.text {_get-content-pointer, _get-rune, _slice-N, is-empty, take-N},
+  core.text {_get-content-pointer, _get-rune, _slice-N},
   this.move.make-parse-error {make-parse-error},
   this.move.make-zonk-kit {make-zonk-kit},
   this.move.private.state {
@@ -296,32 +296,28 @@ inline branch<a>(p1: zonk(a), p2: zonk(a)): zonk(a) {
 
 define _not-followed-by-body<a>(
   k: &zonk-kit,
-  label: &text,
   state-pack: position,
   v: either(tag, a),
-): either(tag, unit) {
+): bool {
   _import-state(k, state-pack);
   match v {
   | Left(_) =>
-    Right(Unit)
+    True
   | Right(_) =>
-    tie _Zonk-Kit of {input-stream} = k in
-    let head-char = take-N(input-stream, 1) in
-    let b on head-char = is-empty(head-char) in
-    let _ = head-char in
-    if b {
-      Left(Label(label))
-    } else {
-      _set-gap-spot(k, 1);
-      Left(Label(label))
-    }
+    _set-gap-spot(k, 1);
+    False
   }
 }
 
 inline not-followed-by<a>(label: &text, p: zonk(a)): zonk(unit) {
   function (k) {
     let state-pack = _export-state(k) in
-    _not-followed-by-body(k, label, state-pack, p(k))
+    let result = _not-followed-by-body(k, state-pack, p(k)) in
+    if result {
+      Right(Unit)
+    } else {
+      Left(Label(label))
+    }
   }
 }
 

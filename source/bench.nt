@@ -1,7 +1,7 @@
 import {
   core.control {loop},
   this.move.make-zonk-kit {make-zonk-kit},
-  this.move.parse {attempt, branch, chunk, label, zonk},
+  this.move.parse {branch, chunk, label, not-followed-by, zonk},
 }
 
 define _try-parse(p: zonk(unit)): unit {
@@ -10,14 +10,14 @@ define _try-parse(p: zonk(unit)): unit {
   | Left(_) =>
     Unit
   | Right(_) =>
-    print("right\n")
+    Unit
   }
 }
 
 define _bench(): unit {
   let whatnot =
     branch(
-      attempt(chunk("gaoe")),
+      not-followed-by("aoeu", chunk("nああ")),
       branch(
         branch(chunk("k"), label("whatever", function (k) {
           try _ = chunk("px")(k) in
@@ -25,7 +25,7 @@ define _bench(): unit {
           Right(Unit)
         })),
         branch(
-          attempt(chunk("tあい")),
+          not-followed-by("my label", chunk("nあ")),
           branch(
             label("whatever 2", function (k) {
               try _ = chunk("pt")(k) in
