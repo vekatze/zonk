@@ -42,8 +42,8 @@ inline _get-offset(r: rune): point {
   }
 }
 
-define report-unexpected-input<a>(expected-item-label: &text): either(expected-item, a) {
-  Left(Label(expected-item-label))
+define report-unexpected-input<a>(label: &text): either(expected-item, a) {
+  Left(Label(label))
 }
 
 define get-point(k: &zonk-kit): point {
