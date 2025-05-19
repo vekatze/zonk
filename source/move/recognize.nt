@@ -1,8 +1,10 @@
 import {
   core.list {any, for-each},
+  this.move.make-parse-error {make-parse-error},
   this.move.make-zonk-kit {make-zonk-kit},
-  this.move.parse {attempt, choice, chunk, end-of-input, many, satisfy, zonk},
-  this.rule.regex {Any, Choose, Chunk, Join, Repeat, regex},
+  this.move.parse {attempt, branch, chunk, end-of-input, label, many, satisfy, zonk},
+  this.rule.error {report},
+  this.rule.regex {Any, Choose, Chunk, End-Of-Input, Join, Repeat, regex},
 }
 
 define _from-regex(r: regex): zonk(unit) {
@@ -23,10 +25,20 @@ define _from-regex(r: regex): zonk(unit) {
     }
   | Chunk(t) =>
     chunk(t)
-  | Choose(xs, fallback) =>
+  | Choose(name, xs, fallback) =>
     let xs' = for-each(xs, _from-regex) in
     let fallback' = _from-regex(fallback) in
-    attempt(choice("choose", xs', fallback'))
+    let go =
+      define loop(xs: list(zonk(unit)), fallback: zonk(unit)): zonk(unit) {
+        match xs {
+        | Nil =>
+          fallback
+        | Cons(x, rest) =>
+          branch(attempt(x), loop(rest, fallback))
+        }
+      }
+    in
+    label(name, go(xs', fallback'))
   | Join(xs) =>
     let xs' = for-each(xs, _from-regex) in
     let go =
@@ -44,50 +56,51 @@ define _from-regex(r: regex): zonk(unit) {
         }
       }
     in
-    attempt(go(xs'))
+    go(xs')
   | Repeat(r) =>
     function (k) {
       try _ = many(attempt(_from-regex(r)))(k) in
       Right(Unit)
     }
+  | End-Of-Input =>
+    end-of-input
   }
 }
 
 inline recognize(r: regex, input: text): bool {
-  let p =
-    function (k) {
-      try _ = _from-regex(r)(k) in
-      end-of-input(k)
-    }
-  in
-  pin base = make-zonk-kit(input) in
-  match p(base) {
+  pin k = make-zonk-kit(input) in
+  match _from-regex(r)(k) {
   | Right(_) =>
     True
-  | Left(_) =>
+  | Left(e) =>
+    printf("{}\n", [report(make-parse-error(k, e))]);
     False
   }
 }
 
 define zen(): unit {
   let reg =
-    Repeat(
-      Join([
-        Choose(
-          [
-            Chunk("pqr"),
-            Chunk("H"),
-            Any("Lorem ipsum", [`P`, `あ`, `Γ`]),
-          ],
-          Chunk("abc"),
-        ),
-        Chunk(":"),
-        Choose([Chunk("AAAA")], Chunk("XX")),
-        Chunk(", "),
-      ]),
-    )
+    Join([
+      Repeat(
+        Join([
+          Choose(
+            "variable",
+            [
+              Chunk("pqr"),
+              Chunk("H"),
+              Any("Lorem ipsum", [`P`, `あ`, `k`]),
+            ],
+            Chunk("abc"),
+          ),
+          Chunk(":"),
+          Choose("type", [Chunk("AAAA")], Chunk("XX")),
+          Chunk(", "),
+        ]),
+      ),
+      End-Of-Input,
+    ])
   in
-  if recognize(reg, *"abc:XX, あ:AAAA, Γ:XX, ") {
+  if recognize(reg, *"abc:XX, あ:AAAA, k:XX, ") {
     print("True\n")
   } else {
     print("False\n")

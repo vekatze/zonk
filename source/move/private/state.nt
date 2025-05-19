@@ -1,5 +1,6 @@
 import {
   core.cell {borrow, mutate},
+  core.int {max-int},
   core.magic,
   core.memory {load-int},
   core.rune,
@@ -12,11 +13,11 @@ define _trick-read<a>(ch: &cell(a)): &a {
   core.magic.cast(int, &a, val-base)
 }
 
-inline _set-gap-size(k: &zonk-kit, gap-size: int): unit {
+inline _set-gap-size(k: &zonk-kit, new-gap-size: int): unit {
   tie _Zonk-Kit of {position-ref} = k in
   mutate(position-ref, function (position) {
-    let _Position of {cursor, line, column} = position in
-    _Position of {cursor, line, column, gap-size}
+    let _Position of {cursor, line, column, gap-size} = position in
+    _Position of {cursor, line, column, gap-size = max-int(gap-size, new-gap-size)}
   })
 }
 
