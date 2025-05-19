@@ -7,7 +7,7 @@ import {
   this.rule.zonk-kit {_Position, _Zonk-Kit, position, zonk-kit},
 }
 
-define _trick-read<a>(ch: &cell(a)): &a {
+define _unsafe-read<a>(ch: &cell(a)): &a {
   let ch = core.magic.cast(&cell(a), pointer, ch) in
   let val-base = load-int(ch) in
   core.magic.cast(int, &a, val-base)
@@ -23,7 +23,7 @@ inline _set-gap-size(k: &zonk-kit, new-gap-size: int): unit {
 
 define _get-cursor(k: &zonk-kit): int {
   tie _Zonk-Kit of {position-ref} = k in
-  let position = _trick-read(position-ref) in
+  let position = _unsafe-read(position-ref) in
   tie _Position of {cursor} = position in
   *cursor
 }
