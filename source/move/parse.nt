@@ -8,12 +8,12 @@ import {
     _export-state,
     _get-column,
     _get-cursor,
-    _get-gap-spot,
+    _get-gap-size,
     _get-line,
     _import-state,
     _proceed,
     _proceed-by-rune,
-    _set-gap-spot,
+    _set-gap-size,
   },
   this.rule.error {parse-error, report},
   this.rule.point {Point, point},
@@ -64,7 +64,7 @@ define end-of-input: zonk(unit) {
     if ge-int(cursor, len) {
       Right(Unit)
     } else {
-      _set-gap-spot(k, 1);
+      _set-gap-size(k, 1);
       Left(Label("end of input"))
     }
   }
@@ -83,7 +83,7 @@ inline satisfy(label: &text, p: (rune) -> bool): zonk(rune) {
         _proceed-by-rune(k, r);
         Right(r)
       } else {
-        _set-gap-spot(k, 1);
+        _set-gap-size(k, 1);
         Left(Label(label))
       }
     }
@@ -130,7 +130,7 @@ define _chunk-body(k: &zonk-kit, chunk-text: &text): int {
               add-int(column-offset, c),
             )
           } else {
-            _set-gap-spot(k, chunk-len);
+            _set-gap-size(k, chunk-len);
             -1
           }
         }
@@ -303,7 +303,7 @@ define _not-followed-by-body<a>(
   | Left(_) =>
     True
   | Right(_) =>
-    _set-gap-spot(k, 1);
+    _set-gap-size(k, 1);
     False
   }
 }
@@ -325,13 +325,13 @@ define _choice<a>(
   label: &text,
   candidates: list(zonk(a)),
   fallback: zonk(a),
-  default-gap-spot: int,
+  default-gap-size: int,
 ): either(tag, a) {
   match candidates {
   | Nil =>
     match fallback(k) {
     | Right(v) =>
-      _set-gap-spot(k, default-gap-spot);
+      _set-gap-size(k, default-gap-size);
       Right(v)
     | Left(_) =>
       Left(Label(label))
@@ -339,10 +339,10 @@ define _choice<a>(
   | Cons(cand, rest) =>
     match cand(k) {
     | Right(v) =>
-      _set-gap-spot(k, default-gap-spot);
+      _set-gap-size(k, default-gap-size);
       Right(v)
     | Left(_) =>
-      _choice(k, label, rest, fallback, default-gap-spot)
+      _choice(k, label, rest, fallback, default-gap-size)
     }
   }
 }
@@ -360,8 +360,8 @@ inline choice<a>(label: &text, candidates: list(zonk(a)), fallback: zonk(a)): zo
       | Left(e) =>
         let new-offset = _get-cursor(k) in
         if eq-int(old-offset, new-offset) {
-          let gap-spot = _get-gap-spot(k) in
-          _choice(k, label, rest, fallback, gap-spot)
+          let gap-size = _get-gap-size(k) in
+          _choice(k, label, rest, fallback, gap-size)
         } else {
           Left(e)
         }

@@ -3,7 +3,7 @@ data position {
     cursor: int,
     line: int,
     column: int,
-    gap-spot: int,
+    gap-size: int,
   )
 }
 

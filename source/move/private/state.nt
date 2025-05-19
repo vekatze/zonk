@@ -12,11 +12,11 @@ define _trick-read<a>(ch: &cell(a)): &a {
   core.magic.cast(int, &a, val-base)
 }
 
-inline _set-gap-spot(k: &zonk-kit, gap-spot: int): unit {
+inline _set-gap-size(k: &zonk-kit, gap-size: int): unit {
   tie _Zonk-Kit of {position-ref} = k in
   mutate(position-ref, function (position) {
     let _Position of {cursor, line, column} = position in
-    _Position of {cursor, line, column, gap-spot}
+    _Position of {cursor, line, column, gap-size}
   })
 }
 
@@ -27,11 +27,11 @@ define _get-cursor(k: &zonk-kit): int {
   *cursor
 }
 
-define _get-gap-spot(k: &zonk-kit): int {
+define _get-gap-size(k: &zonk-kit): int {
   tie _Zonk-Kit of {position-ref} = k in
   borrow(position-ref, function (position) {
-    tie _Position of {gap-spot} = position in
-    quote {*gap-spot}
+    tie _Position of {gap-size} = position in
+    quote {*gap-size}
   })
 }
 
@@ -54,11 +54,11 @@ define _get-column(k: &zonk-kit): int {
 inline _proceed(k: &zonk-kit, byte-offset: int, line-offset: int, column-offset: int): unit {
   tie _Zonk-Kit of {position-ref} = k in
   mutate(position-ref, function (position) {
-    let _Position of {cursor, line, column, gap-spot} = position in
+    let _Position of {cursor, line, column, gap-size} = position in
     let cursor = add-int(cursor, byte-offset) in
     let line = add-int(line, line-offset) in
     let column = add-int(column, column-offset) in
-    _Position of {cursor, line, column, gap-spot}
+    _Position of {cursor, line, column, gap-size}
   })
 }
 
