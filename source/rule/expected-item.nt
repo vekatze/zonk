@@ -2,12 +2,12 @@ import {
   core.text.show {show-text-N},
 }
 
-data tag {
+data expected-item {
 | Raw-Text(&text)
 | Label(&text)
 }
 
-define show-tag(k: tag): text {
+define show-expected-item(k: expected-item): text {
   match k {
   | Raw-Text(t) =>
     show-text-N(t)
