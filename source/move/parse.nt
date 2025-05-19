@@ -16,13 +16,17 @@ import {
     _set-gap-size,
   },
   this.rule.error {parse-error, report},
-  this.rule.expected-item {Label, Raw-Text, expected-item},
+  this.rule.expected-item {_Label, _Raw-Text, expected-item},
   this.rule.point {Point, point},
   this.rule.zonk-kit {_Zonk-Kit, position, zonk-kit},
 }
 
+inline parsed(a): type {
+  either(expected-item, a)
+}
+
 inline zonk(a) {
-  (&zonk-kit) -> either(expected-item, a)
+  (&zonk-kit) -> parsed(a)
 }
 
 define run<a>(k: &zonk-kit, p: zonk(a)): either(parse-error, a) {
@@ -42,18 +46,14 @@ inline _get-offset(r: rune): point {
   }
 }
 
-define report-unexpected-input<a>(label: &text): either(expected-item, a) {
-  Left(Label(label))
+define report-unexpected-input<a>(label: &text): parsed(a) {
+  Left(_Label(label))
 }
 
 define get-point(k: &zonk-kit): point {
   let line = _get-line(k) in
   let column = _get-column(k) in
   Point(line, column)
-}
-
-define fail<a>(expected: expected-item): either(expected-item, a) {
-  Left(expected)
 }
 
 define end-of-input: zonk(unit) {
@@ -65,7 +65,7 @@ define end-of-input: zonk(unit) {
       Right(Unit)
     } else {
       _set-gap-size(k, 1);
-      Left(Label("end of input"))
+      Left(_Label("end of input"))
     }
   }
 }
@@ -76,7 +76,7 @@ inline satisfy(label: &text, p: (rune) -> bool): zonk(rune) {
     let len = core.text.text-byte-length(input-stream) in
     let cursor = _get-cursor(k) in
     if ge-int(cursor, len) {
-      Left(Label(label))
+      Left(_Label(label))
     } else {
       let r = _get-rune(input-stream, cursor) in
       if p(r) {
@@ -84,7 +84,7 @@ inline satisfy(label: &text, p: (rune) -> bool): zonk(rune) {
         Right(r)
       } else {
         _set-gap-size(k, 1);
-        Left(Label(label))
+        Left(_Label(label))
       }
     }
   }
@@ -146,7 +146,7 @@ inline chunk(chunk-text: &text): zonk(unit) {
     if gt-int(result-flag, 0) {
       Right(Unit)
     } else {
-      Left(Raw-Text(chunk-text))
+      Left(_Raw-Text(chunk-text))
     }
   }
 }
@@ -228,12 +228,12 @@ inline label<a>(l: &text, p: zonk(a)): zonk(a) {
     | Right(result) =>
       Right(result)
     | Left(_) =>
-      Left(Label(l))
+      Left(_Label(l))
     }
   }
 }
 
-define _attempt-body<a>(k: &zonk-kit, state-pack: position, v: either(expected-item, a)): either(expected-item, a) {
+define _attempt-body<a>(k: &zonk-kit, state-pack: position, v: parsed(a)): parsed(a) {
   match v {
   | Right(result) =>
     Right(result)
@@ -250,7 +250,7 @@ inline attempt<a>(p: zonk(a)): zonk(a) {
   }
 }
 
-define _look-ahead-body<a>(k: &zonk-kit, state-pack: position, v: either(expected-item, a)): either(expected-item, a) {
+define _look-ahead-body<a>(k: &zonk-kit, state-pack: position, v: parsed(a)): parsed(a) {
   match v {
   | Right(result) =>
     _import-state(k, state-pack);
@@ -267,7 +267,7 @@ inline look-ahead<a>(p: zonk(a)): zonk(a) {
   }
 }
 
-define _optional-body<a>(v: either(expected-item, a)): either(expected-item, ?a) {
+define _optional-body<a>(v: parsed(a)): parsed(?a) {
   match v {
   | Right(result) =>
     Right(Right(result))
@@ -296,7 +296,7 @@ inline branch<a>(p1: zonk(a), p2: zonk(a)): zonk(a) {
 define _not-followed-by-body<a>(
   k: &zonk-kit,
   state-pack: position,
-  v: either(expected-item, a),
+  v: parsed(a),
 ): bool {
   _import-state(k, state-pack);
   match v {
@@ -315,7 +315,7 @@ inline not-followed-by<a>(label: &text, p: zonk(a)): zonk(unit) {
     if result {
       Right(Unit)
     } else {
-      Left(Label(label))
+      Left(_Label(label))
     }
   }
 }
@@ -326,7 +326,7 @@ define _choice<a>(
   candidates: list(zonk(a)),
   fallback: zonk(a),
   default-gap-size: int,
-): either(expected-item, a) {
+): parsed(a) {
   match candidates {
   | Nil =>
     match fallback(k) {
@@ -334,7 +334,7 @@ define _choice<a>(
       _set-gap-size(k, default-gap-size);
       Right(v)
     | Left(_) =>
-      Left(Label(label))
+      Left(_Label(label))
     }
   | Cons(cand, rest) =>
     match cand(k) {
@@ -373,7 +373,7 @@ inline choice<a>(label: &text, candidates: list(zonk(a)), fallback: zonk(a)): zo
 inline many<a>(!p: zonk(a)): zonk(list(a)) {
   function (k) {
     let f =
-      define self(): either(expected-item, list(a)) {
+      define self(): parsed(list(a)) {
         match !p(k) {
         | Right(v) =>
           try vs = self() in

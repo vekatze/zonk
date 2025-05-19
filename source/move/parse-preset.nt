@@ -14,12 +14,12 @@ import {
   this.move.parse {
     drop-while,
     end-of-input,
+    parsed,
     report-unexpected-input,
     take-while,
     zonk,
   },
   this.rule.error {report},
-  this.rule.expected-item {expected-item},
 }
 
 define _is-space(r: rune): bool {
@@ -102,7 +102,7 @@ inline read-float: zonk(float) {
 define read-int-list(size: int): zonk(list(int)) {
   function (k) {
     let f =
-      define self(cursor: int, acc: list(int)): either(expected-item, list(int)) {
+      define self(cursor: int, acc: list(int)): parsed(list(int)) {
         if le-int(cursor, 0) {
           Right(reverse(acc))
         } else {
@@ -141,7 +141,7 @@ inline read-vector<a>(size: int, !p: zonk(a)): zonk(vector(a)) {
   in
   function (k) {
     let f =
-      define self(cursor: int, base: vector(a)): either(expected-item, vector(a)) {
+      define self(cursor: int, base: vector(a)): parsed(vector(a)) {
         if ge-int(cursor, size) {
           Right(base)
         } else {
@@ -165,7 +165,7 @@ define read-int-vector(size: int): zonk(vector(int)) {
   in
   function (k) {
     let f =
-      define self(cursor: int, base: vector(int)): either(expected-item, vector(int)) {
+      define self(cursor: int, base: vector(int)): parsed(vector(int)) {
         if ge-int(cursor, size) {
           Right(base)
         } else {
@@ -184,7 +184,7 @@ define read-int-vector(size: int): zonk(vector(int)) {
 define read-float-list(size: int): zonk(list(float)) {
   function (k) {
     let f =
-      define self(cursor: int, acc: list(float)): either(expected-item, list(float)) {
+      define self(cursor: int, acc: list(float)): parsed(list(float)) {
         if le-int(cursor, 0) {
           Right(reverse(acc))
         } else {
@@ -206,7 +206,7 @@ define read-float-vector(size: int): zonk(vector(float)) {
   in
   function (k) {
     let f =
-      define self(cursor: int, base: vector(float)): either(expected-item, vector(float)) {
+      define self(cursor: int, base: vector(float)): parsed(vector(float)) {
         if ge-int(cursor, size) {
           Right(base)
         } else {

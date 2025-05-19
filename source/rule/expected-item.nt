@@ -3,15 +3,15 @@ import {
 }
 
 data expected-item {
-| Raw-Text(&text)
-| Label(&text)
+| _Raw-Text(&text)
+| _Label(&text)
 }
 
 define show-expected-item(k: expected-item): text {
   match k {
-  | Raw-Text(t) =>
+  | _Raw-Text(t) =>
     show-text-N(t)
-  | Label(t) =>
+  | _Label(t) =>
     *t
   }
 }
