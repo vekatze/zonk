@@ -37,11 +37,11 @@ inline _get-offset(r: rune): point {
   }
 }
 
-define report-unexpected-input<a>(label: &text): parsed(a) {
+inline report-unexpected-input<a>(label: &text): parsed(a) {
   Left(_Label(label))
 }
 
-define get-point(k: &zonk-kit): point {
+inline get-point(k: &zonk-kit): point {
   let line = _get-line(k) in
   let column = _get-column(k) in
   Point(line, column)

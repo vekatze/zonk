@@ -2,7 +2,7 @@ import {
   core.cell {borrow, mutate},
   core.int {max-int},
   core.magic,
-  core.memory {load-int},
+  core.memory {load-int, store-int},
   core.rune,
   this.rule.zonk-kit {_Position, _Zonk-Kit, position, zonk-kit},
 }
@@ -13,9 +13,17 @@ define _unsafe-read<a>(ch: &cell(a)): &a {
   core.magic.cast(int, &a, val-base)
 }
 
+inline _unsafe-mutate<a>(ch: &cell(a), f: (a) -> a): unit {
+  let ch = core.magic.cast(&cell(a), pointer, ch) in
+  let val-base = load-int(ch) in
+  let current-value = core.magic.cast(int, a, val-base) in
+  let new-value = f(current-value) in
+  store-int(core.magic.cast(a, int, new-value), ch)
+}
+
 inline _set-gap-size(k: &zonk-kit, new-gap-size: int): unit {
   tie _Zonk-Kit of {position-ref} = k in
-  mutate(position-ref, function (position) {
+  _unsafe-mutate(position-ref, function (position) {
     let _Position of {cursor, line, column, gap-size} = position in
     _Position of {cursor, line, column, gap-size = max-int(gap-size, new-gap-size)}
   })
