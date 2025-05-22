@@ -1,8 +1,9 @@
 import {
+  core.ref {_make-ref},
   this.rule.zonk-kit {_Position, _Zonk-Kit, zonk-kit},
 }
 
 define make-zonk-kit(input-stream: text): zonk-kit {
-  let position-ref = new-cell(_Position(0, 0, 0, 0)) in
+  let position-ref = _make-ref(_Position(0, 0, 0, 0)) in
   _Zonk-Kit of {input-stream, position-ref}
 }

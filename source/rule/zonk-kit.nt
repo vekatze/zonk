@@ -1,3 +1,7 @@
+import {
+  core.ref {ref},
+}
+
 data position {
 | _Position(
     cursor: int,
@@ -10,6 +14,6 @@ data position {
 data zonk-kit {
 | _Zonk-Kit(
     input-stream: text,
-    position-ref: cell(position),
+    position-ref: ref(position),
   )
 }
