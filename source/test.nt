@@ -1,8 +1,9 @@
 import {
   core.text {_drop-N, text-byte-length},
-  noa.gen.pairs {pairs},
-  noa.gen.texts {texts},
-  noa.suite {Trope, noa},
+  noa.move.check {check},
+  noa.move.gen.pair {pair-gen},
+  noa.move.gen.text {text-gen},
+  noa.move.make-noa-kit {make-default-noa-kit},
   this.move.make-parse-error {make-parse-error},
   this.move.make-zonk-kit {make-zonk-kit},
   this.move.parse {choice, chunk, end-of-input, many, some, zonk},
@@ -12,10 +13,11 @@ import {
 }
 
 define main(): unit {
-  let Trope of {check = !check} = noa in
-  !check(
+  pin k = make-default-noa-kit() in
+  check(
+    k,
     "chunk(t1) against append(t1, t2) must succeed and the remaining text is t2",
-    pairs(texts, texts),
+    pair-gen(text-gen, text-gen),
     function (p) {
       let Pair(t1, t2) = p in
       let full-text on t1, t2 = core.text.append(t1, t2) in
@@ -38,9 +40,10 @@ define main(): unit {
       parse-result
     },
   );
-  !check(
+  check(
+    k,
     "`t1` can be parsed by (chunk(t1) → end-of-input)",
-    texts,
+    text-gen,
     function (!t) {
       pin k = make-zonk-kit(!t) in
       pin t = !t in
@@ -62,9 +65,10 @@ define main(): unit {
       parse-result
     },
   );
-  !check(
+  check(
+    k,
     "`append(t1, t2)` can be parsed by `chunk(t1) → chunk(t2) → end-of-input`",
-    pairs(texts, texts),
+    pair-gen(text-gen, text-gen),
     function (p) {
       let Pair(t1, t2) = p in
       let full-text on t1, t2 = core.text.append(t1, t2) in
@@ -90,9 +94,10 @@ define main(): unit {
       result
     },
   );
-  !check(
+  check(
+    k,
     "for any non-empty text, end-of-input must fail",
-    texts,
+    text-gen,
     function (t) {
       let len on t = text-byte-length(t) in
       if eq-int(len, 0) {
