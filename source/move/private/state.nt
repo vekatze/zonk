@@ -8,87 +8,87 @@ import {
 }
 
 define _unsafe-read<a>(ch: &ref(a)): &a {
-  let ch = core.magic.cast(&ref(a), pointer, ch) in
-  let val-base = load-int(ch) in
+  let ch = core.magic.cast(&ref(a), pointer, ch);
+  let val-base = load-int(ch);
   core.magic.cast(int, &a, val-base)
 }
 
 inline _unsafe-mutate<a>(ch: &ref(a), f: (a) -> a): unit {
-  let ch = core.magic.cast(&ref(a), pointer, ch) in
-  let val-base = load-int(ch) in
-  let current-value = core.magic.cast(int, a, val-base) in
-  let new-value = f(current-value) in
+  let ch = core.magic.cast(&ref(a), pointer, ch);
+  let val-base = load-int(ch);
+  let current-value = core.magic.cast(int, a, val-base);
+  let new-value = f(current-value);
   store-int(core.magic.cast(a, int, new-value), ch)
 }
 
 inline _set-gap-size(k: &zonk-kit, new-gap-size: int): unit {
-  tie _Zonk-Kit of {position-ref} = k in
+  tie _Zonk-Kit of {position-ref} = k;
   _unsafe-mutate(position-ref, function (position) {
-    let _Position of {cursor, line, column, gap-size} = position in
-    _Position of {cursor, line, column, gap-size = max-int(gap-size, new-gap-size)}
+    let _Position of {cursor, line, column, gap-size} = position;
+    _Position of {cursor, line, column, gap-size := max-int(gap-size, new-gap-size)}
   })
 }
 
 define _get-cursor(k: &zonk-kit): int {
-  tie _Zonk-Kit of {position-ref} = k in
-  let position = _unsafe-read(position-ref) in
-  tie _Position of {cursor} = position in
+  tie _Zonk-Kit of {position-ref} = k;
+  let position = _unsafe-read(position-ref);
+  tie _Position of {cursor} = position;
   *cursor
 }
 
 define _get-gap-size(k: &zonk-kit): int {
-  tie _Zonk-Kit of {position-ref} = k in
+  tie _Zonk-Kit of {position-ref} = k;
   borrow(position-ref, function (position) {
-    tie _Position of {gap-size} = position in
+    tie _Position of {gap-size} = position;
     quote {*gap-size}
   })
 }
 
 define _get-line(k: &zonk-kit): int {
-  tie _Zonk-Kit of {position-ref} = k in
+  tie _Zonk-Kit of {position-ref} = k;
   borrow(position-ref, function (position) {
-    tie _Position of {line} = position in
+    tie _Position of {line} = position;
     quote {*line}
   })
 }
 
 define _get-column(k: &zonk-kit): int {
-  tie _Zonk-Kit of {position-ref} = k in
+  tie _Zonk-Kit of {position-ref} = k;
   borrow(position-ref, function (position) {
-    tie _Position of {column} = position in
+    tie _Position of {column} = position;
     quote {*column}
   })
 }
 
 inline _proceed(k: &zonk-kit, byte-offset: int, line-offset: int, column-offset: int): unit {
-  tie _Zonk-Kit of {position-ref} = k in
+  tie _Zonk-Kit of {position-ref} = k;
   mutate(position-ref, function (position) {
-    let _Position of {cursor, line, column, gap-size} = position in
-    let cursor = add-int(cursor, byte-offset) in
-    let line = add-int(line, line-offset) in
-    let column = add-int(column, column-offset) in
+    let _Position of {cursor, line, column, gap-size} = position;
+    let cursor = add-int(cursor, byte-offset);
+    let line = add-int(line, line-offset);
+    let column = add-int(column, column-offset);
     _Position of {cursor, line, column, gap-size}
   })
 }
 
 inline _proceed-by-rune(k: &zonk-kit, r: rune): unit {
   if eq-rune(r, `\n`) {
-    _proceed of {k, byte-offset = 1, line-offset = 1, column-offset = 0}
+    _proceed of {k, byte-offset := 1, line-offset := 1, column-offset := 0}
   } else {
-    let byte-offset = core.rune.size(r) in
-    _proceed of {k, byte-offset, line-offset = 0, column-offset = 1}
+    let byte-offset = core.rune.size(r);
+    _proceed of {k, byte-offset, line-offset := 0, column-offset := 1}
   }
 }
 
 inline _export-state(k: &zonk-kit): position {
-  tie _Zonk-Kit of {position-ref} = k in
+  tie _Zonk-Kit of {position-ref} = k;
   core.ref.clone(position-ref)
 }
 
 inline _import-state(k: &zonk-kit, new-position: position): unit {
-  tie _Zonk-Kit of {position-ref} = k in
+  tie _Zonk-Kit of {position-ref} = k;
   mutate(position-ref, function (old-position) {
-    let _Position of {} = old-position in
+    let _Position of {} = old-position;
     new-position
   })
 }

@@ -4,6 +4,6 @@ import {
 }
 
 define make-zonk-kit(input-stream: text): zonk-kit {
-  let position-ref = _make-ref(_Position(0, 0, 0, 0)) in
+  let position-ref = _make-ref(_Position(0, 0, 0, 0));
   _Zonk-Kit of {input-stream, position-ref}
 }

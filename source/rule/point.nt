@@ -11,6 +11,6 @@ data point {
 }
 
 define show-point(p: point): text {
-  let Point of {row, column} = p in
+  let Point of {row, column} = p;
   format("row {}, column {}", [show-int(add-int(row, 1)), show-int(add-int(column, 1))])
 }

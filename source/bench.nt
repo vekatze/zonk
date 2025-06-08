@@ -5,7 +5,7 @@ import {
 }
 
 define _try-parse(p: zonk(unit)): unit {
-  pin k = make-zonk-kit(*"abcnああhehoge \n\r  hehehetest") in
+  pin k = make-zonk-kit(*"abcnああhehoge \n\r  hehehetest");
   match p(k) {
   | Left(_) =>
     Unit
@@ -20,22 +20,22 @@ define _bench(): unit {
       not-followed-by("aoeu", chunk("nああ")),
       branch(
         branch(chunk("k"), label("whatever", function (k) {
-          try _ = chunk("px")(k) in
-          try _ = chunk("kgあ")(k) in
+          try _ = chunk("px")(k);
+          try _ = chunk("kgあ")(k);
           Right(Unit)
         })),
         branch(
           not-followed-by("my label", chunk("nあ")),
           branch(
             label("whatever 2", function (k) {
-              try _ = chunk("pt")(k) in
-              try _ = chunk("あhebc")(k) in
+              try _ = chunk("pt")(k);
+              try _ = chunk("あhebc")(k);
               Right(Unit)
             }),
             branch(
               function (k) {
-                try _ = chunk("pt")(k) in
-                try _ = chunk("あhebc")(k) in
+                try _ = chunk("pt")(k);
+                try _ = chunk("あhebc")(k);
                 Right(Unit)
               },
               branch(
@@ -49,15 +49,13 @@ define _bench(): unit {
           ),
         ),
       ),
-    )
-  in
+    );
   let my-parser: zonk(unit) =
     function (k) {
-      try _ = chunk("abc")(k) in
-      try _ = whatnot(k) in
+      try _ = chunk("abc")(k);
+      try _ = whatnot(k);
       Right(Unit)
-    }
-  in
+    };
   loop(1000000, function (_) {
     _try-parse(my-parser)
   })

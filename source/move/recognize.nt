@@ -1,5 +1,6 @@
 import {
   core.list {any, for-each},
+  core.text.io {print-line},
   this.move.make-parse-error {make-parse-error},
   this.move.make-zonk-kit {make-zonk-kit},
   this.move.parse {attempt, branch, chunk, end-of-input, label, many, satisfy, zonk},
@@ -16,18 +17,16 @@ define _from-regex(r: regex): zonk(unit) {
           let bs =
             for-each(rs, function (r') {
               eq-rune(r, r')
-            })
-          in
+            });
           any(bs)
-        })(k)
-      in
+        })(k);
       Right(Unit)
     }
   | Chunk(t) =>
     chunk(t)
   | Choose(name, xs, fallback) =>
-    let xs' = for-each(xs, _from-regex) in
-    let fallback' = _from-regex(fallback) in
+    let xs' = for-each(xs, _from-regex);
+    let fallback' = _from-regex(fallback);
     let go =
       define loop(xs: list(zonk(unit)), fallback: zonk(unit)): zonk(unit) {
         match xs {
@@ -36,11 +35,10 @@ define _from-regex(r: regex): zonk(unit) {
         | Cons(x, rest) =>
           branch(attempt(x), loop(rest, fallback))
         }
-      }
-    in
+      };
     label(name, go(xs', fallback'))
   | Join(xs) =>
-    let xs' = for-each(xs, _from-regex) in
+    let xs' = for-each(xs, _from-regex);
     let go =
       define loop(xs: list(zonk(unit))): zonk(unit) {
         match xs {
@@ -50,16 +48,15 @@ define _from-regex(r: regex): zonk(unit) {
           }
         | Cons(x, xs) =>
           function (k) {
-            try _ = x(k) in
+            try _ = x(k);
             loop(xs)(k)
           }
         }
-      }
-    in
+      };
     go(xs')
   | Repeat(r) =>
     function (k) {
-      try _ = many(attempt(_from-regex(r)))(k) in
+      try _ = many(attempt(_from-regex(r)))(k);
       Right(Unit)
     }
   | End-Of-Input =>
@@ -68,12 +65,13 @@ define _from-regex(r: regex): zonk(unit) {
 }
 
 inline recognize(r: regex, input: text): bool {
-  pin k = make-zonk-kit(input) in
+  pin k = make-zonk-kit(input);
   match _from-regex(r)(k) {
   | Right(_) =>
     True
   | Left(e) =>
-    printf("{}\n", [report(make-parse-error(k, e))]);
+    pin t = report(make-parse-error(k, e));
+    print-line(t);
     False
   }
 }
@@ -98,8 +96,7 @@ define zen(): unit {
         ]),
       ),
       End-Of-Input,
-    ])
-  in
+    ]);
   if recognize(reg, *"abc:XX, あ:AAAA, k:XX, ") {
     print("True\n")
   } else {

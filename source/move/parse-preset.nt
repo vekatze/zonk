@@ -1,10 +1,11 @@
 import {
+  core.float.io {print-float},
   core.float.parse {parse-float},
-  core.float.show {show-float},
   core.function {compose},
+  core.int.io {print-int, print-int-line},
   core.int.parse {parse-int},
-  core.int.show {show-int},
   core.list {any, reverse},
+  core.text.io {print-line},
   core.vector {vector},
   this.move.make-parse-error {make-parse-error},
   this.move.make-zonk-kit {make-zonk-kit},
@@ -34,8 +35,8 @@ define skip-space: zonk(unit) {
 }
 
 define _any-number(r: rune): bool {
-  let b1 = le-rune(`0`, r) in
-  let b2 = le-rune(r, `9`) in
+  let b1 = le-rune(`0`, r);
+  let b2 = le-rune(r, `9`);
   and(b1, b2)
 }
 
@@ -60,18 +61,18 @@ define _is-float-rune(r: rune): bool {
 
 inline read-symbol(): zonk(text) {
   function (k) {
-    try result = take-while(compose(not, _is-space))(k) in
-    try _ = skip-space(k) in
+    try result = take-while(compose(not, _is-space))(k);
+    try _ = skip-space(k);
     Right(result)
   }
 }
 
 inline read-int: zonk(int) {
   function (k) {
-    try num-text = take-while(_is-integer-rune)(k) in
-    try _ = skip-space(k) in
-    let none-or-int on num-text = parse-int(num-text) in
-    let _ = num-text in
+    try num-text = take-while(_is-integer-rune)(k);
+    try _ = skip-space(k);
+    let none-or-int on num-text = parse-int(num-text);
+    let _ = num-text;
     match none-or-int {
     | Left(_) =>
       report-unexpected-input("integer")
@@ -83,10 +84,10 @@ inline read-int: zonk(int) {
 
 inline read-float: zonk(float) {
   function (k) {
-    try num-text = take-while(_is-float-rune)(k) in
-    try _ = skip-space(k) in
-    let none-or-float on num-text = parse-float(num-text) in
-    let _ = num-text in
+    try num-text = take-while(_is-float-rune)(k);
+    try _ = skip-space(k);
+    let none-or-float on num-text = parse-float(num-text);
+    let _ = num-text;
     match none-or-float {
     | Left(_) =>
       report-unexpected-input("float")
@@ -103,11 +104,10 @@ define read-int-list(size: int): zonk(list(int)) {
         if le-int(cursor, 0) {
           Right(reverse(acc))
         } else {
-          try v = read-int(k) in
+          try v = read-int(k);
           self(sub-int(cursor, 1), Cons(v, acc))
         }
-      }
-    in
+      };
     f(size, Nil)
   }
 }
@@ -119,13 +119,12 @@ inline read-vector<a>(size: int, !p: zonk(a)): zonk(vector(a)) {
         if ge-int(cursor, size) {
           Right(acc)
         } else {
-          try v = !p(k) in
-          try _ = skip-space(k) in
+          try v = !p(k);
+          try _ = skip-space(k);
           self(add-int(cursor, 1), core.vector.push-back(acc, v))
         }
-      }
-    in
-    try result = f(0, core.vector.make(size)) in
+      };
+    try result = f(0, core.vector.make(size));
     Right(result)
   }
 }
@@ -141,12 +140,11 @@ define read-float-list(size: int): zonk(list(float)) {
         if le-int(cursor, 0) {
           Right(reverse(acc))
         } else {
-          try v = read-float(k) in
-          try _ = skip-space(k) in
+          try v = read-float(k);
+          try _ = skip-space(k);
           self(sub-int(cursor, 1), Cons(v, acc))
         }
-      }
-    in
+      };
     f(size, Nil)
   }
 }
@@ -157,25 +155,30 @@ define read-float-vector(size: int): zonk(vector(float)) {
 
 inline _sample-zonk: zonk(unit) {
   function (k) {
-    try v1 = read-int(k) in
-    try v2 = read-int(k) in
-    try xs = read-float-vector(v1)(k) in
-    try _ = end-of-input(k) in
-    printf("{}, {}\n", [show-int(v1), show-int(v2)]);
+    try v1 = read-int(k);
+    try v2 = read-int(k);
+    try xs = read-float-vector(v1)(k);
+    try _ = end-of-input(k);
+    print-int(v1);
+    print(", ");
+    print-int-line(v2);
     core.vector.for(xs, function (x, _) {
-      printf("{} ", [show-float(x)])
+      print-float(x, 6);
+      print(" ");
     });
     Right(Unit)
   }
 }
 
 define zen(): unit {
-  pin k = make-zonk-kit(*"6 42 \n   5 4 3 2 1 -1234") in
+  pin k = make-zonk-kit(*"6 42 \n   5 4 3 2 1 -1234");
   match _sample-zonk(k) {
   | Right(_) =>
     print("pass\n")
   | Left(e) =>
-    let e' = make-parse-error(k, e) in
-    printf("fail: {}\n", [report(e')])
+    let e' = make-parse-error(k, e);
+    pin e'' = report(e');
+    print("fail: ");
+    print-line(e'');
   }
 }

@@ -9,17 +9,17 @@ import {
 }
 
 define make-parse-error(k: &zonk-kit, expected: expected-item): parse-error {
-  tie _Zonk-Kit of {input-stream} = k in
-  let cursor = _get-cursor(k) in
-  let line = _get-line(k) in
-  let column = _get-column(k) in
-  let gap-size = _get-gap-size(k) in
-  let input-stream' = _drop-N(input-stream, cursor) in
-  let found on input-stream' = show-text(take-N(input-stream', gap-size)) in
-  let _ = input-stream' in
+  tie _Zonk-Kit of {input-stream} = k;
+  let cursor = _get-cursor(k);
+  let line = _get-line(k);
+  let column = _get-column(k);
+  let gap-size = _get-gap-size(k);
+  let input-stream' = _drop-N(input-stream, cursor);
+  let found on input-stream' = show-text(take-N(input-stream', gap-size));
+  let _ = input-stream';
   Parse-Error of {
     expected,
     found,
-    error-location = Point(line, column),
+    error-location := Point(line, column),
   }
 }

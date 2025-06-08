@@ -161,27 +161,29 @@ inline _sample-parser: zonk(unit) {
   // constructs a parser
   function (k) {
     // accepts: foo
-    try _ = chunk("foo")(k) in
+    try _ = chunk("foo")(k);
     // accepts: (buz|test|bar)
-    try _ = choice("buz, test, or bar", [chunk("buz"), chunk("test")], chunk("bar"))(k) in
+    try _ = choice("buz, test, or bar", [chunk("buz"), chunk("test")], chunk("bar"))(k);
     // accepts: (qux)+
-    try _ = some(chunk("qux"))(k) in
+    try _ = some(chunk("qux"))(k);
     // accepts: (yo)*
-    try _ = many(chunk("yo"))(k) in
+    try _ = many(chunk("yo"))(k);
     // accepts: end-of-input
-    try _ = end-of-input(k) in
+    try _ = end-of-input(k);
     Right(Unit)
   }
 }
 
 define zen(): unit {
-  pin k = make-zonk-kit(*"foobarquxquxyoyoyoyo") in
+  pin k = make-zonk-kit(*"foobarquxquxyoyoyoyo");
   match _sample-parser(k) {
   | Right(_) =>
     print("pass\n")
   | Left(_) =>
-    let err = make-parse-error(k, e) in
-    printf("fail: {}\n", [report(err)])
+    let err = make-parse-error(k, e);
+    pin err' = report(err);
+    print("fail: ");
+    print-line(err');
   }
 }
 ```
