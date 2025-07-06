@@ -368,7 +368,7 @@ inline many<a>(!p: zonk(a)): zonk(list(a)) {
           try vs = self();
           Right(Cons(v, vs))
         | Left(_) =>
-          Right([])
+          Right(Nil)
         }
       };
     f()
@@ -387,13 +387,13 @@ define zen(): unit {
   let my-parser =
     choice(
       "some term",
-      [
+      List[
         function (k) {
           try _ = chunk("gaoe")(k);
           try _ = chunk("item")(k);
           Right(Unit)
         },
-        choice("item", [chunk("k")], label("whatever", function (k) {
+        choice("item", List[chunk("k")], label("whatever", function (k) {
           try _ = chunk("px")(k);
           try _ = chunk("kgあ")(k);
           Right(Unit)

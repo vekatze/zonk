@@ -6,7 +6,6 @@ import {
   core.int.parse {parse-int},
   core.list {any, reverse},
   core.text.io {print-line},
-  core.vector {vector},
   this.move.make-parse-error {make-parse-error},
   this.move.make-zonk-kit {make-zonk-kit},
   this.move.parse {
@@ -41,7 +40,7 @@ define _any-number(r: rune): bool {
 }
 
 define _is-integer-rune(r: rune): bool {
-  any([
+  any(List[
     _any-number(r),
     eq-rune(r, `+`),
     eq-rune(r, `-`),
@@ -49,7 +48,7 @@ define _is-integer-rune(r: rune): bool {
 }
 
 define _is-float-rune(r: rune): bool {
-  any([
+  any(List[
     _any-number(r),
     eq-rune(r, `.`),
     eq-rune(r, `e`),

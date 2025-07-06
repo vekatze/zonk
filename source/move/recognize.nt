@@ -78,20 +78,20 @@ inline recognize(r: regex, input: text): bool {
 
 define zen(): unit {
   let reg =
-    Join([
+    Join(List[
       Repeat(
-        Join([
+        Join(List[
           Choose(
             "variable",
-            [
+            List[
               Chunk("pqr"),
               Chunk("H"),
-              Any("Lorem ipsum", [`P`, `あ`, `k`]),
+              Any("Lorem ipsum", List[`P`, `あ`, `k`]),
             ],
             Chunk("abc"),
           ),
           Chunk(":"),
-          Choose("type", [Chunk("AAAA")], Chunk("XX")),
+          Choose("type", List[Chunk("AAAA")], Chunk("XX")),
           Chunk(", "),
         ]),
       ),
