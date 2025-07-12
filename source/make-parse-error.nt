@@ -1,11 +1,11 @@
 import {
   core.text {_drop-N, take-N},
   core.text.show {show-text},
-  this.move.private.state {_get-column, _get-cursor, _get-gap-size, _get-line},
-  this.rule.error {Parse-Error, parse-error},
-  this.rule.expected-item {expected-item},
-  this.rule.point {Point},
-  this.rule.zonk-kit {_Zonk-Kit, zonk-kit},
+  this.error {Parse-Error, parse-error},
+  this.expected-item {expected-item},
+  this.point {Point},
+  this.private.state {_get-column, _get-cursor, _get-gap-size, _get-line},
+  this.zonk-kit {_Zonk-Kit, zonk-kit},
 }
 
 define make-parse-error(k: &zonk-kit, expected: expected-item): parse-error {

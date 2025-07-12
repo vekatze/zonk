@@ -6,9 +6,10 @@ import {
   core.int.parse {parse-int},
   core.list {any, reverse},
   core.text.io {print-line},
-  this.move.make-parse-error {make-parse-error},
-  this.move.make-zonk-kit {make-zonk-kit},
-  this.move.parse {
+  this.error {report},
+  this.make-parse-error {make-parse-error},
+  this.make-zonk-kit {make-zonk-kit},
+  this.parse {
     drop-while,
     end-of-input,
     parsed,
@@ -16,7 +17,6 @@ import {
     take-while,
     zonk,
   },
-  this.rule.error {report},
 }
 
 define _is-space(r: rune): bool {

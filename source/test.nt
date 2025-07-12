@@ -5,12 +5,12 @@ import {
   noa.gen.pair {pair-gen},
   noa.gen.text {text-gen},
   noa.make-noa-kit {make-default-noa-kit},
-  this.move.make-parse-error {make-parse-error},
-  this.move.make-zonk-kit {make-zonk-kit},
-  this.move.parse {choice, chunk, end-of-input, many, some, zonk},
-  this.move.private.state,
-  this.rule.error {report},
-  this.rule.zonk-kit {_Zonk-Kit},
+  this.error {report},
+  this.make-parse-error {make-parse-error},
+  this.make-zonk-kit {make-zonk-kit},
+  this.parse {choice, chunk, end-of-input, many, some, zonk},
+  this.private.state,
+  this.zonk-kit {_Zonk-Kit},
 }
 
 define main(): unit {
@@ -28,7 +28,7 @@ define main(): unit {
         match p(k) {
         | Right(_) =>
           tie _Zonk-Kit of {input-stream} = k;
-          let cursor = this.move.private.state._get-cursor(k);
+          let cursor = this.private.state._get-cursor(k);
           pin stream' = _drop-N(input-stream, cursor);
           let result = eq-text(t2, stream');
           result

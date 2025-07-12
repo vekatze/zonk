@@ -1,6 +1,6 @@
 import {
   core.ref {_make-ref},
-  this.rule.zonk-kit {_Position, _Zonk-Kit, zonk-kit},
+  this.zonk-kit {_Position, _Zonk-Kit, zonk-kit},
 }
 
 define make-zonk-kit(input-stream: text): zonk-kit {

@@ -1,7 +1,7 @@
 import {
   core.text {format},
-  this.rule.expected-item {_show-expected-item, expected-item},
-  this.rule.point {point, show-point},
+  this.expected-item {_show-expected-item, expected-item},
+  this.point {point, show-point},
 }
 
 data parse-error {

@@ -1,7 +1,7 @@
 import {
   core.control {loop},
-  this.move.make-zonk-kit {make-zonk-kit},
-  this.move.parse {branch, chunk, label, not-followed-by, zonk},
+  this.make-zonk-kit {make-zonk-kit},
+  this.parse {branch, chunk, label, not-followed-by, zonk},
 }
 
 define _try-parse(p: zonk(unit)): unit {

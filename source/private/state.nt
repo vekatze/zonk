@@ -4,7 +4,7 @@ import {
   core.memory {load-int, store-int},
   core.ref {borrow, mutate, ref},
   core.rune,
-  this.rule.zonk-kit {_Position, _Zonk-Kit, position, zonk-kit},
+  this.zonk-kit {_Position, _Zonk-Kit, position, zonk-kit},
 }
 
 define _unsafe-read<a>(ch: &ref(a)): &a {

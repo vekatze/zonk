@@ -3,9 +3,12 @@ import {
   core.rune {load-rune},
   core.text {_get-content-pointer, _get-rune, _slice-N},
   core.text.io {print-line},
-  this.move.make-parse-error {make-parse-error},
-  this.move.make-zonk-kit {make-zonk-kit},
-  this.move.private.state {
+  this.error {report},
+  this.expected-item {_Label, _Raw-Text, expected-item},
+  this.make-parse-error {make-parse-error},
+  this.make-zonk-kit {make-zonk-kit},
+  this.point {Point, point},
+  this.private.state {
     _export-state,
     _get-column,
     _get-cursor,
@@ -16,10 +19,7 @@ import {
     _proceed-by-rune,
     _set-gap-size,
   },
-  this.rule.error {report},
-  this.rule.expected-item {_Label, _Raw-Text, expected-item},
-  this.rule.point {Point, point},
-  this.rule.zonk-kit {_Zonk-Kit, position, zonk-kit},
+  this.zonk-kit {_Zonk-Kit, position, zonk-kit},
 }
 
 inline parsed(a): type {
