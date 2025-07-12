@@ -1,14 +1,17 @@
 import {
+  core.bool {all},
   core.text {_drop-N, text-byte-length},
   core.text.io {print-line},
   noa.check {check},
   noa.gen.pair {pair-gen},
   noa.gen.text {text-gen},
   noa.make-noa-kit {make-default-noa-kit},
-  this.error {report},
+  noa.test {test},
+  this.error {Parse-Error, report},
   this.make-parse-error {make-parse-error},
   this.make-zonk-kit {make-zonk-kit},
-  this.parse {choice, chunk, end-of-input, many, some, zonk},
+  this.parse {choice, chunk, drop-while, end-of-input, many, satisfy, some, take-while, zonk},
+  this.point {Point},
   this.private.state,
   this.zonk-kit {_Zonk-Kit},
 }
@@ -115,8 +118,94 @@ define main(): unit {
         result
       }
     },
-  )
-  // ...
+  );
+  test(
+    k,
+    "report error locations correctly (take-while, chunk)",
+    function () {
+      pin k = make-zonk-kit(*"xxx\nbar");
+      let my-parser: zonk(unit) =
+        function (k) {
+          try _ =
+            take-while(function (r) {
+              eq-rune(r, `x`)
+            })(k);
+          try _ = chunk("\n")(k);
+          try _ = chunk("a")(k);
+          Right(Unit)
+        };
+      match my-parser(k) {
+      | Right(_) =>
+        False
+      | Left(e) =>
+        let Parse-Error of {error-location} = make-parse-error(k, e);
+        pin actual = error-location;
+        pin expected = Point(1, 0);
+        eq-data(actual, expected)
+      }
+    },
+  );
+  test(
+    k,
+    "report error locations correctly (drop-while, chunk)",
+    function () {
+      pin k = make-zonk-kit(*"xxx\nbar");
+      let my-parser: zonk(unit) =
+        function (k) {
+          try _ =
+            drop-while(function (r) {
+              all[
+                ne-rune(r, `y`),
+                ne-rune(r, `\n`),
+              ]
+            })(k);
+          try _ = chunk("\n")(k);
+          try _ = chunk("a")(k);
+          Right(Unit)
+        };
+      match my-parser(k) {
+      | Right(_) =>
+        False
+      | Left(e) =>
+        let Parse-Error of {error-location} = make-parse-error(k, e);
+        pin actual = error-location;
+        pin expected = Point(1, 0);
+        eq-data(actual, expected)
+      }
+    },
+  );
+  test(
+    k,
+    "report error locations correctly (satisfy, chunk)",
+    function () {
+      pin k = make-zonk-kit(*"xxx\nbar");
+      let my-parser: zonk(unit) =
+        function (k) {
+          try _ =
+            drop-while(function (r) {
+              all[
+                ne-rune(r, `y`),
+                ne-rune(r, `\n`),
+              ]
+            })(k);
+          try _ =
+            satisfy("foo", function (r) {
+              eq-rune(r, `\n`)
+            })(k);
+          try _ = chunk("a")(k);
+          Right(Unit)
+        };
+      match my-parser(k) {
+      | Right(_) =>
+        False
+      | Left(e) =>
+        let Parse-Error of {error-location} = make-parse-error(k, e);
+        pin actual = error-location;
+        pin expected = Point(1, 0);
+        eq-data(actual, expected)
+      }
+    },
+  );
 }
 
 inline _sample-parser: zonk(unit) {

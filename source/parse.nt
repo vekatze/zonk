@@ -15,9 +15,9 @@ import {
     _get-gap-size,
     _get-line,
     _import-state,
-    _proceed,
     _proceed-by-rune,
     _set-gap-size,
+    _set-new-position,
   },
   this.zonk-kit {_Zonk-Kit, position, zonk-kit},
 }
@@ -28,14 +28,6 @@ inline parsed(a): type {
 
 inline zonk(a) {
   (&zonk-kit) -> parsed(a)
-}
-
-inline _get-offset(r: rune): point {
-  if eq-rune(r, `\n`) {
-    Point of {row := 1, column := 0}
-  } else {
-    Point of {row := 0, column := 1}
-  }
 }
 
 inline report-unexpected-input<a>(label: &text): parsed(a) {
@@ -102,32 +94,31 @@ define _chunk-body(k: &zonk-kit, chunk-text: &text): int {
     let f =
       define _chunk-consumer(
         index: int,
-        line-offset: int,
-        column-offset: int,
+        line: int,
+        column: int,
       ): int {
         if eq-int(index, len2) {
-          _proceed(k, len2, line-offset, column-offset);
+          _set-new-position(k, add-int(cursor, len2), line, column);
           1
         } else {
           let rune1 = load-rune(shift(ptr1, index));
           let rune2 = load-rune(shift(ptr2, index));
           let offset = core.rune.size(rune1);
           if eq-rune(rune1, rune2) {
-            let b = eq-rune(rune1, `\n`);
-            let l = match b {True => 1 | False => 0};
-            let c = match b {True => 0 | False => 1};
-            _chunk-consumer(
-              add-int(index, offset),
-              add-int(line-offset, l),
-              add-int(column-offset, c),
-            )
+            if eq-rune(rune1, `\n`) {
+              _chunk-consumer(add-int(index, offset), add-int(line, 1), 0)
+            } else {
+              _chunk-consumer(add-int(index, offset), line, add-int(column, 1))
+            }
           } else {
             _set-gap-size(k, chunk-len);
             -1
           }
         }
       };
-    f(0, 0, 0)
+    let line = _get-line(k);
+    let column = _get-column(k);
+    f(0, line, column)
   }
 }
 
@@ -147,26 +138,33 @@ inline take-while(!p: (rune) -> bool): zonk(text) {
     tie _Zonk-Kit of {input-stream} = k;
     let len = core.text.text-byte-length(input-stream);
     let cursor = _get-cursor(k);
+    let orig-cursor = cursor;
     let ptr1 = _get-content-pointer(input-stream);
+    let tail-position = add-int(cursor, len);
     let f =
-      define consumer(cursor-offset: int, line-offset: int, column-offset: int): text {
-        let is-tail = ge-int(add-int(cursor, cursor-offset), len);
+      define consumer(cursor: int, line: int, column: int): text {
+        let is-tail = ge-int(cursor, tail-position);
         if is-tail {
-          _proceed(k, cursor-offset, line-offset, column-offset);
-          _slice-N(input-stream, cursor, cursor-offset)
+          _set-new-position(k, tail-position, line, column);
+          _slice-N(input-stream, orig-cursor, cursor)
         } else {
-          let r = load-rune(shift(ptr1, add-int(cursor, cursor-offset)));
+          let r = load-rune(shift(ptr1, cursor));
           if !p(r) {
             let offset = core.rune.size(r);
-            let Point(l, c) = _get-offset(r);
-            consumer(add-int(cursor-offset, offset), add-int(line-offset, l), add-int(column-offset, c))
+            if eq-rune(r, `\n`) {
+              consumer(add-int(cursor, offset), add-int(line, 1), 0)
+            } else {
+              consumer(add-int(cursor, offset), line, add-int(column, 1))
+            }
           } else {
-            _proceed(k, cursor-offset, line-offset, column-offset);
-            _slice-N(input-stream, cursor, cursor-offset)
+            _set-new-position(k, cursor, line, column);
+            _slice-N(input-stream, orig-cursor, cursor)
           }
         }
       };
-    Right(f(0, 0, 0))
+    let cursor = _get-cursor(k);
+    let Point(line, column) = get-point(k);
+    Right(f(cursor, line, column))
   }
 }
 
@@ -176,23 +174,29 @@ inline drop-while(!p: (rune) -> bool): zonk(unit) {
     let len = core.text.text-byte-length(input-stream);
     let cursor = _get-cursor(k);
     let ptr1 = _get-content-pointer(input-stream);
+    let tail-position = add-int(cursor, len);
     let f =
-      define consumer(cursor-offset: int, line-offset: int, column-offset: int): unit {
-        let is-tail = ge-int(add-int(cursor, cursor-offset), len);
+      define consumer(cursor: int, line: int, column: int): unit {
+        let is-tail = ge-int(cursor, tail-position);
         if is-tail {
-          _proceed(k, cursor-offset, line-offset, column-offset)
+          _set-new-position(k, tail-position, line, column);
         } else {
-          let r = load-rune(shift(ptr1, add-int(cursor, cursor-offset)));
+          let r = load-rune(shift(ptr1, cursor));
           if !p(r) {
             let offset = core.rune.size(r);
-            let Point(l, c) = _get-offset(r);
-            consumer(add-int(cursor-offset, offset), add-int(line-offset, l), add-int(column-offset, c))
+            if eq-rune(r, `\n`) {
+              consumer(add-int(cursor, offset), add-int(line, 1), 0)
+            } else {
+              consumer(add-int(cursor, offset), line, add-int(column, 1))
+            }
           } else {
-            _proceed(k, cursor-offset, line-offset, column-offset)
+            _set-new-position(k, cursor, line, column);
           }
         }
       };
-    Right(f(0, 0, 0))
+    let line = _get-line(k);
+    let column = _get-column(k);
+    Right(f(cursor, line, column))
   }
 }
 

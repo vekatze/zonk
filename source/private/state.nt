@@ -60,24 +60,29 @@ define _get-column(k: &zonk-kit): int {
   })
 }
 
-inline _proceed(k: &zonk-kit, byte-offset: int, line-offset: int, column-offset: int): unit {
+inline _set-new-position(k: &zonk-kit, cursor: int, line: int, column: int): unit {
   tie _Zonk-Kit of {position-ref} = k;
   mutate(position-ref, function (position) {
-    let _Position of {cursor, line, column, gap-size} = position;
-    let cursor = add-int(cursor, byte-offset);
-    let line = add-int(line, line-offset);
-    let column = add-int(column, column-offset);
+    let _Position of {gap-size} = position;
     _Position of {cursor, line, column, gap-size}
   })
 }
 
 inline _proceed-by-rune(k: &zonk-kit, r: rune): unit {
-  if eq-rune(r, `\n`) {
-    _proceed of {k, byte-offset := 1, line-offset := 1, column-offset := 0}
-  } else {
-    let byte-offset = core.rune.size(r);
-    _proceed of {k, byte-offset, line-offset := 0, column-offset := 1}
-  }
+  tie _Zonk-Kit of {position-ref} = k;
+  mutate(position-ref, function (position) {
+    let _Position of {cursor, line, column, gap-size} = position;
+    if eq-rune(r, `\n`) {
+      let cursor = add-int(cursor, 1);
+      let line = add-int(line, 1);
+      let column = 0;
+      _Position of {cursor, line, column, gap-size}
+    } else {
+      let cursor = add-int(cursor, core.rune.size(r));
+      let column = add-int(column, 1);
+      _Position of {cursor, line, column, gap-size}
+    }
+  })
 }
 
 inline _export-state(k: &zonk-kit): position {
