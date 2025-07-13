@@ -121,6 +121,58 @@ define main(): unit {
   );
   test(
     k,
+    "take-while, chunk, take-while",
+    function () {
+      pin k = make-zonk-kit(*"xxx\nbar");
+      let my-parser: zonk(unit) =
+        function (k) {
+          try _ =
+            take-while(function (r) {
+              eq-rune(r, `x`)
+            })(k);
+          try _ = chunk("\n")(k);
+          try _ =
+            take-while(function (r) {
+              ne-rune(r, `x`)
+            })(k);
+          Right(Unit)
+        };
+      match my-parser(k) {
+      | Right(_) =>
+        True
+      | Left(_) =>
+        False
+      }
+    },
+  );
+  test(
+    k,
+    "drop-while, chunk, drop-while",
+    function () {
+      pin k = make-zonk-kit(*"xxx\nbar");
+      let my-parser: zonk(unit) =
+        function (k) {
+          try _ =
+            drop-while(function (r) {
+              eq-rune(r, `x`)
+            })(k);
+          try _ = chunk("\n")(k);
+          try _ =
+            drop-while(function (r) {
+              ne-rune(r, `x`)
+            })(k);
+          Right(Unit)
+        };
+      match my-parser(k) {
+      | Right(_) =>
+        True
+      | Left(_) =>
+        False
+      }
+    },
+  );
+  test(
+    k,
     "report error locations correctly (take-while, chunk)",
     function () {
       pin k = make-zonk-kit(*"xxx\nbar");

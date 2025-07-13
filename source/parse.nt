@@ -140,13 +140,12 @@ inline take-while(!p: (rune) -> bool): zonk(text) {
     let cursor = _get-cursor(k);
     let orig-cursor = cursor;
     let ptr1 = _get-content-pointer(input-stream);
-    let tail-position = add-int(cursor, len);
     let f =
       define consumer(cursor: int, line: int, column: int): text {
-        let is-tail = ge-int(cursor, tail-position);
+        let is-tail = ge-int(cursor, len);
         if is-tail {
-          _set-new-position(k, tail-position, line, column);
-          _slice-N(input-stream, orig-cursor, cursor)
+          _set-new-position(k, cursor, line, column);
+          _slice-N(input-stream, orig-cursor, sub-int(cursor, orig-cursor))
         } else {
           let r = load-rune(shift(ptr1, cursor));
           if !p(r) {
@@ -158,7 +157,7 @@ inline take-while(!p: (rune) -> bool): zonk(text) {
             }
           } else {
             _set-new-position(k, cursor, line, column);
-            _slice-N(input-stream, orig-cursor, cursor)
+            _slice-N(input-stream, orig-cursor, sub-int(cursor, orig-cursor))
           }
         }
       };
@@ -174,12 +173,11 @@ inline drop-while(!p: (rune) -> bool): zonk(unit) {
     let len = core.text.text-byte-length(input-stream);
     let cursor = _get-cursor(k);
     let ptr1 = _get-content-pointer(input-stream);
-    let tail-position = add-int(cursor, len);
     let f =
       define consumer(cursor: int, line: int, column: int): unit {
-        let is-tail = ge-int(cursor, tail-position);
+        let is-tail = ge-int(cursor, len);
         if is-tail {
-          _set-new-position(k, tail-position, line, column);
+          _set-new-position(k, cursor, line, column);
         } else {
           let r = load-rune(shift(ptr1, cursor));
           if !p(r) {
