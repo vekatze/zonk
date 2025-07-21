@@ -1,4 +1,5 @@
 import {
+  core.box {axiom-T},
   core.int {max-int},
   core.magic,
   core.memory {load-int, store-int},
@@ -63,24 +64,24 @@ define _get-column(k: &zonk-kit): int {
 inline _set-new-position(k: &zonk-kit, cursor: int, line: int, column: int): unit {
   tie _Zonk-Kit of {position-ref} = k;
   mutate(position-ref, function (position) {
-    let _Position of {gap-size} = position;
-    _Position of {cursor, line, column, gap-size}
+    let _Position of {gap-size} = axiom-T(position);
+    quote {_Position of {cursor, line, column, gap-size}}
   })
 }
 
 inline _proceed-by-rune(k: &zonk-kit, r: rune): unit {
   tie _Zonk-Kit of {position-ref} = k;
   mutate(position-ref, function (position) {
-    let _Position of {cursor, line, column, gap-size} = position;
+    let _Position of {cursor, line, column, gap-size} = axiom-T(position);
     if eq-rune(r, `\n`) {
       let cursor = add-int(cursor, 1);
       let line = add-int(line, 1);
       let column = 0;
-      _Position of {cursor, line, column, gap-size}
+      quote {_Position of {cursor, line, column, gap-size}}
     } else {
       let cursor = add-int(cursor, core.rune.size(r));
       let column = add-int(column, 1);
-      _Position of {cursor, line, column, gap-size}
+      quote {_Position of {cursor, line, column, gap-size}}
     }
   })
 }
@@ -93,7 +94,7 @@ inline _export-state(k: &zonk-kit): position {
 inline _import-state(k: &zonk-kit, new-position: position): unit {
   tie _Zonk-Kit of {position-ref} = k;
   mutate(position-ref, function (old-position) {
-    let _Position of {} = old-position;
-    new-position
+    let _Position of {} = axiom-T(old-position);
+    quote {new-position}
   })
 }
