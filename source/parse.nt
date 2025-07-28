@@ -1,4 +1,5 @@
 import {
+  core.int.io {print-int-line},
   core.pointer {shift},
   core.rune {load-rune},
   core.text {_get-content-pointer, _get-rune, _slice-N},
@@ -164,6 +165,50 @@ inline take-while(!p: (rune) -> bool): zonk(text) {
     let cursor = _get-cursor(k);
     let Point(line, column) = get-point(k);
     Right(f(cursor, line, column))
+  }
+}
+
+inline take-while-1(!p: (rune) -> bool): zonk(text) {
+  function (k) {
+    tie _Zonk-Kit of {input-stream} = k;
+    let len = core.text.text-byte-length(input-stream);
+    let cursor = _get-cursor(k);
+    let orig-cursor = cursor;
+    let ptr1 = _get-content-pointer(input-stream);
+    let f =
+      define consumer(cursor: int, line: int, column: int): parsed(text) {
+        let is-tail = ge-int(cursor, len);
+        if is-tail {
+          let size = sub-int(cursor, orig-cursor);
+          if lt-int(size, 0) {
+            _set-new-position(k, cursor, line, column);
+            Right(_slice-N(input-stream, orig-cursor, size))
+          } else {
+            Left(_Label("non-empty string"))
+          }
+        } else {
+          let r = load-rune(shift(ptr1, cursor));
+          if !p(r) {
+            let offset = core.rune.size(r);
+            if eq-rune(r, `\n`) {
+              consumer(add-int(cursor, offset), add-int(line, 1), 0)
+            } else {
+              consumer(add-int(cursor, offset), line, add-int(column, 1))
+            }
+          } else {
+            let size = sub-int(cursor, orig-cursor);
+            if lt-int(size, 0) {
+              _set-new-position(k, cursor, line, column);
+              Right(_slice-N(input-stream, orig-cursor, sub-int(cursor, orig-cursor)))
+            } else {
+              Left(_Label("non-empty string"))
+            }
+          }
+        }
+      };
+    let cursor = _get-cursor(k);
+    let Point(line, column) = get-point(k);
+    f(cursor, line, column)
   }
 }
 
