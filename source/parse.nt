@@ -1,5 +1,4 @@
 import {
-  core.int.io {print-int-line},
   core.pointer {shift},
   core.rune {load-rune},
   core.text {_get-content-pointer, _get-rune, _slice-N},
