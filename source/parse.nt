@@ -179,7 +179,7 @@ inline take-while-1(!p: (rune) -> bool): zonk(text) {
         let is-tail = ge-int(cursor, len);
         if is-tail {
           let size = sub-int(cursor, orig-cursor);
-          if lt-int(size, 0) {
+          if gt-int(size, 0) {
             _set-new-position(k, cursor, line, column);
             Right(_slice-N(input-stream, orig-cursor, size))
           } else {
@@ -196,7 +196,7 @@ inline take-while-1(!p: (rune) -> bool): zonk(text) {
             }
           } else {
             let size = sub-int(cursor, orig-cursor);
-            if lt-int(size, 0) {
+            if gt-int(size, 0) {
               _set-new-position(k, cursor, line, column);
               Right(_slice-N(input-stream, orig-cursor, sub-int(cursor, orig-cursor)))
             } else {
