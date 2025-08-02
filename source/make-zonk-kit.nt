@@ -3,7 +3,7 @@ import {
   this.zonk-kit {_Position, _Zonk-Kit, zonk-kit},
 }
 
-define make-zonk-kit(input-stream: text): zonk-kit {
+define make-zonk-kit<c>(input-stream: text, context: c): zonk-kit(c) {
   let position-ref = make-ref(quote {_Position(0, 0, 0, 0)});
-  _Zonk-Kit of {input-stream, position-ref}
+  _Zonk-Kit of {input-stream, position-ref, context}
 }

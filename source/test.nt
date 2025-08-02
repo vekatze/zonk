@@ -25,7 +25,7 @@ define main(): unit {
     function (p) {
       let Pair(t1, t2) = p;
       let full-text on t1, t2 = core.text.append(t1, t2);
-      pin k = make-zonk-kit(full-text);
+      pin k = make-zonk-kit(full-text, Unit);
       let parse-result on t1, t2 = {
         let p = chunk(t1);
         match p(k) {
@@ -49,10 +49,10 @@ define main(): unit {
     "`t1` can be parsed by (chunk(t1) → end-of-input)",
     text-gen,
     function (!t) {
-      pin k = make-zonk-kit(!t);
+      pin k = make-zonk-kit(!t, Unit);
       pin t = !t;
       let parse-result = {
-        let p: zonk(unit) = {
+        let p: zonk(unit, unit) = {
           function (k) {
             try _ = chunk(t)(k);
             try _ = end-of-input(k);
@@ -76,9 +76,9 @@ define main(): unit {
     function (p) {
       let Pair(t1, t2) = p;
       let full-text on t1, t2 = core.text.append(t1, t2);
-      pin k = make-zonk-kit(full-text);
+      pin k = make-zonk-kit(full-text, Unit);
       let result on t1, t2 = {
-        let p: zonk(unit) = {
+        let p: zonk(unit, unit) = {
           function (k) {
             try _ = chunk(t1)(k);
             try _ = chunk(t2)(k);
@@ -107,7 +107,7 @@ define main(): unit {
       if eq-int(len, 0) {
         True
       } else {
-        pin k = make-zonk-kit(t);
+        pin k = make-zonk-kit(t, Unit);
         let result =
           match end-of-input(k) {
           | Right(_) =>
@@ -123,8 +123,8 @@ define main(): unit {
     k,
     "take-while, chunk, take-while",
     function () {
-      pin k = make-zonk-kit(*"xxx\nbar");
-      let my-parser: zonk(unit) =
+      pin k = make-zonk-kit(*"xxx\nbar", Unit);
+      let my-parser: zonk(unit, unit) =
         function (k) {
           try _ =
             take-while(function (r) {
@@ -149,8 +149,8 @@ define main(): unit {
     k,
     "drop-while, chunk, drop-while",
     function () {
-      pin k = make-zonk-kit(*"xxx\nbar");
-      let my-parser: zonk(unit) =
+      pin k = make-zonk-kit(*"xxx\nbar", Unit);
+      let my-parser: zonk(unit, unit) =
         function (k) {
           try _ =
             drop-while(function (r) {
@@ -175,8 +175,8 @@ define main(): unit {
     k,
     "report error locations correctly (take-while, chunk)",
     function () {
-      pin k = make-zonk-kit(*"xxx\nbar");
-      let my-parser: zonk(unit) =
+      pin k = make-zonk-kit(*"xxx\nbar", Unit);
+      let my-parser: zonk(unit, unit) =
         function (k) {
           try _ =
             take-while(function (r) {
@@ -201,8 +201,8 @@ define main(): unit {
     k,
     "report error locations correctly (drop-while, chunk)",
     function () {
-      pin k = make-zonk-kit(*"xxx\nbar");
-      let my-parser: zonk(unit) =
+      pin k = make-zonk-kit(*"xxx\nbar", Unit);
+      let my-parser: zonk(unit, unit) =
         function (k) {
           try _ =
             drop-while(function (r) {
@@ -230,8 +230,8 @@ define main(): unit {
     k,
     "report error locations correctly (satisfy, chunk)",
     function () {
-      pin k = make-zonk-kit(*"xxx\nbar");
-      let my-parser: zonk(unit) =
+      pin k = make-zonk-kit(*"xxx\nbar", Unit);
+      let my-parser: zonk(unit, unit) =
         function (k) {
           try _ =
             drop-while(function (r) {
@@ -260,7 +260,7 @@ define main(): unit {
   );
 }
 
-inline _sample-parser: zonk(unit) {
+inline _sample-parser: zonk(unit, unit) {
   // constructs a parser
   function (k) {
     // accepts: foo
@@ -278,7 +278,7 @@ inline _sample-parser: zonk(unit) {
 }
 
 define zen(): unit {
-  pin k = make-zonk-kit(*"fooXXXXquxquxyoyoyoyo");
+  pin k = make-zonk-kit(*"fooXXXXquxquxyoyoyoyo", Unit);
   match _sample-parser(k) {
   | Right(_) =>
     print("pass\n")

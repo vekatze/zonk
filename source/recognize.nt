@@ -8,7 +8,7 @@ import {
   this.regex {Any, Choose, Chunk, End-Of-Input, Join, Repeat, regex},
 }
 
-define _from-regex(r: regex): zonk(unit) {
+define _from-regex<c>(r: regex): zonk(c, unit) {
   match r {
   | Any(label, rs) =>
     function (k) {
@@ -25,10 +25,10 @@ define _from-regex(r: regex): zonk(unit) {
   | Chunk(t) =>
     chunk(t)
   | Choose(name, xs, fallback) =>
-    let xs' = for-each(xs, _from-regex);
+    let xs' = for-each(xs, exact _from-regex);
     let fallback' = _from-regex(fallback);
     let go =
-      define loop(xs: list(zonk(unit)), fallback: zonk(unit)): zonk(unit) {
+      define loop(xs: list(zonk(c, unit)), fallback: zonk(c, unit)): zonk(c, unit) {
         match xs {
         | Nil =>
           fallback
@@ -38,9 +38,9 @@ define _from-regex(r: regex): zonk(unit) {
       };
     label(name, go(xs', fallback'))
   | Join(xs) =>
-    let xs' = for-each(xs, _from-regex);
+    let xs' = for-each(xs, exact _from-regex);
     let go =
-      define loop(xs: list(zonk(unit))): zonk(unit) {
+      define loop(xs: list(zonk(c, unit))): zonk(c, unit) {
         match xs {
         | Nil =>
           function (_) {
@@ -65,7 +65,7 @@ define _from-regex(r: regex): zonk(unit) {
 }
 
 inline recognize(r: regex, input: text): bool {
-  pin k = make-zonk-kit(input);
+  pin k = make-zonk-kit(input, unit);
   match _from-regex(r)(k) {
   | Right(_) =>
     True

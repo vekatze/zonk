@@ -26,21 +26,21 @@ inline parsed(a): type {
   either(expected-item, a)
 }
 
-inline zonk(a) {
-  (&zonk-kit) -> parsed(a)
+inline zonk(c, a) {
+  (&zonk-kit(c)) -> parsed(a)
 }
 
 inline report-unexpected-input<a>(label: &text): parsed(a) {
   Left(_Label(label))
 }
 
-inline get-point(k: &zonk-kit): point {
+inline get-point<c>(k: &zonk-kit(c)): point {
   let line = _get-line(k);
   let column = _get-column(k);
   Point(line, column)
 }
 
-define end-of-input: zonk(unit) {
+define end-of-input<c>: zonk(c, unit) {
   function (k) {
     tie _Zonk-Kit of {input-stream} = k;
     let cursor = _get-cursor(k);
@@ -54,7 +54,7 @@ define end-of-input: zonk(unit) {
   }
 }
 
-inline satisfy(label: &text, p: (rune) -> bool): zonk(rune) {
+inline satisfy<c>(label: &text, p: (rune) -> bool): zonk(c, rune) {
   function (k) {
     tie _Zonk-Kit of {input-stream} = k;
     let len = core.text.text-byte-length(input-stream);
@@ -74,13 +74,13 @@ inline satisfy(label: &text, p: (rune) -> bool): zonk(rune) {
   }
 }
 
-inline any-rune: zonk(rune) {
+inline any-rune<c>: zonk(c, rune) {
   satisfy("any character", function (_) {
     True
   })
 }
 
-define _chunk-body(k: &zonk-kit, chunk-text: &text): int {
+define _chunk-body<c>(k: &zonk-kit(c), chunk-text: &text): int {
   tie _Zonk-Kit of {input-stream} = k;
   let cursor = _get-cursor(k);
   let len1 = core.text.text-byte-length(input-stream);
@@ -122,7 +122,7 @@ define _chunk-body(k: &zonk-kit, chunk-text: &text): int {
   }
 }
 
-inline chunk(chunk-text: &text): zonk(unit) {
+inline chunk<c>(chunk-text: &text): zonk(c, unit) {
   function (k) {
     let result-flag = _chunk-body(k, chunk-text);
     if gt-int(result-flag, 0) {
@@ -133,7 +133,7 @@ inline chunk(chunk-text: &text): zonk(unit) {
   }
 }
 
-inline take-while(!p: (rune) -> bool): zonk(text) {
+inline take-while<c>(!p: (rune) -> bool): zonk(c, text) {
   function (k) {
     tie _Zonk-Kit of {input-stream} = k;
     let len = core.text.text-byte-length(input-stream);
@@ -167,7 +167,7 @@ inline take-while(!p: (rune) -> bool): zonk(text) {
   }
 }
 
-inline take-while-1(!p: (rune) -> bool): zonk(text) {
+inline take-while-1<c>(!p: (rune) -> bool): zonk(c, text) {
   function (k) {
     tie _Zonk-Kit of {input-stream} = k;
     let len = core.text.text-byte-length(input-stream);
@@ -211,7 +211,7 @@ inline take-while-1(!p: (rune) -> bool): zonk(text) {
   }
 }
 
-inline drop-while(!p: (rune) -> bool): zonk(unit) {
+inline drop-while<c>(!p: (rune) -> bool): zonk(c, unit) {
   function (k) {
     tie _Zonk-Kit of {input-stream} = k;
     let len = core.text.text-byte-length(input-stream);
@@ -242,7 +242,7 @@ inline drop-while(!p: (rune) -> bool): zonk(unit) {
   }
 }
 
-inline ascii-space: zonk(unit) {
+inline ascii-space<c>: zonk(c, unit) {
   drop-while(
     function (r) {
       if eq-rune(r, ` `) {
@@ -256,7 +256,7 @@ inline ascii-space: zonk(unit) {
   )
 }
 
-inline label<a>(l: &text, p: zonk(a)): zonk(a) {
+inline label<c, a>(l: &text, p: zonk(c, a)): zonk(c, a) {
   function (k) {
     let v = p(k);
     match v {
@@ -268,7 +268,7 @@ inline label<a>(l: &text, p: zonk(a)): zonk(a) {
   }
 }
 
-define _attempt-body<a>(k: &zonk-kit, state-pack: position, v: parsed(a)): parsed(a) {
+define _attempt-body<c, a>(k: &zonk-kit(c), state-pack: position, v: parsed(a)): parsed(a) {
   match v {
   | Right(result) =>
     Right(result)
@@ -278,14 +278,14 @@ define _attempt-body<a>(k: &zonk-kit, state-pack: position, v: parsed(a)): parse
   }
 }
 
-inline attempt<a>(p: zonk(a)): zonk(a) {
+inline attempt<c, a>(p: zonk(c, a)): zonk(c, a) {
   function (k) {
     let state-pack = _export-state(k);
     _attempt-body(k, state-pack, p(k))
   }
 }
 
-define _look-ahead-body<a>(k: &zonk-kit, state-pack: position, v: parsed(a)): parsed(a) {
+define _look-ahead-body<c, a>(k: &zonk-kit(c), state-pack: position, v: parsed(a)): parsed(a) {
   match v {
   | Right(result) =>
     _import-state(k, state-pack);
@@ -295,7 +295,7 @@ define _look-ahead-body<a>(k: &zonk-kit, state-pack: position, v: parsed(a)): pa
   }
 }
 
-inline look-ahead<a>(p: zonk(a)): zonk(a) {
+inline look-ahead<c, a>(p: zonk(c, a)): zonk(c, a) {
   function (k) {
     let state-pack = _export-state(k);
     _look-ahead-body(k, state-pack, p(k))
@@ -311,13 +311,13 @@ define _optional-body<a>(v: parsed(a)): parsed(?a) {
   }
 }
 
-inline optional<a>(p: zonk(a)): zonk(?a) {
+inline optional<c, a>(p: zonk(c, a)): zonk(c, ?a) {
   function (k) {
     _optional-body(p(k))
   }
 }
 
-inline branch<a>(p1: zonk(a), p2: zonk(a)): zonk(a) {
+inline branch<c, a>(p1: zonk(c, a), p2: zonk(c, a)): zonk(c, a) {
   function (k) {
     match p1(k) {
     | Right(result) =>
@@ -328,8 +328,8 @@ inline branch<a>(p1: zonk(a), p2: zonk(a)): zonk(a) {
   }
 }
 
-define _not-followed-by-body<a>(
-  k: &zonk-kit,
+define _not-followed-by-body<c, a>(
+  k: &zonk-kit(c),
   state-pack: position,
   v: parsed(a),
 ): bool {
@@ -343,7 +343,7 @@ define _not-followed-by-body<a>(
   }
 }
 
-inline not-followed-by<a>(label: &text, p: zonk(a)): zonk(unit) {
+inline not-followed-by<c, a>(label: &text, p: zonk(c, a)): zonk(c, unit) {
   function (k) {
     let state-pack = _export-state(k);
     let result = _not-followed-by-body(k, state-pack, p(k));
@@ -355,11 +355,11 @@ inline not-followed-by<a>(label: &text, p: zonk(a)): zonk(unit) {
   }
 }
 
-define _choice<a>(
-  k: &zonk-kit,
+define _choice<c, a>(
+  k: &zonk-kit(c),
   label: &text,
-  candidates: list(zonk(a)),
-  fallback: zonk(a),
+  candidates: list(zonk(c, a)),
+  fallback: zonk(c, a),
   default-gap-size: int,
 ): parsed(a) {
   match candidates {
@@ -382,7 +382,7 @@ define _choice<a>(
   }
 }
 
-inline choice<a>(label: &text, candidates: list(zonk(a)), fallback: zonk(a)): zonk(a) {
+inline choice<c, a>(label: &text, candidates: list(zonk(c, a)), fallback: zonk(c, a)): zonk(c, a) {
   function (k) {
     match candidates {
     | Nil =>
@@ -405,7 +405,7 @@ inline choice<a>(label: &text, candidates: list(zonk(a)), fallback: zonk(a)): zo
   }
 }
 
-inline many<a>(!p: zonk(a)): zonk(list(a)) {
+inline many<c, a>(!p: zonk(c, a)): zonk(c, list(a)) {
   function (k) {
     let f =
       define self(): parsed(list(a)) {
@@ -421,7 +421,7 @@ inline many<a>(!p: zonk(a)): zonk(list(a)) {
   }
 }
 
-inline some<a>(!p: zonk(a)): zonk(list(a)) {
+inline some<c, a>(!p: zonk(c, a)): zonk(c, list(a)) {
   function (k) {
     try v = !p(k);
     try vs = many(!p)(k);
@@ -456,7 +456,7 @@ define zen(): unit {
       ],
       chunk("tn"),
     );
-  pin k = make-zonk-kit(*"gaxoeitemtesttnapqabcd\nctああhehoge \n\r  hehehetest");
+  pin k = make-zonk-kit(*"gaxoeitemtesttnapqabcd\nctああhehoge \n\r  hehehetest", Unit);
   let my-result = my-parser(k);
   match my-result {
   | Left(e) =>

@@ -22,7 +22,7 @@ inline _unsafe-mutate<a>(ch: &ref(a), f: (a) -> a): unit {
   store-int(core.magic.cast(a, int, new-value), ch)
 }
 
-inline _set-gap-size(k: &zonk-kit, new-gap-size: int): unit {
+inline _set-gap-size<c>(k: &zonk-kit(c), new-gap-size: int): unit {
   tie _Zonk-Kit of {position-ref} = k;
   _unsafe-mutate(position-ref, function (position) {
     let _Position of {cursor, line, column, gap-size} = position;
@@ -30,14 +30,14 @@ inline _set-gap-size(k: &zonk-kit, new-gap-size: int): unit {
   })
 }
 
-define _get-cursor(k: &zonk-kit): int {
+define _get-cursor<c>(k: &zonk-kit(c)): int {
   tie _Zonk-Kit of {position-ref} = k;
   let position = _unsafe-read(position-ref);
   tie _Position of {cursor} = position;
   *cursor
 }
 
-define _get-gap-size(k: &zonk-kit): int {
+define _get-gap-size<c>(k: &zonk-kit(c)): int {
   tie _Zonk-Kit of {position-ref} = k;
   borrow(position-ref, function (position) {
     tie _Position of {gap-size} = position;
@@ -45,7 +45,7 @@ define _get-gap-size(k: &zonk-kit): int {
   })
 }
 
-define _get-line(k: &zonk-kit): int {
+define _get-line<c>(k: &zonk-kit(c)): int {
   tie _Zonk-Kit of {position-ref} = k;
   borrow(position-ref, function (position) {
     tie _Position of {line} = position;
@@ -53,7 +53,7 @@ define _get-line(k: &zonk-kit): int {
   })
 }
 
-define _get-column(k: &zonk-kit): int {
+define _get-column<c>(k: &zonk-kit(c)): int {
   tie _Zonk-Kit of {position-ref} = k;
   borrow(position-ref, function (position) {
     tie _Position of {column} = position;
@@ -61,7 +61,7 @@ define _get-column(k: &zonk-kit): int {
   })
 }
 
-inline _set-new-position(k: &zonk-kit, cursor: int, line: int, column: int): unit {
+inline _set-new-position<c>(k: &zonk-kit(c), cursor: int, line: int, column: int): unit {
   tie _Zonk-Kit of {position-ref} = k;
   mutate(position-ref, function (position) {
     let _Position of {gap-size} = axiom-T(position);
@@ -69,7 +69,7 @@ inline _set-new-position(k: &zonk-kit, cursor: int, line: int, column: int): uni
   })
 }
 
-inline _proceed-by-rune(k: &zonk-kit, r: rune): unit {
+inline _proceed-by-rune<c>(k: &zonk-kit(c), r: rune): unit {
   tie _Zonk-Kit of {position-ref} = k;
   mutate(position-ref, function (position) {
     let _Position of {cursor, line, column, gap-size} = axiom-T(position);
@@ -86,12 +86,12 @@ inline _proceed-by-rune(k: &zonk-kit, r: rune): unit {
   })
 }
 
-inline _export-state(k: &zonk-kit): position {
+inline _export-state<c>(k: &zonk-kit(c)): position {
   tie _Zonk-Kit of {position-ref} = k;
   core.ref.clone(position-ref)
 }
 
-inline _import-state(k: &zonk-kit, new-position: position): unit {
+inline _import-state<c>(k: &zonk-kit(c), new-position: position): unit {
   tie _Zonk-Kit of {position-ref} = k;
   mutate(position-ref, function (old-position) {
     let _Position of {} = axiom-T(old-position);

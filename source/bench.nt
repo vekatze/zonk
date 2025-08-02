@@ -4,8 +4,8 @@ import {
   this.parse {branch, chunk, label, not-followed-by, zonk},
 }
 
-define _try-parse(p: zonk(unit)): unit {
-  pin k = make-zonk-kit(*"abcnああhehoge \n\r  hehehetest");
+define _try-parse(p: zonk(unit, unit)): unit {
+  pin k = make-zonk-kit(*"abcnああhehoge \n\r  hehehetest", Unit);
   match p(k) {
   | Left(_) =>
     Unit
@@ -50,7 +50,7 @@ define _bench(): unit {
         ),
       ),
     );
-  let my-parser: zonk(unit) =
+  let my-parser: zonk(unit, unit) =
     function (k) {
       try _ = chunk("abc")(k);
       try _ = whatnot(k);

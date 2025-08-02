@@ -17,6 +17,7 @@ import {
     take-while,
     zonk,
   },
+  this.zonk-kit {get-context},
 }
 
 define _is-space(r: rune): bool {
@@ -29,7 +30,7 @@ define _is-space(r: rune): bool {
   }
 }
 
-define skip-space: zonk(unit) {
+define skip-space<c>: zonk(c, unit) {
   drop-while(_is-space)
 }
 
@@ -58,7 +59,7 @@ define _is-float-rune(r: rune): bool {
   ])
 }
 
-inline read-symbol(): zonk(text) {
+inline read-symbol<c>(): zonk(c, text) {
   function (k) {
     try result = take-while(compose(not, _is-space))(k);
     try _ = skip-space(k);
@@ -66,7 +67,7 @@ inline read-symbol(): zonk(text) {
   }
 }
 
-inline read-int: zonk(int) {
+inline read-int<c>: zonk(c, int) {
   function (k) {
     try num-text = take-while(_is-integer-rune)(k);
     try _ = skip-space(k);
@@ -81,7 +82,7 @@ inline read-int: zonk(int) {
   }
 }
 
-inline read-float: zonk(float) {
+inline read-float<c>: zonk(c, float) {
   function (k) {
     try num-text = take-while(_is-float-rune)(k);
     try _ = skip-space(k);
@@ -96,7 +97,7 @@ inline read-float: zonk(float) {
   }
 }
 
-define read-int-list(size: int): zonk(list(int)) {
+define read-int-list<c>(size: int): zonk(c, list(int)) {
   function (k) {
     let f =
       define self(cursor: int, acc: list(int)): parsed(list(int)) {
@@ -111,7 +112,7 @@ define read-int-list(size: int): zonk(list(int)) {
   }
 }
 
-inline read-vector<a>(size: int, !p: zonk(a)): zonk(vector(a)) {
+inline read-vector<c, a>(size: int, !p: zonk(c, a)): zonk(c, vector(a)) {
   function (k) {
     let f =
       define self(cursor: int, acc: vector(a)): parsed(vector(a)) {
@@ -128,11 +129,11 @@ inline read-vector<a>(size: int, !p: zonk(a)): zonk(vector(a)) {
   }
 }
 
-define read-int-vector(size: int): zonk(vector(int)) {
+define read-int-vector<c>(size: int): zonk(c, vector(int)) {
   read-vector(size, read-int)
 }
 
-define read-float-list(size: int): zonk(list(float)) {
+define read-float-list<c>(size: int): zonk(c, list(float)) {
   function (k) {
     let f =
       define self(cursor: int, acc: list(float)): parsed(list(float)) {
@@ -148,11 +149,11 @@ define read-float-list(size: int): zonk(list(float)) {
   }
 }
 
-define read-float-vector(size: int): zonk(vector(float)) {
+define read-float-vector<c>(size: int): zonk(c, vector(float)) {
   read-vector(size, read-float)
 }
 
-inline _sample-zonk: zonk(unit) {
+inline _sample-zonk<c>: zonk(c, unit) {
   function (k) {
     try v1 = read-int(k);
     try v2 = read-int(k);
@@ -170,7 +171,9 @@ inline _sample-zonk: zonk(unit) {
 }
 
 define zen(): unit {
-  pin k = make-zonk-kit(*"6 42 \n   5 4 3 2 1 -1234");
+  pin k = make-zonk-kit(*"6 42 \n   5 4 3 2 1 -1234", *"path/to/some/file.txt");
+  let ctx = get-context(k);
+  vet(ctx);
   match _sample-zonk(k) {
   | Right(_) =>
     print("pass\n")

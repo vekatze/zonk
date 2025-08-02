@@ -11,9 +11,15 @@ data position {
   )
 }
 
-data zonk-kit {
+data zonk-kit(a) {
 | _Zonk-Kit(
     input-stream: text,
     position-ref: ref(position),
+    context: a,
   )
+}
+
+define get-context<c>(k: &zonk-kit(c)): &c {
+  tie _Zonk-Kit of {context} = k;
+  context
 }

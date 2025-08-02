@@ -8,7 +8,7 @@ import {
   this.zonk-kit {_Zonk-Kit, zonk-kit},
 }
 
-define make-parse-error(k: &zonk-kit, expected: expected-item): parse-error {
+define make-parse-error<c>(k: &zonk-kit(c), expected: expected-item): parse-error {
   tie _Zonk-Kit of {input-stream} = k;
   let cursor = _get-cursor(k);
   let line = _get-line(k);
