@@ -22,11 +22,11 @@ import {
   this.zonk-kit {_Zonk-Kit, position, zonk-kit},
 }
 
-inline parsed(a): type {
+alias parsed(a) {
   either(expected-item, a)
 }
 
-inline zonk(c, a) {
+alias zonk(c, a) {
   (&zonk-kit(c)) -> parsed(a)
 }
 
@@ -460,10 +460,10 @@ define zen(): unit {
   let my-result = my-parser(k);
   match my-result {
   | Left(e) =>
-    let e' = make-parse-error(k, e);
-    pin e'' = report(e');
+    let err = make-parse-error(k, e);
+    pin message = report(err);
     print("left: ");
-    print-line(e'');
+    print-line(message);
   | Right(_) =>
     print("right\n")
   }

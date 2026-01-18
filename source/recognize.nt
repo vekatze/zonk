@@ -8,15 +8,15 @@ import {
   this.regex {Any, Choose, Chunk, End-Of-Input, Join, Repeat, regex},
 }
 
-define _from-regex<c>(r: regex): zonk(c, unit) {
-  match r {
+define _from-regex<c>(reg: regex): zonk(c, unit) {
+  match reg {
   | Any(label, rs) =>
     function (k) {
       try _ =
         satisfy(label, function (r) {
           let bs =
-            for-each(rs, function (r') {
-              eq-rune(r, r')
+            for-each(rs, function (r-cand) {
+              eq-rune(r, r-cand)
             });
           any(bs)
         })(k);
@@ -25,8 +25,8 @@ define _from-regex<c>(r: regex): zonk(c, unit) {
   | Chunk(t) =>
     chunk(t)
   | Choose(name, xs, fallback) =>
-    let xs' = for-each(xs, exact _from-regex);
-    let fallback' = _from-regex(fallback);
+    let xs = for-each(xs, exact _from-regex);
+    let fallback = _from-regex(fallback);
     let go =
       define loop(xs: list(zonk(c, unit)), fallback: zonk(c, unit)): zonk(c, unit) {
         match xs {
@@ -36,9 +36,9 @@ define _from-regex<c>(r: regex): zonk(c, unit) {
           branch(attempt(x), loop(rest, fallback))
         }
       };
-    label(name, go(xs', fallback'))
+    label(name, go(xs, fallback))
   | Join(xs) =>
-    let xs' = for-each(xs, exact _from-regex);
+    let xs = for-each(xs, exact _from-regex);
     let go =
       define loop(xs: list(zonk(c, unit))): zonk(c, unit) {
         match xs {
@@ -53,7 +53,7 @@ define _from-regex<c>(r: regex): zonk(c, unit) {
           }
         }
       };
-    go(xs')
+    go(xs)
   | Repeat(r) =>
     function (k) {
       try _ = many(attempt(_from-regex(r)))(k);
@@ -65,7 +65,7 @@ define _from-regex<c>(r: regex): zonk(c, unit) {
 }
 
 inline recognize(r: regex, input: text): bool {
-  pin k = make-zonk-kit(input, unit);
+  pin k = make-zonk-kit(input, pack-type {unit});
   match _from-regex(r)(k) {
   | Right(_) =>
     True

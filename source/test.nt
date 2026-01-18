@@ -18,7 +18,7 @@ import {
 
 define main(): unit {
   pin k = make-default-noa-kit();
-  check(
+  check::(
     k,
     "chunk(t1) against append(t1, t2) must succeed and the remaining text is t2",
     pair-gen(text-gen, text-gen),
@@ -32,8 +32,8 @@ define main(): unit {
         | Right(_) =>
           tie _Zonk-Kit of {input-stream} = k;
           let cursor = this.private.state._get-cursor(k);
-          pin stream' = _drop-N(input-stream, cursor);
-          let result = eq-text(t2, stream');
+          pin stream = _drop-N(input-stream, cursor);
+          let result = eq-text(t2, stream);
           result
         | Left(_) =>
           False
@@ -44,7 +44,7 @@ define main(): unit {
       parse-result
     },
   );
-  check(
+  check::(
     k,
     "`t1` can be parsed by (chunk(t1) → end-of-input)",
     text-gen,
@@ -69,7 +69,7 @@ define main(): unit {
       parse-result
     },
   );
-  check(
+  check::(
     k,
     "`append(t1, t2)` can be parsed by `chunk(t1) → chunk(t2) → end-of-input`",
     pair-gen(text-gen, text-gen),
@@ -98,7 +98,7 @@ define main(): unit {
       result
     },
   );
-  check(
+  check::(
     k,
     "for any non-empty text, end-of-input must fail",
     text-gen,
@@ -193,7 +193,7 @@ define main(): unit {
         let Parse-Error of {error-location} = make-parse-error(k, e);
         pin actual = error-location;
         pin expected = Point(1, 0);
-        eq-data(actual, expected)
+        eq-data::(actual, expected)
       }
     },
   );
@@ -222,7 +222,7 @@ define main(): unit {
         let Parse-Error of {error-location} = make-parse-error(k, e);
         pin actual = error-location;
         pin expected = Point(1, 0);
-        eq-data(actual, expected)
+        eq-data::(actual, expected)
       }
     },
   );
@@ -254,7 +254,7 @@ define main(): unit {
         let Parse-Error of {error-location} = make-parse-error(k, e);
         pin actual = error-location;
         pin expected = Point(1, 0);
-        eq-data(actual, expected)
+        eq-data::(actual, expected)
       }
     },
   );
@@ -284,8 +284,8 @@ define zen(): unit {
     print("pass\n")
   | Left(e) =>
     let err = make-parse-error(k, e);
-    pin err' = report(err);
+    pin err = report(err);
     print("fail: ");
-    print-line(err');
+    print-line(err);
   }
 }

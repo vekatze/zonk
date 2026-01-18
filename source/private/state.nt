@@ -9,17 +9,17 @@ import {
 }
 
 define _unsafe-read<a>(ch: &ref(a)): &a {
-  let ch = core.magic.cast(&ref(a), pointer, ch);
+  let ch = core.magic.cast<&ref(a), pointer>(ch);
   let val-base = load-int(ch);
-  core.magic.cast(int, &a, val-base)
+  core.magic.cast<int, &a>(val-base)
 }
 
 inline _unsafe-mutate<a>(ch: &ref(a), f: (a) -> a): unit {
-  let ch = core.magic.cast(&ref(a), pointer, ch);
+  let ch = core.magic.cast<&ref(a), pointer>(ch);
   let val-base = load-int(ch);
-  let current-value = core.magic.cast(int, a, val-base);
+  let current-value = core.magic.cast<int, a>(val-base);
   let new-value = f(current-value);
-  store-int(core.magic.cast(a, int, new-value), ch)
+  store-int(core.magic.cast<a, int>(new-value), ch)
 }
 
 inline _set-gap-size<c>(k: &zonk-kit(c), new-gap-size: int): unit {
@@ -41,7 +41,7 @@ define _get-gap-size<c>(k: &zonk-kit(c)): int {
   tie _Zonk-Kit of {position-ref} = k;
   borrow(position-ref, function (position) {
     tie _Position of {gap-size} = position;
-    quote {*gap-size}
+    lift {*gap-size}
   })
 }
 
@@ -49,7 +49,7 @@ define _get-line<c>(k: &zonk-kit(c)): int {
   tie _Zonk-Kit of {position-ref} = k;
   borrow(position-ref, function (position) {
     tie _Position of {line} = position;
-    quote {*line}
+    lift {*line}
   })
 }
 
@@ -57,7 +57,7 @@ define _get-column<c>(k: &zonk-kit(c)): int {
   tie _Zonk-Kit of {position-ref} = k;
   borrow(position-ref, function (position) {
     tie _Position of {column} = position;
-    quote {*column}
+    lift {*column}
   })
 }
 
@@ -65,7 +65,7 @@ inline _set-new-position<c>(k: &zonk-kit(c), cursor: int, line: int, column: int
   tie _Zonk-Kit of {position-ref} = k;
   mutate(position-ref, function (position) {
     let _Position of {gap-size} = axiom-T(position);
-    quote {_Position of {cursor, line, column, gap-size}}
+    lift {_Position of {cursor, line, column, gap-size}}
   })
 }
 
@@ -77,11 +77,11 @@ inline _proceed-by-rune<c>(k: &zonk-kit(c), r: rune): unit {
       let cursor = add-int(cursor, 1);
       let line = add-int(line, 1);
       let column = 0;
-      quote {_Position of {cursor, line, column, gap-size}}
+      lift {_Position of {cursor, line, column, gap-size}}
     } else {
       let cursor = add-int(cursor, core.rune.size(r));
       let column = add-int(column, 1);
-      quote {_Position of {cursor, line, column, gap-size}}
+      lift {_Position of {cursor, line, column, gap-size}}
     }
   })
 }
@@ -95,6 +95,6 @@ inline _import-state<c>(k: &zonk-kit(c), new-position: position): unit {
   tie _Zonk-Kit of {position-ref} = k;
   mutate(position-ref, function (old-position) {
     let _Position of {} = axiom-T(old-position);
-    quote {new-position}
+    lift {new-position}
   })
 }

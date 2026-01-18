@@ -14,9 +14,9 @@ define make-parse-error<c>(k: &zonk-kit(c), expected: expected-item): parse-erro
   let line = _get-line(k);
   let column = _get-column(k);
   let gap-size = _get-gap-size(k);
-  let input-stream' = _drop-N(input-stream, cursor);
-  let found on input-stream' = show-text(take-N(input-stream', gap-size));
-  let _ = input-stream';
+  let input-stream = _drop-N(input-stream, cursor);
+  let found on input-stream = show-text(take-N(input-stream, gap-size));
+  let _ = input-stream;
   Parse-Error of {
     expected,
     found,

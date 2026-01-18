@@ -4,6 +4,6 @@ import {
 }
 
 define make-zonk-kit<c>(input-stream: text, context: c): zonk-kit(c) {
-  let position-ref = make-ref(quote {_Position(0, 0, 0, 0)});
+  let position-ref = make-ref(lift {_Position(0, 0, 0, 0)});
   _Zonk-Kit of {input-stream, position-ref, context}
 }

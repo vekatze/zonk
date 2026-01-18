@@ -173,14 +173,14 @@ inline _sample-zonk<c>: zonk(c, unit) {
 define zen(): unit {
   pin k = make-zonk-kit(*"6 42 \n   5 4 3 2 1 -1234", *"path/to/some/file.txt");
   let ctx = get-context(k);
-  vet(ctx);
+  vet::(ctx);
   match _sample-zonk(k) {
   | Right(_) =>
     print("pass\n")
   | Left(e) =>
-    let e' = make-parse-error(k, e);
-    pin e'' = report(e');
+    let err = make-parse-error(k, e);
+    pin message = report(err);
     print("fail: ");
-    print-line(e'');
+    print-line(message);
   }
 }
