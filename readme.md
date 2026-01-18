@@ -5,7 +5,7 @@
 ## Installation
 
 ```sh
-neut get zonk https://github.com/vekatze/zonk/raw/main/archive/0-1-56.tar.zst
+neut get zonk https://github.com/vekatze/zonk/raw/main/archive/0-2-1.tar.zst
 ```
 
 ## Types
