@@ -119,7 +119,7 @@ inline read-vector<c, a>(size: int, !p: zonk(c, a)): zonk(c, vector(a)) {
         if ge-int(cursor, size) {
           Right(acc)
         } else {
-          try v = !p(k);
+          try v = p(k);
           try _ = skip-space(k);
           self(add-int(cursor, 1), core.vector.push-back(acc, v))
         }

@@ -9,7 +9,7 @@ import {
 }
 
 define make-parse-error<c>(k: &zonk-kit(c), expected: expected-item): parse-error {
-  tie _Zonk-Kit of {input-stream} = k;
+  tie _Zonk-Kit{input-stream} = k;
   let cursor = _get-cursor(k);
   let line = _get-line(k);
   let column = _get-column(k);
@@ -17,7 +17,7 @@ define make-parse-error<c>(k: &zonk-kit(c), expected: expected-item): parse-erro
   let input-stream = _drop-N(input-stream, cursor);
   let found on input-stream = show-text(take-N(input-stream, gap-size));
   let _ = input-stream;
-  Parse-Error of {
+  Parse-Error{
     expected,
     found,
     error-location := Point(line, column),

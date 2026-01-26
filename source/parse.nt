@@ -42,21 +42,21 @@ inline get-point<c>(k: &zonk-kit(c)): point {
 
 define end-of-input<c>: zonk(c, unit) {
   function (k) {
-    tie _Zonk-Kit of {input-stream} = k;
+    tie _Zonk-Kit{input-stream} = k;
     let cursor = _get-cursor(k);
     let len = core.text.text-byte-length(input-stream);
     if ge-int(cursor, len) {
       Right(Unit)
     } else {
       _set-gap-size(k, 1);
-      Left(_Label("end of input"))
+      Left(_Label("endinput"))
     }
   }
 }
 
 inline satisfy<c>(label: &text, p: (rune) -> bool): zonk(c, rune) {
   function (k) {
-    tie _Zonk-Kit of {input-stream} = k;
+    tie _Zonk-Kit{input-stream} = k;
     let len = core.text.text-byte-length(input-stream);
     let cursor = _get-cursor(k);
     if ge-int(cursor, len) {
@@ -81,7 +81,7 @@ inline any-rune<c>: zonk(c, rune) {
 }
 
 define _chunk-body<c>(k: &zonk-kit(c), chunk-text: &text): int {
-  tie _Zonk-Kit of {input-stream} = k;
+  tie _Zonk-Kit{input-stream} = k;
   let cursor = _get-cursor(k);
   let len1 = core.text.text-byte-length(input-stream);
   let len2 = core.text.text-byte-length(chunk-text);
@@ -135,7 +135,7 @@ inline chunk<c>(chunk-text: &text): zonk(c, unit) {
 
 inline take-while<c>(!p: (rune) -> bool): zonk(c, text) {
   function (k) {
-    tie _Zonk-Kit of {input-stream} = k;
+    tie _Zonk-Kit{input-stream} = k;
     let len = core.text.text-byte-length(input-stream);
     let cursor = _get-cursor(k);
     let orig-cursor = cursor;
@@ -148,7 +148,7 @@ inline take-while<c>(!p: (rune) -> bool): zonk(c, text) {
           _slice-N(input-stream, orig-cursor, sub-int(cursor, orig-cursor))
         } else {
           let r = load-rune(shift(ptr1, cursor));
-          if !p(r) {
+          if p(r) {
             let offset = core.rune.size(r);
             if eq-rune(r, `\n`) {
               consumer(add-int(cursor, offset), add-int(line, 1), 0)
@@ -169,7 +169,7 @@ inline take-while<c>(!p: (rune) -> bool): zonk(c, text) {
 
 inline take-while-1<c>(!p: (rune) -> bool): zonk(c, text) {
   function (k) {
-    tie _Zonk-Kit of {input-stream} = k;
+    tie _Zonk-Kit{input-stream} = k;
     let len = core.text.text-byte-length(input-stream);
     let cursor = _get-cursor(k);
     let orig-cursor = cursor;
@@ -187,7 +187,7 @@ inline take-while-1<c>(!p: (rune) -> bool): zonk(c, text) {
           }
         } else {
           let r = load-rune(shift(ptr1, cursor));
-          if !p(r) {
+          if p(r) {
             let offset = core.rune.size(r);
             if eq-rune(r, `\n`) {
               consumer(add-int(cursor, offset), add-int(line, 1), 0)
@@ -213,7 +213,7 @@ inline take-while-1<c>(!p: (rune) -> bool): zonk(c, text) {
 
 inline drop-while<c>(!p: (rune) -> bool): zonk(c, unit) {
   function (k) {
-    tie _Zonk-Kit of {input-stream} = k;
+    tie _Zonk-Kit{input-stream} = k;
     let len = core.text.text-byte-length(input-stream);
     let cursor = _get-cursor(k);
     let ptr1 = _get-content-pointer(input-stream);
@@ -224,7 +224,7 @@ inline drop-while<c>(!p: (rune) -> bool): zonk(c, unit) {
           _set-new-position(k, cursor, line, column);
         } else {
           let r = load-rune(shift(ptr1, cursor));
-          if !p(r) {
+          if p(r) {
             let offset = core.rune.size(r);
             if eq-rune(r, `\n`) {
               consumer(add-int(cursor, offset), add-int(line, 1), 0)
@@ -409,7 +409,7 @@ inline many<c, a>(!p: zonk(c, a)): zonk(c, list(a)) {
   function (k) {
     let f =
       define self(): parsed(list(a)) {
-        match !p(k) {
+        match p(k) {
         | Right(v) =>
           try vs = self();
           Right(Cons(v, vs))
@@ -423,8 +423,8 @@ inline many<c, a>(!p: zonk(c, a)): zonk(c, list(a)) {
 
 inline some<c, a>(!p: zonk(c, a)): zonk(c, list(a)) {
   function (k) {
-    try v = !p(k);
-    try vs = many(!p)(k);
+    try v = p(k);
+    try vs = many(p)(k);
     Right(Cons(v, vs))
   }
 }

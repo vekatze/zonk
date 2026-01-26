@@ -30,7 +30,7 @@ define main(): unit {
         let p = chunk(t1);
         match p(k) {
         | Right(_) =>
-          tie _Zonk-Kit of {input-stream} = k;
+          tie _Zonk-Kit{input-stream} = k;
           let cursor = this.private.state._get-cursor(k);
           pin stream = _drop-N(input-stream, cursor);
           let result = eq-text(t2, stream);
@@ -49,8 +49,8 @@ define main(): unit {
     "`t1` can be parsed by (chunk(t1) → end-of-input)",
     text-gen,
     function (!t) {
-      pin k = make-zonk-kit(!t, Unit);
-      pin t = !t;
+      pin k = make-zonk-kit(t, Unit);
+      pin t = t;
       let parse-result = {
         let p: zonk(unit, unit) = {
           function (k) {
@@ -190,7 +190,7 @@ define main(): unit {
       | Right(_) =>
         False
       | Left(e) =>
-        let Parse-Error of {error-location} = make-parse-error(k, e);
+        let Parse-Error{error-location} = make-parse-error(k, e);
         pin actual = error-location;
         pin expected = Point(1, 0);
         eq-data::(actual, expected)
@@ -219,7 +219,7 @@ define main(): unit {
       | Right(_) =>
         False
       | Left(e) =>
-        let Parse-Error of {error-location} = make-parse-error(k, e);
+        let Parse-Error{error-location} = make-parse-error(k, e);
         pin actual = error-location;
         pin expected = Point(1, 0);
         eq-data::(actual, expected)
@@ -251,7 +251,7 @@ define main(): unit {
       | Right(_) =>
         False
       | Left(e) =>
-        let Parse-Error of {error-location} = make-parse-error(k, e);
+        let Parse-Error{error-location} = make-parse-error(k, e);
         pin actual = error-location;
         pin expected = Point(1, 0);
         eq-data::(actual, expected)
