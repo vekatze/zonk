@@ -8,7 +8,7 @@ import {
   this.regex {Any, Choose, Chunk, End-Of-Input, Join, Repeat, regex},
 }
 
-define _from-regex<c>(reg: regex): zonk(c, unit) {
+define _from-regex<c>(reg: regex) -> zonk(c, unit) {
   match reg {
   | Any(label, rs) =>
     function (k) {
@@ -28,7 +28,7 @@ define _from-regex<c>(reg: regex): zonk(c, unit) {
     let xs = for-each(xs, exact _from-regex);
     let fallback = _from-regex(fallback);
     let go =
-      define loop(xs: list(zonk(c, unit)), fallback: zonk(c, unit)): zonk(c, unit) {
+      define loop(xs: list(zonk(c, unit)), fallback: zonk(c, unit)) -> zonk(c, unit) {
         match xs {
         | Nil =>
           fallback
@@ -40,7 +40,7 @@ define _from-regex<c>(reg: regex): zonk(c, unit) {
   | Join(xs) =>
     let xs = for-each(xs, exact _from-regex);
     let go =
-      define loop(xs: list(zonk(c, unit))): zonk(c, unit) {
+      define loop(xs: list(zonk(c, unit))) -> zonk(c, unit) {
         match xs {
         | Nil =>
           function (_) {
@@ -64,7 +64,7 @@ define _from-regex<c>(reg: regex): zonk(c, unit) {
   }
 }
 
-inline recognize(r: regex, input: text): bool {
+inline recognize(r: regex, input: text) -> bool {
   pin k = make-zonk-kit(input, pack-type {unit});
   match _from-regex(r)(k) {
   | Right(_) =>
@@ -76,7 +76,7 @@ inline recognize(r: regex, input: text): bool {
   }
 }
 
-define zen(): unit {
+define zen() -> unit {
   let reg =
     Join(List[
       Repeat(

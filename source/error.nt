@@ -12,7 +12,7 @@ data parse-error {
   )
 }
 
-define report(e: parse-error): text {
+define report(e: parse-error) -> text {
   let Parse-Error{found, expected, error-location} = e;
   let error-location = show-point(error-location);
   format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", List[error-location, _show-expected-item(expected), found])

@@ -20,7 +20,7 @@ import {
   this.zonk-kit {get-context},
 }
 
-define _is-space(r: rune): bool {
+define _is-space(r: rune) -> bool {
   if eq-rune(r, ` `) {
     True
   } else-if ule-int32(sub-int32(magic cast(rune, int32, r), 0x9), 0x4) {
@@ -30,17 +30,17 @@ define _is-space(r: rune): bool {
   }
 }
 
-define skip-space<c>: zonk(c, unit) {
+constant skip-space<c>: zonk(c, unit) {
   drop-while(_is-space)
 }
 
-define _any-number(r: rune): bool {
+define _any-number(r: rune) -> bool {
   let b1 = le-rune(`0`, r);
   let b2 = le-rune(r, `9`);
   and(b1, b2)
 }
 
-define _is-integer-rune(r: rune): bool {
+define _is-integer-rune(r: rune) -> bool {
   any(List[
     _any-number(r),
     eq-rune(r, `+`),
@@ -48,7 +48,7 @@ define _is-integer-rune(r: rune): bool {
   ])
 }
 
-define _is-float-rune(r: rune): bool {
+define _is-float-rune(r: rune) -> bool {
   any(List[
     _any-number(r),
     eq-rune(r, `.`),
@@ -59,7 +59,7 @@ define _is-float-rune(r: rune): bool {
   ])
 }
 
-inline read-symbol<c>(): zonk(c, text) {
+inline read-symbol<c>() -> zonk(c, text) {
   function (k) {
     try result = take-while(compose(not, _is-space))(k);
     try _ = skip-space(k);
@@ -67,7 +67,7 @@ inline read-symbol<c>(): zonk(c, text) {
   }
 }
 
-inline read-int<c>: zonk(c, int) {
+constant read-int<c>: zonk(c, int) {
   function (k) {
     try num-text = take-while(_is-integer-rune)(k);
     try _ = skip-space(k);
@@ -82,7 +82,7 @@ inline read-int<c>: zonk(c, int) {
   }
 }
 
-inline read-float<c>: zonk(c, float) {
+constant read-float<c>: zonk(c, float) {
   function (k) {
     try num-text = take-while(_is-float-rune)(k);
     try _ = skip-space(k);
@@ -97,10 +97,10 @@ inline read-float<c>: zonk(c, float) {
   }
 }
 
-define read-int-list<c>(size: int): zonk(c, list(int)) {
+define read-int-list<c>(size: int) -> zonk(c, list(int)) {
   function (k) {
     let f =
-      define self(cursor: int, acc: list(int)): parsed(list(int)) {
+      define self(cursor: int, acc: list(int)) -> parsed(list(int)) {
         if le-int(cursor, 0) {
           Right(reverse(acc))
         } else {
@@ -112,10 +112,10 @@ define read-int-list<c>(size: int): zonk(c, list(int)) {
   }
 }
 
-inline read-vector<c, a>(size: int, !p: zonk(c, a)): zonk(c, vector(a)) {
+inline read-vector<c, a>(size: int, !p: zonk(c, a)) -> zonk(c, vector(a)) {
   function (k) {
     let f =
-      define self(cursor: int, acc: vector(a)): parsed(vector(a)) {
+      define self(cursor: int, acc: vector(a)) -> parsed(vector(a)) {
         if ge-int(cursor, size) {
           Right(acc)
         } else {
@@ -129,14 +129,14 @@ inline read-vector<c, a>(size: int, !p: zonk(c, a)): zonk(c, vector(a)) {
   }
 }
 
-define read-int-vector<c>(size: int): zonk(c, vector(int)) {
+define read-int-vector<c>(size: int) -> zonk(c, vector(int)) {
   read-vector(size, read-int)
 }
 
-define read-float-list<c>(size: int): zonk(c, list(float)) {
+define read-float-list<c>(size: int) -> zonk(c, list(float)) {
   function (k) {
     let f =
-      define self(cursor: int, acc: list(float)): parsed(list(float)) {
+      define self(cursor: int, acc: list(float)) -> parsed(list(float)) {
         if le-int(cursor, 0) {
           Right(reverse(acc))
         } else {
@@ -149,11 +149,11 @@ define read-float-list<c>(size: int): zonk(c, list(float)) {
   }
 }
 
-define read-float-vector<c>(size: int): zonk(c, vector(float)) {
+define read-float-vector<c>(size: int) -> zonk(c, vector(float)) {
   read-vector(size, read-float)
 }
 
-inline _sample-zonk<c>: zonk(c, unit) {
+constant _sample-zonk<c>: zonk(c, unit) {
   function (k) {
     try v1 = read-int(k);
     try v2 = read-int(k);
@@ -170,7 +170,7 @@ inline _sample-zonk<c>: zonk(c, unit) {
   }
 }
 
-define zen(): unit {
+define zen() -> unit {
   pin k = make-zonk-kit(*"6 42 \n   5 4 3 2 1 -1234", *"path/to/some/file.txt");
   let ctx = get-context(k);
   vet::(ctx);

@@ -19,7 +19,7 @@ data zonk-kit(a) {
   )
 }
 
-define get-context<c>(k: &zonk-kit(c)): &c {
+define get-context<c>(k: &zonk-kit(c)) -> &c {
   tie _Zonk-Kit{context} = k;
   context
 }

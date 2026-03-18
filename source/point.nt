@@ -10,7 +10,7 @@ data point {
   )
 }
 
-define show-point(p: point): text {
+define show-point(p: point) -> text {
   let Point{row, column} = p;
   format("row {}, column {}", List[show-int(add-int(row, 1)), show-int(add-int(column, 1))])
 }

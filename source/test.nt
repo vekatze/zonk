@@ -16,7 +16,7 @@ import {
   this.zonk-kit {_Zonk-Kit},
 }
 
-define main(): unit {
+define main() -> unit {
   pin k = make-default-noa-kit();
   check::(
     k,
@@ -260,7 +260,7 @@ define main(): unit {
   );
 }
 
-inline _sample-parser: zonk(unit, unit) {
+constant _sample-parser: zonk(unit, unit) {
   // constructs a parser
   function (k) {
     // accepts: foo
@@ -277,7 +277,7 @@ inline _sample-parser: zonk(unit, unit) {
   }
 }
 
-define zen(): unit {
+define zen() -> unit {
   pin k = make-zonk-kit(*"fooXXXXquxquxyoyoyoyo", Unit);
   match _sample-parser(k) {
   | Right(_) =>
