@@ -60,7 +60,7 @@ define _is-float-rune(r: rune) -> bool {
 }
 
 inline read-symbol<c>() -> zonk(c, text) {
-  function (k) {
+  (k) => {
     try result = take-while(compose(not, _is-space))(k);
     try _ = skip-space(k);
     Right(result)
@@ -68,7 +68,7 @@ inline read-symbol<c>() -> zonk(c, text) {
 }
 
 constant read-int<c>: zonk(c, int) {
-  function (k) {
+  (k) => {
     try num-text = take-while(_is-integer-rune)(k);
     try _ = skip-space(k);
     let none-or-int on num-text = parse-int(num-text);
@@ -83,7 +83,7 @@ constant read-int<c>: zonk(c, int) {
 }
 
 constant read-float<c>: zonk(c, float) {
-  function (k) {
+  (k) => {
     try num-text = take-while(_is-float-rune)(k);
     try _ = skip-space(k);
     let none-or-float on num-text = parse-float(num-text);
@@ -98,7 +98,7 @@ constant read-float<c>: zonk(c, float) {
 }
 
 define read-int-list<c>(size: int) -> zonk(c, list(int)) {
-  function (k) {
+  (k) => {
     let f =
       define self(cursor: int, acc: list(int)) -> parsed(list(int)) {
         if le-int(cursor, 0) {
@@ -113,7 +113,7 @@ define read-int-list<c>(size: int) -> zonk(c, list(int)) {
 }
 
 inline read-vector<c, a>(size: int, !p: zonk(c, a)) -> zonk(c, vector(a)) {
-  function (k) {
+  (k) => {
     let f =
       define self(cursor: int, acc: vector(a)) -> parsed(vector(a)) {
         if ge-int(cursor, size) {
@@ -134,7 +134,7 @@ define read-int-vector<c>(size: int) -> zonk(c, vector(int)) {
 }
 
 define read-float-list<c>(size: int) -> zonk(c, list(float)) {
-  function (k) {
+  (k) => {
     let f =
       define self(cursor: int, acc: list(float)) -> parsed(list(float)) {
         if le-int(cursor, 0) {
@@ -154,7 +154,7 @@ define read-float-vector<c>(size: int) -> zonk(c, vector(float)) {
 }
 
 constant _sample-zonk<c>: zonk(c, unit) {
-  function (k) {
+  (k) => {
     try v1 = read-int(k);
     try v2 = read-int(k);
     try xs = read-float-vector(v1)(k);
@@ -162,7 +162,7 @@ constant _sample-zonk<c>: zonk(c, unit) {
     print-int(v1);
     print(", ");
     print-int-line(v2);
-    core.vector.for(xs, function (x, _) {
+    core.vector.for(xs, (x, _) => {
       print-float(x, 6);
       print(" ");
     });

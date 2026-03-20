@@ -22,7 +22,7 @@ define main() -> unit {
     k,
     "chunk(t1) against append(t1, t2) must succeed and the remaining text is t2",
     pair-gen(text-gen, text-gen),
-    function (p) {
+    (p) => {
       let Pair(t1, t2) = p;
       let full-text on t1, t2 = core.text.append(t1, t2);
       pin k = make-zonk-kit(full-text, Unit);
@@ -30,7 +30,7 @@ define main() -> unit {
         let p = chunk(t1);
         match p(k) {
         | Right(_) =>
-          tie _Zonk-Kit{input-stream} = k;
+          tie _Zonk-Kit {input-stream} = k;
           let cursor = this.private.state._get-cursor(k);
           pin stream = _drop-N(input-stream, cursor);
           let result = eq-text(t2, stream);
@@ -48,12 +48,12 @@ define main() -> unit {
     k,
     "`t1` can be parsed by (chunk(t1) → end-of-input)",
     text-gen,
-    function (!t) {
+    (!t) => {
       pin k = make-zonk-kit(t, Unit);
       pin t = t;
       let parse-result = {
         let p: zonk(unit, unit) = {
-          function (k) {
+          (k) => {
             try _ = chunk(t)(k);
             try _ = end-of-input(k);
             Right(Unit)
@@ -73,13 +73,13 @@ define main() -> unit {
     k,
     "`append(t1, t2)` can be parsed by `chunk(t1) → chunk(t2) → end-of-input`",
     pair-gen(text-gen, text-gen),
-    function (p) {
+    (p) => {
       let Pair(t1, t2) = p;
       let full-text on t1, t2 = core.text.append(t1, t2);
       pin k = make-zonk-kit(full-text, Unit);
       let result on t1, t2 = {
         let p: zonk(unit, unit) = {
-          function (k) {
+          (k) => {
             try _ = chunk(t1)(k);
             try _ = chunk(t2)(k);
             try _ = end-of-input(k);
@@ -102,7 +102,7 @@ define main() -> unit {
     k,
     "for any non-empty text, end-of-input must fail",
     text-gen,
-    function (t) {
+    (t) => {
       let len on t = text-byte-length(t);
       if eq-int(len, 0) {
         True
@@ -122,17 +122,17 @@ define main() -> unit {
   test(
     k,
     "take-while, chunk, take-while",
-    function () {
+    () => {
       pin k = make-zonk-kit(*"xxx\nbar", Unit);
       let my-parser: zonk(unit, unit) =
-        function (k) {
+        (k) => {
           try _ =
-            take-while(function (r) {
+            take-while((r) => {
               eq-rune(r, `x`)
             })(k);
           try _ = chunk("\n")(k);
           try _ =
-            take-while(function (r) {
+            take-while((r) => {
               ne-rune(r, `x`)
             })(k);
           Right(Unit)
@@ -148,17 +148,17 @@ define main() -> unit {
   test(
     k,
     "drop-while, chunk, drop-while",
-    function () {
+    () => {
       pin k = make-zonk-kit(*"xxx\nbar", Unit);
       let my-parser: zonk(unit, unit) =
-        function (k) {
+        (k) => {
           try _ =
-            drop-while(function (r) {
+            drop-while((r) => {
               eq-rune(r, `x`)
             })(k);
           try _ = chunk("\n")(k);
           try _ =
-            drop-while(function (r) {
+            drop-while((r) => {
               ne-rune(r, `x`)
             })(k);
           Right(Unit)
@@ -174,12 +174,12 @@ define main() -> unit {
   test(
     k,
     "report error locations correctly (take-while, chunk)",
-    function () {
+    () => {
       pin k = make-zonk-kit(*"xxx\nbar", Unit);
       let my-parser: zonk(unit, unit) =
-        function (k) {
+        (k) => {
           try _ =
-            take-while(function (r) {
+            take-while((r) => {
               eq-rune(r, `x`)
             })(k);
           try _ = chunk("\n")(k);
@@ -190,7 +190,7 @@ define main() -> unit {
       | Right(_) =>
         False
       | Left(e) =>
-        let Parse-Error{error-location} = make-parse-error(k, e);
+        let Parse-Error {error-location} = make-parse-error(k, e);
         pin actual = error-location;
         pin expected = Point(1, 0);
         eq-data::(actual, expected)
@@ -200,12 +200,12 @@ define main() -> unit {
   test(
     k,
     "report error locations correctly (drop-while, chunk)",
-    function () {
+    () => {
       pin k = make-zonk-kit(*"xxx\nbar", Unit);
       let my-parser: zonk(unit, unit) =
-        function (k) {
+        (k) => {
           try _ =
-            drop-while(function (r) {
+            drop-while((r) => {
               all[
                 ne-rune(r, `y`),
                 ne-rune(r, `\n`),
@@ -219,7 +219,7 @@ define main() -> unit {
       | Right(_) =>
         False
       | Left(e) =>
-        let Parse-Error{error-location} = make-parse-error(k, e);
+        let Parse-Error {error-location} = make-parse-error(k, e);
         pin actual = error-location;
         pin expected = Point(1, 0);
         eq-data::(actual, expected)
@@ -229,19 +229,19 @@ define main() -> unit {
   test(
     k,
     "report error locations correctly (satisfy, chunk)",
-    function () {
+    () => {
       pin k = make-zonk-kit(*"xxx\nbar", Unit);
       let my-parser: zonk(unit, unit) =
-        function (k) {
+        (k) => {
           try _ =
-            drop-while(function (r) {
+            drop-while((r) => {
               all[
                 ne-rune(r, `y`),
                 ne-rune(r, `\n`),
               ]
             })(k);
           try _ =
-            satisfy("foo", function (r) {
+            satisfy("foo", (r) => {
               eq-rune(r, `\n`)
             })(k);
           try _ = chunk("a")(k);
@@ -251,7 +251,7 @@ define main() -> unit {
       | Right(_) =>
         False
       | Left(e) =>
-        let Parse-Error{error-location} = make-parse-error(k, e);
+        let Parse-Error {error-location} = make-parse-error(k, e);
         pin actual = error-location;
         pin expected = Point(1, 0);
         eq-data::(actual, expected)
@@ -262,7 +262,7 @@ define main() -> unit {
 
 constant _sample-parser: zonk(unit, unit) {
   // constructs a parser
-  function (k) {
+  (k) => {
     // accepts: foo
     try _ = chunk("foo")(k);
     // accepts: (buz|test|bar)

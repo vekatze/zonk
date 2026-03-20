@@ -19,7 +19,7 @@ define _bench() -> unit {
     branch(
       not-followed-by("aoeu", chunk("nああ")),
       branch(
-        branch(chunk("k"), label("whatever", function (k) {
+        branch(chunk("k"), label("whatever", (k) => {
           try _ = chunk("px")(k);
           try _ = chunk("kgあ")(k);
           Right(Unit)
@@ -27,13 +27,13 @@ define _bench() -> unit {
         branch(
           not-followed-by("my label", chunk("nあ")),
           branch(
-            label("whatever 2", function (k) {
+            label("whatever 2", (k) => {
               try _ = chunk("pt")(k);
               try _ = chunk("あhebc")(k);
               Right(Unit)
             }),
             branch(
-              function (k) {
+              (k) => {
                 try _ = chunk("pt")(k);
                 try _ = chunk("あhebc")(k);
                 Right(Unit)
@@ -51,12 +51,12 @@ define _bench() -> unit {
       ),
     );
   let my-parser: zonk(unit, unit) =
-    function (k) {
+    (k) => {
       try _ = chunk("abc")(k);
       try _ = whatnot(k);
       Right(Unit)
     };
-  loop(1000000, function (_) {
+  loop(1000000, (_) => {
     _try-parse(my-parser)
   })
 }

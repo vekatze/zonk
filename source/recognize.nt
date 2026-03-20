@@ -11,11 +11,11 @@ import {
 define _from-regex<c>(reg: regex) -> zonk(c, unit) {
   match reg {
   | Any(label, rs) =>
-    function (k) {
+    (k) => {
       try _ =
-        satisfy(label, function (r) {
+        satisfy(label, (r) => {
           let bs =
-            for-each(rs, function (r-cand) {
+            for-each(rs, (r-cand) => {
               eq-rune(r, r-cand)
             });
           any(bs)
@@ -43,11 +43,11 @@ define _from-regex<c>(reg: regex) -> zonk(c, unit) {
       define loop(xs: list(zonk(c, unit))) -> zonk(c, unit) {
         match xs {
         | Nil =>
-          function (_) {
+          (_) => {
             Right(Unit)
           }
         | Cons(x, xs) =>
-          function (k) {
+          (k) => {
             try _ = x(k);
             loop(xs)(k)
           }
@@ -55,7 +55,7 @@ define _from-regex<c>(reg: regex) -> zonk(c, unit) {
       };
     go(xs)
   | Repeat(r) =>
-    function (k) {
+    (k) => {
       try _ = many(attempt(_from-regex(r)))(k);
       Right(Unit)
     }
