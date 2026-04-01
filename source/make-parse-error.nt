@@ -1,6 +1,6 @@
 import {
-  core.text {_drop-N, take-N},
-  core.text.show {show-text},
+  core.string {_drop-N, take-N},
+  core.string.show {show-string},
   this.error {Parse-Error, parse-error},
   this.expected-item {expected-item},
   this.point {Point},
@@ -15,7 +15,7 @@ define make-parse-error<c>(k: &zonk-kit(c), expected: expected-item) -> parse-er
   let column = _get-column(k);
   let gap-size = _get-gap-size(k);
   let input-stream = _drop-N(input-stream, cursor);
-  let found on input-stream = show-text(take-N(input-stream, gap-size));
+  let found on input-stream = show-string(take-N(input-stream, gap-size));
   let _ = input-stream;
   Parse-Error {
     expected,

@@ -1,6 +1,6 @@
 import {
   core.list {any, for-each},
-  core.text.io {print-line},
+  core.string.io {print-line},
   this.error {report},
   this.make-parse-error {make-parse-error},
   this.make-zonk-kit {make-zonk-kit},
@@ -64,7 +64,7 @@ define _from-regex<c>(reg: regex) -> zonk(c, unit) {
   }
 }
 
-inline recognize(r: regex, input: text) -> bool {
+inline recognize(r: regex, input: string) -> bool {
   pin k = make-zonk-kit(input, pack-type {unit});
   match _from-regex(r)(k) {
   | Right(_) =>

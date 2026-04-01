@@ -1,16 +1,16 @@
 import {
-  core.text.show {show-text-N},
+  core.string.show {show-string-N},
 }
 
 data expected-item {
-| _Raw-Text(&text)
-| _Label(&text)
+| _Raw-Text(&string)
+| _Label(&string)
 }
 
-define _show-expected-item(k: expected-item) -> text {
+define _show-expected-item(k: expected-item) -> string {
   match k {
   | _Raw-Text(t) =>
-    show-text-N(t)
+    show-string-N(t)
   | _Label(t) =>
     *t
   }

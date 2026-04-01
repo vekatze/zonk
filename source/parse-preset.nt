@@ -5,7 +5,7 @@ import {
   core.int.io {print-int, print-int-line},
   core.int.parse {parse-int},
   core.list {any, reverse},
-  core.text.io {print-line},
+  core.string.io {print-line},
   this.error {report},
   this.make-parse-error {make-parse-error},
   this.make-zonk-kit {make-zonk-kit},
@@ -17,7 +17,7 @@ import {
     take-while,
     zonk,
   },
-  this.zonk-kit {get-context},
+  this.zonk-kit {get-constring},
 }
 
 define _is-space(r: rune) -> bool {
@@ -59,7 +59,7 @@ define _is-float-rune(r: rune) -> bool {
   ])
 }
 
-inline read-symbol<c>() -> zonk(c, text) {
+inline read-symbol<c>() -> zonk(c, string) {
   (k) => {
     try result = take-while(compose(not, _is-space))(k);
     try _ = skip-space(k);
@@ -69,10 +69,10 @@ inline read-symbol<c>() -> zonk(c, text) {
 
 constant read-int<c>: zonk(c, int) {
   (k) => {
-    try num-text = take-while(_is-integer-rune)(k);
+    try num-string = take-while(_is-integer-rune)(k);
     try _ = skip-space(k);
-    let none-or-int on num-text = parse-int(num-text);
-    let _ = num-text;
+    let none-or-int on num-string = parse-int(num-string);
+    let _ = num-string;
     match none-or-int {
     | Left(_) =>
       report-unexpected-input("integer")
@@ -84,10 +84,10 @@ constant read-int<c>: zonk(c, int) {
 
 constant read-float<c>: zonk(c, float) {
   (k) => {
-    try num-text = take-while(_is-float-rune)(k);
+    try num-string = take-while(_is-float-rune)(k);
     try _ = skip-space(k);
-    let none-or-float on num-text = parse-float(num-text);
-    let _ = num-text;
+    let none-or-float on num-string = parse-float(num-string);
+    let _ = num-string;
     match none-or-float {
     | Left(_) =>
       report-unexpected-input("float")
@@ -172,7 +172,7 @@ constant _sample-zonk<c>: zonk(c, unit) {
 
 define zen() -> unit {
   pin k = make-zonk-kit(*"6 42 \n   5 4 3 2 1 -1234", *"path/to/some/file.txt");
-  let ctx = get-context(k);
+  let ctx = get-constring(k);
   vet::(ctx);
   match _sample-zonk(k) {
   | Right(_) =>

@@ -1,18 +1,18 @@
 import {
-  core.text {format},
+  core.string {format},
   this.expected-item {_show-expected-item, expected-item},
   this.point {point, show-point},
 }
 
 data parse-error {
 | Parse-Error(
-    found: text,
+    found: string,
     expected: expected-item,
     error-location: point,
   )
 }
 
-define report(e: parse-error) -> text {
+define report(e: parse-error) -> string {
   let Parse-Error {found, expected, error-location} = e;
   let error-location = show-point(error-location);
   format("parse error at {}:\nexpected:\n  {}\nfound:\n  {}", List[error-location, _show-expected-item(expected), found])

@@ -1,10 +1,10 @@
 import {
   core.bool {all},
-  core.text {_drop-N, text-byte-length},
-  core.text.io {print-line},
+  core.string {_drop-N, string-byte-length},
+  core.string.io {print-line},
   noa.check {check},
   noa.gen.pair {pair-gen},
-  noa.gen.text {text-gen},
+  noa.gen.string {string-gen},
   noa.make-noa-kit {make-default-noa-kit},
   noa.test {test},
   this.error {Parse-Error, report},
@@ -20,12 +20,12 @@ define main() -> unit {
   pin k = make-default-noa-kit();
   check::(
     k,
-    "chunk(t1) against append(t1, t2) must succeed and the remaining text is t2",
-    pair-gen(text-gen, text-gen),
+    "chunk(t1) against append(t1, t2) must succeed and the remaining string is t2",
+    pair-gen(string-gen, string-gen),
     (p) => {
       let Pair(t1, t2) = p;
-      let full-text on t1, t2 = core.text.append(t1, t2);
-      pin k = make-zonk-kit(full-text, Unit);
+      let full-string on t1, t2 = core.string.append(t1, t2);
+      pin k = make-zonk-kit(full-string, Unit);
       let parse-result on t1, t2 = {
         let p = chunk(t1);
         match p(k) {
@@ -33,7 +33,7 @@ define main() -> unit {
           tie _Zonk-Kit {input-stream} = k;
           let cursor = this.private.state._get-cursor(k);
           pin stream = _drop-N(input-stream, cursor);
-          let result = eq-text(t2, stream);
+          let result = eq-string(t2, stream);
           result
         | Left(_) =>
           False
@@ -47,7 +47,7 @@ define main() -> unit {
   check::(
     k,
     "`t1` can be parsed by (chunk(t1) → end-of-input)",
-    text-gen,
+    string-gen,
     (!t) => {
       pin k = make-zonk-kit(t, Unit);
       pin t = t;
@@ -72,11 +72,11 @@ define main() -> unit {
   check::(
     k,
     "`append(t1, t2)` can be parsed by `chunk(t1) → chunk(t2) → end-of-input`",
-    pair-gen(text-gen, text-gen),
+    pair-gen(string-gen, string-gen),
     (p) => {
       let Pair(t1, t2) = p;
-      let full-text on t1, t2 = core.text.append(t1, t2);
-      pin k = make-zonk-kit(full-text, Unit);
+      let full-string on t1, t2 = core.string.append(t1, t2);
+      pin k = make-zonk-kit(full-string, Unit);
       let result on t1, t2 = {
         let p: zonk(unit, unit) = {
           (k) => {
@@ -100,10 +100,10 @@ define main() -> unit {
   );
   check::(
     k,
-    "for any non-empty text, end-of-input must fail",
-    text-gen,
+    "for any non-empty string, end-of-input must fail",
+    string-gen,
     (t) => {
-      let len on t = text-byte-length(t);
+      let len on t = string-byte-length(t);
       if eq-int(len, 0) {
         True
       } else {

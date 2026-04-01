@@ -1,7 +1,7 @@
 data regex {
-| Any(label: &text, runes: list(rune))
-| Chunk(chunk-text: &text)
-| Choose(label: &text, candidates: list(regex), fallback: regex)
+| Any(label: &string, runes: list(rune))
+| Chunk(chunk-string: &string)
+| Choose(label: &string, candidates: list(regex), fallback: regex)
 | Join(components: list(regex))
 | Repeat(regex)
 | End-Of-Input

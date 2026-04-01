@@ -1,8 +1,8 @@
 import {
   core.pointer {shift},
   core.rune {load-rune},
-  core.text {_get-content-pointer, _get-rune, _slice-N},
-  core.text.io {print-line},
+  core.string {_get-content-pointer, _get-rune, _slice-N},
+  core.string.io {print-line},
   this.error {report},
   this.expected-item {_Label, _Raw-Text, expected-item},
   this.make-parse-error {make-parse-error},
@@ -30,7 +30,7 @@ alias zonk(c, a) {
   (&zonk-kit(c)) -> parsed(a)
 }
 
-inline report-unexpected-input<a>(label: &text) -> parsed(a) {
+inline report-unexpected-input<a>(label: &string) -> parsed(a) {
   Left(_Label(label))
 }
 
@@ -44,7 +44,7 @@ constant end-of-input<c>: zonk(c, unit) {
   (k) => {
     tie _Zonk-Kit {input-stream} = k;
     let cursor = _get-cursor(k);
-    let len = core.text.text-byte-length(input-stream);
+    let len = core.string.string-byte-length(input-stream);
     if ge-int(cursor, len) {
       Right(Unit)
     } else {
@@ -54,10 +54,10 @@ constant end-of-input<c>: zonk(c, unit) {
   }
 }
 
-inline satisfy<c>(label: &text, p: (rune) -> bool) -> zonk(c, rune) {
+inline satisfy<c>(label: &string, p: (rune) -> bool) -> zonk(c, rune) {
   (k) => {
     tie _Zonk-Kit {input-stream} = k;
-    let len = core.text.text-byte-length(input-stream);
+    let len = core.string.string-byte-length(input-stream);
     let cursor = _get-cursor(k);
     if ge-int(cursor, len) {
       Left(_Label(label))
@@ -80,17 +80,17 @@ constant any-rune<c>: zonk(c, rune) {
   })
 }
 
-define _chunk-body<c>(k: &zonk-kit(c), chunk-text: &text) -> int {
+define _chunk-body<c>(k: &zonk-kit(c), chunk-string: &string) -> int {
   tie _Zonk-Kit {input-stream} = k;
   let cursor = _get-cursor(k);
-  let len1 = core.text.text-byte-length(input-stream);
-  let len2 = core.text.text-byte-length(chunk-text);
+  let len1 = core.string.string-byte-length(input-stream);
+  let len2 = core.string.string-byte-length(chunk-string);
   if lt-int(len1, len2) {
     -1
   } else {
     let ptr1 = shift(_get-content-pointer(input-stream), cursor);
-    let ptr2 = _get-content-pointer(chunk-text);
-    let chunk-len = core.text.length(chunk-text);
+    let ptr2 = _get-content-pointer(chunk-string);
+    let chunk-len = core.string.length(chunk-string);
     let f =
       define _chunk-consumer(
         index: int,
@@ -122,26 +122,26 @@ define _chunk-body<c>(k: &zonk-kit(c), chunk-text: &text) -> int {
   }
 }
 
-inline chunk<c>(chunk-text: &text) -> zonk(c, unit) {
+inline chunk<c>(chunk-string: &string) -> zonk(c, unit) {
   (k) => {
-    let result-flag = _chunk-body(k, chunk-text);
+    let result-flag = _chunk-body(k, chunk-string);
     if gt-int(result-flag, 0) {
       Right(Unit)
     } else {
-      Left(_Raw-Text(chunk-text))
+      Left(_Raw-Text(chunk-string))
     }
   }
 }
 
-inline take-while<c>(!p: (rune) -> bool) -> zonk(c, text) {
+inline take-while<c>(!p: (rune) -> bool) -> zonk(c, string) {
   (k) => {
     tie _Zonk-Kit {input-stream} = k;
-    let len = core.text.text-byte-length(input-stream);
+    let len = core.string.string-byte-length(input-stream);
     let cursor = _get-cursor(k);
     let orig-cursor = cursor;
     let ptr1 = _get-content-pointer(input-stream);
     let f =
-      define consumer(cursor: int, line: int, column: int) -> text {
+      define consumer(cursor: int, line: int, column: int) -> string {
         let is-tail = ge-int(cursor, len);
         if is-tail {
           _set-new-position(k, cursor, line, column);
@@ -167,15 +167,15 @@ inline take-while<c>(!p: (rune) -> bool) -> zonk(c, text) {
   }
 }
 
-inline take-while-1<c>(!p: (rune) -> bool) -> zonk(c, text) {
+inline take-while-1<c>(!p: (rune) -> bool) -> zonk(c, string) {
   (k) => {
     tie _Zonk-Kit {input-stream} = k;
-    let len = core.text.text-byte-length(input-stream);
+    let len = core.string.string-byte-length(input-stream);
     let cursor = _get-cursor(k);
     let orig-cursor = cursor;
     let ptr1 = _get-content-pointer(input-stream);
     let f =
-      define consumer(cursor: int, line: int, column: int) -> parsed(text) {
+      define consumer(cursor: int, line: int, column: int) -> parsed(string) {
         let is-tail = ge-int(cursor, len);
         if is-tail {
           let size = sub-int(cursor, orig-cursor);
@@ -214,7 +214,7 @@ inline take-while-1<c>(!p: (rune) -> bool) -> zonk(c, text) {
 inline drop-while<c>(!p: (rune) -> bool) -> zonk(c, unit) {
   (k) => {
     tie _Zonk-Kit {input-stream} = k;
-    let len = core.text.text-byte-length(input-stream);
+    let len = core.string.string-byte-length(input-stream);
     let cursor = _get-cursor(k);
     let ptr1 = _get-content-pointer(input-stream);
     let f =
@@ -256,7 +256,7 @@ constant ascii-space<c>: zonk(c, unit) {
   )
 }
 
-inline label<c, a>(l: &text, p: zonk(c, a)) -> zonk(c, a) {
+inline label<c, a>(l: &string, p: zonk(c, a)) -> zonk(c, a) {
   (k) => {
     let v = p(k);
     match v {
@@ -343,7 +343,7 @@ define _not-followed-by-body<c, a>(
   }
 }
 
-inline not-followed-by<c, a>(label: &text, p: zonk(c, a)) -> zonk(c, unit) {
+inline not-followed-by<c, a>(label: &string, p: zonk(c, a)) -> zonk(c, unit) {
   (k) => {
     let state-pack = _export-state(k);
     let result = _not-followed-by-body(k, state-pack, p(k));
@@ -357,7 +357,7 @@ inline not-followed-by<c, a>(label: &text, p: zonk(c, a)) -> zonk(c, unit) {
 
 define _choice<c, a>(
   k: &zonk-kit(c),
-  label: &text,
+  label: &string,
   candidates: list(zonk(c, a)),
   fallback: zonk(c, a),
   default-gap-size: int,
@@ -382,7 +382,7 @@ define _choice<c, a>(
   }
 }
 
-inline choice<c, a>(label: &text, candidates: list(zonk(c, a)), fallback: zonk(c, a)) -> zonk(c, a) {
+inline choice<c, a>(label: &string, candidates: list(zonk(c, a)), fallback: zonk(c, a)) -> zonk(c, a) {
   (k) => {
     match candidates {
     | Nil =>
