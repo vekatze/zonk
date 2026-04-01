@@ -17,7 +17,7 @@ import {
     take-while,
     zonk,
   },
-  this.zonk-kit {get-constring},
+  this.zonk-kit {get-context},
 }
 
 define _is-space(r: rune) -> bool {
@@ -172,7 +172,7 @@ constant _sample-zonk<c>: zonk(c, unit) {
 
 define zen() -> unit {
   pin k = make-zonk-kit(*"6 42 \n   5 4 3 2 1 -1234", *"path/to/some/file.txt");
-  let ctx = get-constring(k);
+  let ctx = get-context(k);
   vet::(ctx);
   match _sample-zonk(k) {
   | Right(_) =>

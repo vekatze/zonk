@@ -15,11 +15,11 @@ data zonk-kit(a) {
 | _Zonk-Kit(
     input-stream: string,
     position-ref: ref(position),
-    constring: a,
+    context: a,
   )
 }
 
-define get-constring<c>(k: &zonk-kit(c)) -> &c {
-  tie _Zonk-Kit {constring} = k;
-  constring
+define get-context<c>(k: &zonk-kit(c)) -> &c {
+  tie _Zonk-Kit {context} = k;
+  context
 }
