@@ -42,7 +42,7 @@ inline get-point<c>(k: &zonk-kit(c)) -> point {
 
 constant end-of-input<c>: zonk(c, unit) {
   (k) => {
-    tie _Zonk-Kit {input-stream} = k;
+    tie _Zonk-Kit{input-stream} = k;
     let cursor = _get-cursor(k);
     let len = core.string.string-byte-length(input-stream);
     if ge-int(cursor, len) {
@@ -56,7 +56,7 @@ constant end-of-input<c>: zonk(c, unit) {
 
 inline satisfy<c>(label: &string, p: (rune) -> bool) -> zonk(c, rune) {
   (k) => {
-    tie _Zonk-Kit {input-stream} = k;
+    tie _Zonk-Kit{input-stream} = k;
     let len = core.string.string-byte-length(input-stream);
     let cursor = _get-cursor(k);
     if ge-int(cursor, len) {
@@ -81,7 +81,7 @@ constant any-rune<c>: zonk(c, rune) {
 }
 
 define _chunk-body<c>(k: &zonk-kit(c), chunk-string: &string) -> int {
-  tie _Zonk-Kit {input-stream} = k;
+  tie _Zonk-Kit{input-stream} = k;
   let cursor = _get-cursor(k);
   let len1 = core.string.string-byte-length(input-stream);
   let len2 = core.string.string-byte-length(chunk-string);
@@ -135,7 +135,7 @@ inline chunk<c>(chunk-string: &string) -> zonk(c, unit) {
 
 inline take-while<c>(!p: (rune) -> bool) -> zonk(c, string) {
   (k) => {
-    tie _Zonk-Kit {input-stream} = k;
+    tie _Zonk-Kit{input-stream} = k;
     let len = core.string.string-byte-length(input-stream);
     let cursor = _get-cursor(k);
     let orig-cursor = cursor;
@@ -169,7 +169,7 @@ inline take-while<c>(!p: (rune) -> bool) -> zonk(c, string) {
 
 inline take-while-1<c>(!p: (rune) -> bool) -> zonk(c, string) {
   (k) => {
-    tie _Zonk-Kit {input-stream} = k;
+    tie _Zonk-Kit{input-stream} = k;
     let len = core.string.string-byte-length(input-stream);
     let cursor = _get-cursor(k);
     let orig-cursor = cursor;
@@ -213,7 +213,7 @@ inline take-while-1<c>(!p: (rune) -> bool) -> zonk(c, string) {
 
 inline drop-while<c>(!p: (rune) -> bool) -> zonk(c, unit) {
   (k) => {
-    tie _Zonk-Kit {input-stream} = k;
+    tie _Zonk-Kit{input-stream} = k;
     let len = core.string.string-byte-length(input-stream);
     let cursor = _get-cursor(k);
     let ptr1 = _get-content-pointer(input-stream);
