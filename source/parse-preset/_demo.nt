@@ -1,0 +1,45 @@
+import {
+  core.float.io {print-float},
+  core.int.io {print-int, print-int-line},
+  this.parse {
+    end-of-input,
+    get-context,
+    make-parse-error,
+    make-zonk-kit,
+    report,
+    zonk,
+  },
+  this.parse-preset {read-float-vector, read-int},
+}
+
+constant _sample-zonk<c>: zonk(c, unit) {
+  (k) => {
+    try v1 = read-int(k);
+    try v2 = read-int(k);
+    try xs = read-float-vector(v1)(k);
+    try _ = end-of-input(k);
+    print-int(v1);
+    print(", ");
+    print-int-line(v2);
+    core.vector.for(xs, (x, _) => {
+      print-float(x, 6);
+      print(" ");
+    });
+    Right(Unit)
+  }
+}
+
+define zen() -> unit {
+  pin k = make-zonk-kit(*"6 42 \n   5.0 4.0 3.0 2.0 1.0 -1234.0", *"path/to/some/file.txt");
+  let ctx = get-context(k);
+  vet::(ctx);
+  match _sample-zonk(k) {
+  | Right(_) =>
+    print("pass\n")
+  | Left(e) =>
+    let err = make-parse-error(k, e);
+    pin message = report(err);
+    print("fail: ");
+    print-line(message);
+  }
+}

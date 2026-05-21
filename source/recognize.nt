@@ -1,10 +1,18 @@
 import {
   core.list {any, for-each},
-  core.string.io {print-line},
-  this.error {report},
-  this.make-parse-error {make-parse-error},
-  this.make-zonk-kit {make-zonk-kit},
-  this.parse {attempt, branch, chunk, end-of-input, label, many, satisfy, zonk},
+  this.parse {
+    attempt,
+    branch,
+    chunk,
+    end-of-input,
+    label,
+    make-parse-error,
+    make-zonk-kit,
+    many,
+    report,
+    satisfy,
+    zonk,
+  },
   this.regex {Any, Choose, Chunk, End-Of-Input, Join, Repeat, regex},
 }
 
@@ -73,33 +81,5 @@ inline recognize(r: regex, input: string) -> bool {
     pin t = report(make-parse-error(k, e));
     print-line(t);
     False
-  }
-}
-
-define zen() -> unit {
-  let reg =
-    Join(List[
-      Repeat(
-        Join(List[
-          Choose(
-            "variable",
-            List[
-              Chunk("pqr"),
-              Chunk("H"),
-              Any("Lorem ipsum", List[`P`, `あ`, `k`]),
-            ],
-            Chunk("abc"),
-          ),
-          Chunk(":"),
-          Choose("type", List[Chunk("AAAA")], Chunk("XX")),
-          Chunk(", "),
-        ]),
-      ),
-      End-Of-Input,
-    ]);
-  if recognize(reg, *"abc:XX, あ:AAAA, k:XX, ") {
-    print("True\n")
-  } else {
-    print("False\n")
   }
 }

@@ -1,0 +1,32 @@
+import {
+  this.recognize {recognize},
+  this.regex {Any, Choose, Chunk, End-Of-Input, Join, Repeat},
+}
+
+define zen() -> unit {
+  let reg =
+    Join(List[
+      Repeat(
+        Join(List[
+          Choose(
+            "variable",
+            List[
+              Chunk("pqr"),
+              Chunk("H"),
+              Any("Lorem ipsum", List[`P`, `あ`, `k`]),
+            ],
+            Chunk("abc"),
+          ),
+          Chunk(":"),
+          Choose("type", List[Chunk("AAAA")], Chunk("XX")),
+          Chunk(", "),
+        ]),
+      ),
+      End-Of-Input,
+    ]);
+  if recognize(reg, *"abc:XX, あ:AAAA, k:XX, ") {
+    print("True\n")
+  } else {
+    print("False\n")
+  }
+}

@@ -1,29 +1,21 @@
 import {
-  core.float.io {print-float},
   core.float.parse {parse-float},
   core.function {compose},
-  core.int.io {print-int, print-int-line},
   core.int.parse {parse-int},
   core.list {any, reverse},
-  core.string.io {print-line},
-  this.error {report},
-  this.make-parse-error {make-parse-error},
-  this.make-zonk-kit {make-zonk-kit},
   this.parse {
     drop-while,
-    end-of-input,
     parsed,
     report-unexpected-input,
     take-while,
     zonk,
   },
-  this.zonk-kit {get-context},
 }
 
 define _is-space(r: rune) -> bool {
   if eq-rune(r, ` `) {
     True
-  } else-if ule-int32(sub-int32(magic cast(rune, int32, r), 0x9), 0x4) {
+  } else-if and(le-rune(`\u{9}`, r), le-rune(r, `\u{D}`)) {
     True
   } else {
     False
@@ -151,36 +143,4 @@ define read-float-list<c>(size: int) -> zonk(c, list(float)) {
 
 define read-float-vector<c>(size: int) -> zonk(c, vector(float)) {
   read-vector(size, read-float)
-}
-
-constant _sample-zonk<c>: zonk(c, unit) {
-  (k) => {
-    try v1 = read-int(k);
-    try v2 = read-int(k);
-    try xs = read-float-vector(v1)(k);
-    try _ = end-of-input(k);
-    print-int(v1);
-    print(", ");
-    print-int-line(v2);
-    core.vector.for(xs, (x, _) => {
-      print-float(x, 6);
-      print(" ");
-    });
-    Right(Unit)
-  }
-}
-
-define zen() -> unit {
-  pin k = make-zonk-kit(*"6 42 \n   5 4 3 2 1 -1234", *"path/to/some/file.txt");
-  let ctx = get-context(k);
-  vet::(ctx);
-  match _sample-zonk(k) {
-  | Right(_) =>
-    print("pass\n")
-  | Left(e) =>
-    let err = make-parse-error(k, e);
-    pin message = report(err);
-    print("fail: ");
-    print-line(message);
-  }
 }

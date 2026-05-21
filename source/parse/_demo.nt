@@ -1,0 +1,51 @@
+import {
+  this.parse {
+    choice,
+    chunk,
+    end-of-input,
+    label,
+    make-parse-error,
+    make-zonk-kit,
+    report,
+  },
+}
+
+define zen() -> unit {
+  let my-parser =
+    choice(
+      "some term",
+      List[
+        (k) => {
+          try _ = chunk("gaoe")(k);
+          try _ = chunk("item")(k);
+          Right(Unit)
+        },
+        choice("item", List[chunk("k")], label("whatever", (k) => {
+          try _ = chunk("px")(k);
+          try _ = chunk("kgあ")(k);
+          Right(Unit)
+        })),
+        chunk("tあい"),
+        label("whatever 2", (k) => {
+          try _ = chunk("pt")(k);
+          try _ = chunk("あhebc")(k);
+          Right(Unit)
+        }),
+        chunk("abc"),
+        chunk("{}"),
+        end-of-input,
+      ],
+      chunk("tn"),
+    );
+  pin k = make-zonk-kit(*"gaxoeitemtesttnapqabcd\nctああhehoge \n\r  hehehetest", Unit);
+  let my-result = my-parser(k);
+  match my-result {
+  | Left(e) =>
+    let err = make-parse-error(k, e);
+    pin message = report(err);
+    print("left: ");
+    print-line(message);
+  | Right(_) =>
+    print("right\n")
+  }
+}
