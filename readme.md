@@ -5,7 +5,7 @@
 ## Installation
 
 ```sh
-neut get zonk https://github.com/vekatze/zonk/raw/main/archive/0-2-12.tar.zst
+neut get zonk https://github.com/vekatze/zonk/raw/main/archive/0-2-13.tar.zst
 ```
 
 ## Types
@@ -180,10 +180,7 @@ Executing `zen` in the following example should output `pass`:
 ```neut
 import {
   core.string.io {print-line},
-  this.make-parse-error {make-parse-error},
-  this.make-zonk-kit {make-zonk-kit},
-  this.parse {choice, chunk, end-of-input, many, some, zonk},
-  this.error {report},
+  this.parse {choice, chunk, end-of-input, make-parse-error, make-zonk-kit, many, report, some, zonk},
 }
 
 constant sample-parser: zonk(unit, unit) {
