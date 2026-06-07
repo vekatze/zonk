@@ -1,7 +1,9 @@
 import {
-  core.cell {cell, clone, make-cell, mutate},
+  core.box {axiom-T},
+  core.cell {borrow, cell, make-cell, mutate},
   core.int {max-int},
   core.int.show {show-int},
+  core.list {reverse},
   core.rune,
   core.string {byte-length, format, take-N},
   core.string.show {show-string, show-string-N},
@@ -77,7 +79,9 @@ define get-context<c>(k: &zonk-kit(c)) -> &c {
 
 define _get-position<c>(k: &zonk-kit(c)) -> position {
   tie _Zonk-Kit{position-cell} = k;
-  clone(position-cell)
+  borrow(position-cell, (position) => {
+    lift {*position}
+  })
 }
 
 inline _set-position<c>(k: &zonk-kit(c), new-position: position) -> unit {
@@ -93,21 +97,30 @@ define _get-input-stream<c>(k: &zonk-kit(c)) -> &string {
 }
 
 define _get-cursor<c>(k: &zonk-kit(c)) -> int {
-  let _Position{cursor} = _get-position(k);
-  cursor
+  tie _Zonk-Kit{position-cell} = k;
+  borrow(position-cell, (position) => {
+    tie _Position{cursor} = position;
+    lift {*cursor}
+  })
 }
 
 define _get-gap-size<c>(k: &zonk-kit(c)) -> int {
-  let _Position{gap-size} = _get-position(k);
-  gap-size
+  tie _Zonk-Kit{position-cell} = k;
+  borrow(position-cell, (position) => {
+    tie _Position{gap-size} = position;
+    lift {*gap-size}
+  })
 }
 
 inline _set-gap-size<c>(k: &zonk-kit(c), new-gap-size: int) -> unit {
-  let _Position{cursor, line, column, gap-size} = _get-position(k);
-  _set-position(k, _Position{cursor, line, column, gap-size := max-int(gap-size, new-gap-size)})
+  tie _Zonk-Kit{position-cell} = k;
+  mutate(position-cell, (position) => {
+    let _Position{cursor, line, column, gap-size} = axiom-T(position);
+    lift {_Position{cursor, line, column, gap-size := max-int(gap-size, new-gap-size)}}
+  })
 }
 
-inline _advance-point(line: int, column: int, r: rune) -> point {
+inline _advance-point(line: int, column: int, r: rune) ->> point {
   if eq-rune(r, `\n`) {
     Point(add-int(line, 1), 0)
   } else {
@@ -116,8 +129,11 @@ inline _advance-point(line: int, column: int, r: rune) -> point {
 }
 
 inline _set-new-position<c>(k: &zonk-kit(c), cursor: int, line: int, column: int) -> unit {
-  let gap-size = _get-gap-size(k);
-  _set-position(k, _Position{cursor, line, column, gap-size})
+  tie _Zonk-Kit{position-cell} = k;
+  mutate(position-cell, (position) => {
+    let _Position{gap-size} = axiom-T(position);
+    lift {_Position{cursor, line, column, gap-size}}
+  })
 }
 
 define make-parse-error<c>(k: &zonk-kit(c), expected: expected-item) ->> parse-error {
@@ -146,8 +162,11 @@ inline report-unexpected-input<a>(label: &string) -> parsed(a) {
 }
 
 inline get-point<c>(k: &zonk-kit(c)) -> point {
-  let _Position{line, column} = _get-position(k);
-  Point(line, column)
+  tie _Zonk-Kit{position-cell} = k;
+  borrow(position-cell, (position) => {
+    tie _Position{line, column} = position;
+    lift {Point(*line, *column)}
+  })
 }
 
 constant end-of-input<c>: zonk(c, unit) {
@@ -193,7 +212,7 @@ constant any-rune<c>: zonk(c, rune) {
 
 define _chunk-body<c>(k: &zonk-kit(c), chunk-string: &string) -> int {
   let input-stream = _get-input-stream(k);
-  let cursor = _get-cursor(k);
+  let _Position{cursor, line, column} = _get-position(k);
   let len1 = byte-length(input-stream);
   let len2 = byte-length(chunk-string);
   if lt-int(sub-int(len1, cursor), len2) {
@@ -224,7 +243,6 @@ define _chunk-body<c>(k: &zonk-kit(c), chunk-string: &string) -> int {
           }
         }
       };
-    let Point(line, column) = get-point(k);
     if eq-int(len2, 0) {
       1
     } else {
@@ -495,16 +513,15 @@ inline choice<c, a>(label: &string, candidates: list(zonk(c, a)), fallback: zonk
 inline many<c, a>(!p: zonk(c, a)) -> zonk(c, list(a)) {
   (k) =>> {
     let f =
-      define self() ->> parsed(list(a)) {
+      define self(acc: list(a)) ->> parsed(list(a)) {
         match p(k) {
         | Right(v) =>
-          try vs = self();
-          Right(Cons(v, vs))
+          self(Cons(v, acc))
         | Left(_) =>
-          Right(Nil)
+          Right(reverse(acc))
         }
       };
-    f()
+    f(Nil)
   }
 }
 

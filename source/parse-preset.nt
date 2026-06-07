@@ -2,7 +2,7 @@ import {
   core.float.parse {parse-float},
   core.function {compose},
   core.int.parse {parse-int},
-  core.list {any, reverse},
+  core.list {reverse},
   this.parse {
     drop-while,
     parsed,
@@ -33,22 +33,32 @@ define _any-number(r: rune) -> bool {
 }
 
 define _is-integer-rune(r: rune) -> bool {
-  any(List[
+  or(
     _any-number(r),
-    eq-rune(r, `+`),
-    eq-rune(r, `-`),
-  ])
+    or(
+      eq-rune(r, `+`),
+      eq-rune(r, `-`),
+    ),
+  )
 }
 
 define _is-float-rune(r: rune) -> bool {
-  any(List[
+  or(
     _any-number(r),
-    eq-rune(r, `.`),
-    eq-rune(r, `e`),
-    eq-rune(r, `E`),
-    eq-rune(r, `+`),
-    eq-rune(r, `-`),
-  ])
+    or(
+      eq-rune(r, `.`),
+      or(
+        eq-rune(r, `e`),
+        or(
+          eq-rune(r, `E`),
+          or(
+            eq-rune(r, `+`),
+            eq-rune(r, `-`),
+          ),
+        ),
+      ),
+    ),
+  )
 }
 
 inline read-symbol<c>() -> zonk(c, string) {

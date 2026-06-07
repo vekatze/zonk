@@ -1,5 +1,5 @@
 import {
-  core.list {any, for-each},
+  core.list {for-each},
   this.parse {
     attempt,
     branch,
@@ -8,12 +8,25 @@ import {
     label,
     make-parse-error,
     make-zonk-kit,
-    many,
+    parsed,
     report,
     satisfy,
     zonk,
   },
   this.regex {Any, Choose, Chunk, End-Of-Input, Join, Repeat, regex},
+}
+
+define _rune-member(r: rune, rs: &list(rune)) -> bool {
+  case rs {
+  | Nil =>
+    False
+  | Cons(r-cand, rest) =>
+    if eq-rune(r, *r-cand) {
+      True
+    } else {
+      _rune-member(r, rest)
+    }
+  }
 }
 
 define _from-regex<c>(reg: regex) -> zonk(c, unit) {
@@ -22,11 +35,9 @@ define _from-regex<c>(reg: regex) -> zonk(c, unit) {
     (k) =>> {
       try _ =
         satisfy(label, (r) => {
-          let bs =
-            for-each(rs, (r-cand) => {
-              eq-rune(r, r-cand)
-            });
-          any(bs)
+          let found on rs = _rune-member(r, rs);
+          let _ = rs;
+          found
         })(k);
       Right(Unit)
     }
@@ -63,9 +74,18 @@ define _from-regex<c>(reg: regex) -> zonk(c, unit) {
       };
     go(xs)
   | Repeat(r) =>
+    let !p = attempt(_from-regex(r));
     (k) =>> {
-      try _ = many(attempt(_from-regex(r)))(k);
-      Right(Unit)
+      let go =
+        define self() -> parsed(unit) {
+          match p(k) {
+          | Right(_) =>
+            self()
+          | Left(_) =>
+            Right(Unit)
+          }
+        };
+      go()
     }
   | End-Of-Input =>
     end-of-input

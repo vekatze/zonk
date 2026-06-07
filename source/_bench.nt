@@ -1,6 +1,9 @@
 import {
   core.control {loop},
-  this.parse {branch, chunk, label, make-zonk-kit, not-followed-by, zonk},
+  this.parse {branch, chunk, label, make-zonk-kit, many, not-followed-by, zonk},
+  this.parse-preset {read-int-list},
+  this.recognize {recognize},
+  this.regex {Any, Chunk, End-Of-Input, Join, Repeat, regex},
 }
 
 define _try-parse(p: zonk(unit, unit)) -> unit {
@@ -11,6 +14,31 @@ define _try-parse(p: zonk(unit, unit)) -> unit {
   | Right(_) =>
     Unit
   }
+}
+
+define _try-parse-ints(p: zonk(unit, list(int))) -> unit {
+  pin k = make-zonk-kit(*"10 -20 30 -40 50 -60 70 -80 90 -100 110 -120 130 -140 150 -160", Unit);
+  match p(k) {
+  | Left(_) =>
+    Unit
+  | Right(_) =>
+    Unit
+  }
+}
+
+define _try-parse-many(p: zonk(unit, list(unit))) -> unit {
+  pin k = make-zonk-kit(*"yoyoyoyoyoyoyoyoyoyoyoyoyoyoyoyo", Unit);
+  match p(k) {
+  | Left(_) =>
+    Unit
+  | Right(_) =>
+    Unit
+  }
+}
+
+define _try-recognize(reg: regex) -> unit {
+  let _ = recognize(reg, *"abababababababababababababababab");
+  Unit
 }
 
 define _bench() -> unit {
@@ -57,6 +85,22 @@ define _bench() -> unit {
     };
   loop(1000000, (_) => {
     _try-parse(my-parser)
+  });
+  let int-list-parser = read-int-list(16);
+  loop(100000, (_) => {
+    _try-parse-ints(int-list-parser)
+  });
+  let many-parser = many(chunk("yo"));
+  loop(100000, (_) => {
+    _try-parse-many(many-parser)
+  });
+  let repeat-regex = Join(List[Repeat(Chunk("ab")), End-Of-Input]);
+  loop(100000, (_) => {
+    _try-recognize(repeat-regex)
+  });
+  let any-repeat-regex = Join(List[Repeat(Any("a or b", List[`a`, `b`])), End-Of-Input]);
+  loop(100000, (_) => {
+    _try-recognize(any-repeat-regex)
   })
 }
 
