@@ -52,7 +52,7 @@ define _is-float-rune(r: rune) -> bool {
 }
 
 inline read-symbol<c>() -> zonk(c, string) {
-  (k) => {
+  (k) =>> {
     try result = take-while(compose(not, _is-space))(k);
     try _ = skip-space(k);
     Right(result)
@@ -60,7 +60,7 @@ inline read-symbol<c>() -> zonk(c, string) {
 }
 
 constant read-int<c>: zonk(c, int) {
-  (k) => {
+  (k) =>> {
     try num-string = take-while(_is-integer-rune)(k);
     try _ = skip-space(k);
     let none-or-int on num-string = parse-int(num-string);
@@ -75,7 +75,7 @@ constant read-int<c>: zonk(c, int) {
 }
 
 constant read-float<c>: zonk(c, float) {
-  (k) => {
+  (k) =>> {
     try num-string = take-while(_is-float-rune)(k);
     try _ = skip-space(k);
     let none-or-float on num-string = parse-float(num-string);
@@ -90,7 +90,7 @@ constant read-float<c>: zonk(c, float) {
 }
 
 define read-int-list<c>(size: int) -> zonk(c, list(int)) {
-  (k) => {
+  (k) =>> {
     let f =
       define self(cursor: int, acc: list(int)) -> parsed(list(int)) {
         if le-int(cursor, 0) {
@@ -105,7 +105,7 @@ define read-int-list<c>(size: int) -> zonk(c, list(int)) {
 }
 
 inline read-vector<c, a>(size: int, !p: zonk(c, a)) -> zonk(c, vector(a)) {
-  (k) => {
+  (k) =>> {
     let f =
       define self(cursor: int, acc: vector(a)) -> parsed(vector(a)) {
         if ge-int(cursor, size) {
@@ -126,7 +126,7 @@ define read-int-vector<c>(size: int) -> zonk(c, vector(int)) {
 }
 
 define read-float-list<c>(size: int) -> zonk(c, list(float)) {
-  (k) => {
+  (k) =>> {
     let f =
       define self(cursor: int, acc: list(float)) -> parsed(list(float)) {
         if le-int(cursor, 0) {

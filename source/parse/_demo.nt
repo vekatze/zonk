@@ -15,18 +15,18 @@ define zen() -> unit {
     choice(
       "some term",
       List[
-        (k) => {
+        (k) =>> {
           try _ = chunk("gaoe")(k);
           try _ = chunk("item")(k);
           Right(Unit)
         },
-        choice("item", List[chunk("k")], label("whatever", (k) => {
+        choice("item", List[chunk("k")], label("whatever", (k) =>> {
           try _ = chunk("px")(k);
           try _ = chunk("kgあ")(k);
           Right(Unit)
         })),
         chunk("tあい"),
-        label("whatever 2", (k) => {
+        label("whatever 2", (k) =>> {
           try _ = chunk("pt")(k);
           try _ = chunk("あhebc")(k);
           Right(Unit)

@@ -19,7 +19,7 @@ import {
 define _from-regex<c>(reg: regex) -> zonk(c, unit) {
   match reg {
   | Any(label, rs) =>
-    (k) => {
+    (k) =>> {
       try _ =
         satisfy(label, (r) => {
           let bs =
@@ -51,11 +51,11 @@ define _from-regex<c>(reg: regex) -> zonk(c, unit) {
       define loop(xs: list(zonk(c, unit))) -> zonk(c, unit) {
         match xs {
         | Nil =>
-          (_) => {
+          (_) =>> {
             Right(Unit)
           }
         | Cons(x, xs) =>
-          (k) => {
+          (k) =>> {
             try _ = x(k);
             loop(xs)(k)
           }
@@ -63,7 +63,7 @@ define _from-regex<c>(reg: regex) -> zonk(c, unit) {
       };
     go(xs)
   | Repeat(r) =>
-    (k) => {
+    (k) =>> {
       try _ = many(attempt(_from-regex(r)))(k);
       Right(Unit)
     }

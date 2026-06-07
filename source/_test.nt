@@ -37,7 +37,7 @@ define main() -> unit {
       pin k = make-zonk-kit(full-string, Unit);
       let parse-result on t1, t2 = {
         let p: zonk(unit, bool) =
-          (k) => {
+          (k) =>> {
             try _ = chunk(t1)(k);
             try rest =
               take-while((_) => {
@@ -69,7 +69,7 @@ define main() -> unit {
       pin t = t;
       let parse-result = {
         let p: zonk(unit, unit) = {
-          (k) => {
+          (k) =>> {
             try _ = chunk(t)(k);
             try _ = end-of-input(k);
             Right(Unit)
@@ -95,7 +95,7 @@ define main() -> unit {
       pin k = make-zonk-kit(full-string, Unit);
       let result on t1, t2 = {
         let p: zonk(unit, unit) = {
-          (k) => {
+          (k) =>> {
             try _ = chunk(t1)(k);
             try _ = chunk(t2)(k);
             try _ = end-of-input(k);
@@ -141,7 +141,7 @@ define main() -> unit {
     () => {
       pin k = make-zonk-kit(*"xxx\nbar", Unit);
       let my-parser: zonk(unit, unit) =
-        (k) => {
+        (k) =>> {
           try _ =
             take-while((r) => {
               eq-rune(r, `x`)
@@ -167,7 +167,7 @@ define main() -> unit {
     () => {
       pin k = make-zonk-kit(*"xxx\nbar", Unit);
       let my-parser: zonk(unit, unit) =
-        (k) => {
+        (k) =>> {
           try _ =
             drop-while((r) => {
               eq-rune(r, `x`)
@@ -193,7 +193,7 @@ define main() -> unit {
     () => {
       pin k = make-zonk-kit(*"xxx\nbar", Unit);
       let my-parser: zonk(unit, unit) =
-        (k) => {
+        (k) =>> {
           try _ =
             take-while((r) => {
               eq-rune(r, `x`)
@@ -219,7 +219,7 @@ define main() -> unit {
     () => {
       pin k = make-zonk-kit(*"xxx\nbar", Unit);
       let my-parser: zonk(unit, unit) =
-        (k) => {
+        (k) =>> {
           try _ =
             drop-while((r) => {
               all[
@@ -248,7 +248,7 @@ define main() -> unit {
     () => {
       pin k = make-zonk-kit(*"xxx\nbar", Unit);
       let my-parser: zonk(unit, unit) =
-        (k) => {
+        (k) =>> {
           try _ =
             drop-while((r) => {
               all[
@@ -278,7 +278,7 @@ define main() -> unit {
 
 constant _sample-parser: zonk(unit, unit) {
   // constructs a parser
-  (k) => {
+  (k) =>> {
     // accepts: foo
     try _ = chunk("foo")(k);
     // accepts: (buz|test|bar)
