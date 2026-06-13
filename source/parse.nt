@@ -5,7 +5,7 @@ import {
   core.int.show {show-int},
   core.list {reverse},
   core.rune,
-  core.string {byte-length, format, take-N},
+  core.string {byte-length, format, take-N, with-byte-slice},
   core.string.show {show-string, show-string-N},
   core.string.unsafe {drop-N, get-rune-unchecked, slice-N},
 }
@@ -530,5 +530,47 @@ inline some<c, a>(!p: zonk(c, a)) ->> zonk(c, list(a)) {
     try v = p(k);
     try vs = many(p)(k);
     Right(Cons(v, vs))
+  }
+}
+
+inline scan-while<c, a>(
+  label: &string,
+  !p: (rune) -> bool,
+  interpret: (&string) -> +?a,
+) ->> zonk(c, a) {
+  (k) =>> {
+    let input-stream = _get-input-stream(k);
+    let len = byte-length(input-stream);
+    let _Position{cursor, line, column} = _get-position(k);
+    let orig-cursor = cursor;
+    let f =
+      define consumer(cursor: int, line: int, column: int) -> int {
+        if ge-int(cursor, len) {
+          _set-new-position(k, cursor, line, column);
+          cursor
+        } else {
+          let r = get-rune-unchecked(input-stream, cursor);
+          if p(r) {
+            let Point(line, column) = _advance-point(line, column, r);
+            consumer(add-int(cursor, core.rune.size(r)), line, column)
+          } else {
+            _set-new-position(k, cursor, line, column);
+            cursor
+          }
+        }
+      };
+    let end-cursor = f(cursor, line, column);
+    let size = sub-int(end-cursor, orig-cursor);
+    let result =
+      with-byte-slice(input-stream, orig-cursor, size, (slice) => {
+        interpret(slice)
+      });
+    match result {
+    | Right(v) =>
+      Right(v)
+    | Left(_) =>
+      _set-gap-size(k, max-int(size, 1));
+      Left(_Label(label))
+    }
   }
 }

@@ -6,7 +6,7 @@ import {
   this.parse {
     drop-while,
     parsed,
-    report-unexpected-input,
+    scan-while,
     take-while,
     zonk,
   },
@@ -71,31 +71,25 @@ inline read-symbol<c>() -> zonk(c, string) {
 
 constant read-int<c>: zonk(c, int) {
   (k) =>> {
-    try num-string = take-while(_is-integer-rune)(k);
+    try v =
+      scan-while("integer", _is-integer-rune, (v) => {
+        let result = parse-int(v);
+        lift {result}
+      })(k);
     try _ = skip-space(k);
-    let none-or-int on num-string = parse-int(num-string);
-    let _ = num-string;
-    match none-or-int {
-    | Left(_) =>
-      report-unexpected-input("integer")
-    | Right(v) =>
-      Right(v)
-    }
+    Right(v)
   }
 }
 
 constant read-float<c>: zonk(c, float) {
   (k) =>> {
-    try num-string = take-while(_is-float-rune)(k);
+    try v =
+      scan-while("float", _is-float-rune, (v) => {
+        let result = parse-float(v);
+        lift {result}
+      })(k);
     try _ = skip-space(k);
-    let none-or-float on num-string = parse-float(num-string);
-    let _ = num-string;
-    match none-or-float {
-    | Left(_) =>
-      report-unexpected-input("float")
-    | Right(v) =>
-      Right(v)
-    }
+    Right(v)
   }
 }
 
