@@ -46,6 +46,36 @@ define _try-parse-many(p: zonk(unit, list(unit))) -> unit {
   }
 }
 
+define _try-parse-long-chunk-hit(p: zonk(unit, unit)) -> unit {
+  pin k = make-zonk-kit(*"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-rest", Unit);
+  match p(k) {
+  | Left(_) =>
+    Unit
+  | Right(_) =>
+    Unit
+  }
+}
+
+define _try-parse-long-chunk-miss(p: zonk(unit, unit)) -> unit {
+  pin k = make-zonk-kit(*"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXY_-rest", Unit);
+  match p(k) {
+  | Left(_) =>
+    Unit
+  | Right(_) =>
+    Unit
+  }
+}
+
+define _try-parse-unicode-chunk-hit(p: zonk(unit, unit)) -> unit {
+  pin k = make-zonk-kit(*"abc\nあいうxyz-rest", Unit);
+  match p(k) {
+  | Left(_) =>
+    Unit
+  | Right(_) =>
+    Unit
+  }
+}
+
 define _try-recognize(reg: regex) -> unit {
   let _ = recognize(reg, *"abababababababababababababababab");
   Unit
@@ -107,6 +137,17 @@ define _bench() -> unit {
   let many-parser = many(chunk("yo"));
   loop(100000, (_) => {
     _try-parse-many(many-parser)
+  });
+  let !long-chunk-parser = chunk("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+  loop(500000, (_) => {
+    _try-parse-long-chunk-hit(long-chunk-parser)
+  });
+  loop(500000, (_) => {
+    _try-parse-long-chunk-miss(long-chunk-parser)
+  });
+  let unicode-chunk-parser = chunk("abc\nあいうxyz");
+  loop(500000, (_) => {
+    _try-parse-unicode-chunk-hit(unicode-chunk-parser)
   });
   let repeat-regex = Join(List[Repeat(Chunk("ab")), End-Of-Input]);
   loop(100000, (_) => {

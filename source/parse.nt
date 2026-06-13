@@ -1,13 +1,22 @@
 import {
   core.box {axiom-T},
+  core.c-size {C-Size, c-size},
   core.cell {borrow, cell, make-cell, mutate},
   core.int {max-int},
   core.int.show {show-int},
   core.list {reverse},
+  core.memory.unsafe {load-int8},
+  core.pointer {shift},
   core.rune,
+  core.rune.utf8 {size-by-head-byte},
   core.string {byte-length, format, take-N, with-byte-slice},
+  core.string.pointer {get-content-pointer},
   core.string.show {show-string, show-string-N},
   core.string.unsafe {drop-N, get-rune-unchecked, slice-N},
+}
+
+foreign {
+  memcmp(pointer, pointer, c-size) -> int,
 }
 
 data expected-item {
@@ -218,35 +227,37 @@ define _chunk-body<c>(k: &zonk-kit(c), chunk-string: &string) -> int {
   if lt-int(sub-int(len1, cursor), len2) {
     -1
   } else {
-    let f =
-      define _chunk-consumer(
-        index: int,
-        line: int,
-        column: int,
-      ) -> int {
-        if eq-int(index, len2) {
-          _set-new-position(k, add-int(cursor, len2), line, column);
-          1
-        } else {
-          let rune1 = get-rune-unchecked(input-stream, add-int(cursor, index));
-          let rune2 = get-rune-unchecked(chunk-string, index);
-          let offset = core.rune.size(rune1);
-          if eq-rune(rune1, rune2) {
-            if eq-rune(rune1, `\n`) {
-              _chunk-consumer(add-int(index, offset), add-int(line, 1), 0)
-            } else {
-              _chunk-consumer(add-int(index, offset), line, add-int(column, 1))
-            }
-          } else {
-            _set-gap-size(k, core.string.length(chunk-string));
-            -1
-          }
-        }
-      };
     if eq-int(len2, 0) {
       1
     } else {
-      f(0, line, column)
+      let input-ptr = shift(get-content-pointer(input-stream), cursor);
+      let chunk-ptr = get-content-pointer(chunk-string);
+      let match-result = magic external memcmp(input-ptr, chunk-ptr, C-Size(len2));
+      if ne-int(match-result, 0) {
+        _set-gap-size(k, core.string.length(chunk-string));
+        -1
+      } else {
+        let f =
+          define _chunk-consumer(
+            index: int,
+            line: int,
+            column: int,
+          ) -> int {
+            if eq-int(index, len2) {
+              _set-new-position(k, add-int(cursor, len2), line, column);
+              1
+            } else {
+              let head-byte = load-int8(shift(chunk-ptr, index));
+              let offset = size-by-head-byte(head-byte);
+              if eq-int8(head-byte, 0x0A) {
+                _chunk-consumer(add-int(index, offset), add-int(line, 1), 0)
+              } else {
+                _chunk-consumer(add-int(index, offset), line, add-int(column, 1))
+              }
+            }
+          };
+        f(0, line, column)
+      }
     }
   }
 }
