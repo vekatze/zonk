@@ -65,7 +65,7 @@ data zonk-kit {
     point-cursor: cell(int) mix,
     point-line: cell(int) mix,
     point-column: cell(int) mix,
-    expected-is-raw: cell(int) mix,
+    expected-is-raw: cell(bool) mix,
     expected-text: cell(text) mix,
   )
 }
@@ -78,7 +78,7 @@ define make-zonk-kit(input-stream: string) ->> zonk-kit {
     point-cursor := make-cell(lift {0}),
     point-line := make-cell(lift {0}),
     point-column := make-cell(lift {0}),
-    expected-is-raw := make-cell(lift {0}),
+    expected-is-raw := make-cell(lift {False}),
     expected-text := make-cell(lift {static "unknown"}),
   }
 }
@@ -90,6 +90,18 @@ inline _read-int-cell(r: &cell(int)) -> int {
 }
 
 inline _write-int-cell(r: &cell(int), v: int) -> unit {
+  mutate(r, (_) => {
+    lift {v}
+  })
+}
+
+inline _read-bool-cell(r: &cell(bool)) -> bool {
+  borrow(r, (x) => {
+    lift {*x}
+  })
+}
+
+inline _write-bool-cell(r: &cell(bool), v: bool) -> unit {
   mutate(r, (_) => {
     lift {v}
   })
@@ -127,20 +139,20 @@ inline _reset-gap-size(k: &zonk-kit, new-gap-size: int) -> unit {
   _write-int-cell(gap-size, new-gap-size)
 }
 
-inline _store-expected(k: &zonk-kit, is-raw: int, t: text) -> unit {
+inline _store-expected(k: &zonk-kit, is-raw: bool, t: text) -> unit {
   tie _Zonk-Kit{expected-is-raw, expected-text} = k;
-  _write-int-cell(expected-is-raw, is-raw);
+  _write-bool-cell(expected-is-raw, is-raw);
   mutate(expected-text, (_) => {
     lift {t}
   })
 }
 
 inline _set-expected-raw(k: &zonk-kit, t: text) -> unit {
-  _store-expected(k, 1, t)
+  _store-expected(k, True, t)
 }
 
 inline _set-expected-label(k: &zonk-kit, l: text) -> unit {
-  _store-expected(k, 0, l)
+  _store-expected(k, False, l)
 }
 
 define _get-expected(k: &zonk-kit) -> expected-item {
@@ -149,7 +161,7 @@ define _get-expected(k: &zonk-kit) -> expected-item {
     from-text(borrow(expected-text, (x) => {
       lift {*x}
     }));
-  if eq-int(_read-int-cell(expected-is-raw), 1) {
+  if _read-bool-cell(expected-is-raw) {
     _Raw-Text(t)
   } else {
     _Label(t)
