@@ -72,7 +72,7 @@ inline read-symbol<c>() -> zonk(c, string) {
 constant read-int<c>: zonk(c, int) {
   (k) =>> {
     try v =
-      scan-while("integer", _is-integer-rune, (v) => {
+      scan-while(static "integer", _is-integer-rune, (v) => {
         let result = parse-int(v);
         lift {result}
       })(k);
@@ -84,7 +84,7 @@ constant read-int<c>: zonk(c, int) {
 constant read-float<c>: zonk(c, float) {
   (k) =>> {
     try v =
-      scan-while("float", _is-float-rune, (v) => {
+      scan-while(static "float", _is-float-rune, (v) => {
         let result = parse-float(v);
         lift {result}
       })(k);

@@ -97,8 +97,8 @@ inline recognize(r: regex, input: string) -> bool {
   match _from-regex(r)(k) {
   | Right(_) =>
     True
-  | Left(e) =>
-    pin t = report(make-parse-error(k, e));
+  | Left(_) =>
+    pin t = report(make-parse-error(k));
     print-line(t);
     False
   }

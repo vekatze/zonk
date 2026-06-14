@@ -7,7 +7,7 @@ import {
   core.list {reverse},
   core.pointer {shift},
   core.rune,
-  core.string {byte-length, format, take-N, with-byte-slice},
+  core.string {byte-length, format, from-text, take-N, with-byte-slice},
   core.string.pointer {get-content-pointer},
   core.string.show {show-string, show-string-N},
   core.string.unsafe {drop-N, get-rune-unchecked, slice-N},
@@ -65,6 +65,8 @@ data zonk-kit(a) {
     point-cursor: cell(int),
     point-line: cell(int),
     point-column: cell(int),
+    expected-is-raw: cell(int),
+    expected-text: cell(text),
     context: a,
   )
 }
@@ -77,6 +79,8 @@ define make-zonk-kit<c>(input-stream: string, context: c) ->> zonk-kit(c) {
     point-cursor := make-cell(lift {0}),
     point-line := make-cell(lift {0}),
     point-column := make-cell(lift {0}),
+    expected-is-raw := make-cell(lift {0}),
+    expected-text := make-cell(lift {static "unknown"}),
     context,
   }
 }
@@ -130,6 +134,35 @@ inline _reset-gap-size<c>(k: &zonk-kit(c), new-gap-size: int) -> unit {
   _write-int-cell(gap-size, new-gap-size)
 }
 
+inline _store-expected<c>(k: &zonk-kit(c), is-raw: int, t: text) -> unit {
+  tie _Zonk-Kit{expected-is-raw, expected-text} = k;
+  _write-int-cell(expected-is-raw, is-raw);
+  mutate(expected-text, (_) => {
+    lift {t}
+  })
+}
+
+inline _set-expected-raw<c>(k: &zonk-kit(c), t: text) -> unit {
+  _store-expected(k, 1, t)
+}
+
+inline _set-expected-label<c>(k: &zonk-kit(c), l: text) -> unit {
+  _store-expected(k, 0, l)
+}
+
+define _get-expected<c>(k: &zonk-kit(c)) -> expected-item {
+  tie _Zonk-Kit{expected-is-raw, expected-text} = k;
+  let t =
+    from-text(borrow(expected-text, (x) => {
+      lift {*x}
+    }));
+  if eq-int(_read-int-cell(expected-is-raw), 1) {
+    _Raw-Text(t)
+  } else {
+    _Label(t)
+  }
+}
+
 inline _advance-point(line: int, column: int, r: rune) ->> point {
   if eq-rune(r, `\n`) {
     Point(add-int(line, 1), 0)
@@ -164,7 +197,7 @@ define _resolve-point<c>(k: &zonk-kit(c), target: int) -> point {
   Point(line, column)
 }
 
-define make-parse-error<c>(k: &zonk-kit(c), expected: expected-item) ->> parse-error {
+define make-parse-error<c>(k: &zonk-kit(c)) ->> parse-error {
   let cursor = _get-cursor(k);
   let gap-size = _get-gap-size(k);
   let error-location = _resolve-point(k, cursor);
@@ -173,22 +206,18 @@ define make-parse-error<c>(k: &zonk-kit(c), expected: expected-item) ->> parse-e
   let found on rest = show-string(take-N(rest, gap-size));
   let _ = rest;
   Parse-Error{
-    expected,
+    expected := _get-expected(k),
     found,
     error-location,
   }
 }
 
 alias parsed(a) {
-  either(expected-item, a)
+  either(unit, a)
 }
 
 alias zonk(c, a) {
   (&zonk-kit(c)) ->> parsed(a)
-}
-
-inline report-unexpected-input<a>(label: &string) -> parsed(a) {
-  Left(_Label(label))
 }
 
 inline get-point<c>(k: &zonk-kit(c)) -> point {
@@ -204,18 +233,20 @@ constant end-of-input<c>: zonk(c, unit) {
       Right(Unit)
     } else {
       _set-gap-size(k, 1);
-      Left(_Label("endinput"))
+      _set-expected-label(k, static "end of input");
+      Left(Unit)
     }
   }
 }
 
-inline satisfy<c>(label: &string, p: (rune) -> bool) ->> zonk(c, rune) {
+inline satisfy<c>(label: text, p: (rune) -> bool) ->> zonk(c, rune) {
   (k) =>> {
     let input-stream = _get-input-stream(k);
     let len = byte-length(input-stream);
     let cursor = _get-cursor(k);
     if ge-int(cursor, len) {
-      Left(_Label(label))
+      _set-expected-label(k, label);
+      Left(Unit)
     } else {
       let r = get-rune-unchecked(input-stream, cursor);
       if p(r) {
@@ -223,14 +254,15 @@ inline satisfy<c>(label: &string, p: (rune) -> bool) ->> zonk(c, rune) {
         Right(r)
       } else {
         _set-gap-size(k, 1);
-        Left(_Label(label))
+        _set-expected-label(k, label);
+        Left(Unit)
       }
     }
   }
 }
 
 constant any-rune<c>: zonk(c, rune) {
-  satisfy("any character", (_) => {
+  satisfy(static "any character", (_) => {
     True
   })
 }
@@ -258,13 +290,14 @@ define _chunk-body<c>(k: &zonk-kit(c), chunk-string: &string) -> int {
   }
 }
 
-inline chunk<c>(chunk-string: &string) ->> zonk(c, unit) {
+inline chunk<c>(chunk-text: text) ->> zonk(c, unit) {
   (k) =>> {
-    let result-flag = _chunk-body(k, chunk-string);
+    let result-flag = _chunk-body(k, from-text(chunk-text));
     if gt-int(result-flag, 0) {
       Right(Unit)
     } else {
-      Left(_Raw-Text(chunk-string))
+      _set-expected-raw(k, chunk-text);
+      Left(Unit)
     }
   }
 }
@@ -306,7 +339,8 @@ inline take-while-1<c>(!p: (rune) -> bool) ->> zonk(c, string) {
       _set-cursor(k, end-cursor);
       Right(slice-N(_get-input-stream(k), orig-cursor, size))
     } else {
-      Left(_Label("non-empty string"))
+      _set-expected-label(k, static "non-empty string");
+      Left(Unit)
     }
   }
 }
@@ -332,14 +366,15 @@ constant ascii-space<c>: zonk(c, unit) {
   drop-while(_is-ascii-space)
 }
 
-inline label<c, a>(l: &string, p: zonk(c, a)) ->> zonk(c, a) {
+inline label<c, a>(l: text, p: zonk(c, a)) ->> zonk(c, a) {
   (k) =>> {
     let v = p(k);
     match v {
     | Right(result) =>
       Right(result)
     | Left(_) =>
-      Left(_Label(l))
+      _set-expected-label(k, l);
+      Left(Unit)
     }
   }
 }
@@ -356,9 +391,9 @@ inline attempt<c, a>(p: zonk(c, a)) ->> zonk(c, a) {
     match p(k) {
     | Right(result) =>
       Right(result)
-    | Left(e) =>
+    | Left(_) =>
       _rewind(k, cursor, gap-size);
-      Left(e)
+      Left(Unit)
     }
   }
 }
@@ -371,8 +406,8 @@ inline look-ahead<c, a>(p: zonk(c, a)) ->> zonk(c, a) {
     | Right(result) =>
       _rewind(k, cursor, gap-size);
       Right(result)
-    | Left(e) =>
-      Left(e)
+    | Left(_) =>
+      Left(Unit)
     }
   }
 }
@@ -403,7 +438,7 @@ inline branch<c, a>(p1: zonk(c, a), p2: zonk(c, a)) ->> zonk(c, a) {
   }
 }
 
-inline not-followed-by<c, a>(label: &string, p: zonk(c, a)) ->> zonk(c, unit) {
+inline not-followed-by<c, a>(label: text, p: zonk(c, a)) ->> zonk(c, unit) {
   (k) =>> {
     let cursor = _get-cursor(k);
     let gap-size = _get-gap-size(k);
@@ -414,14 +449,15 @@ inline not-followed-by<c, a>(label: &string, p: zonk(c, a)) ->> zonk(c, unit) {
       Right(Unit)
     | Right(_) =>
       _set-gap-size(k, 1);
-      Left(_Label(label))
+      _set-expected-label(k, label);
+      Left(Unit)
     }
   }
 }
 
 define _choice<c, a>(
   k: &zonk-kit(c),
-  label: &string,
+  label: text,
   candidates: list(zonk(c, a)),
   fallback: zonk(c, a),
   default-gap-size: int,
@@ -433,7 +469,8 @@ define _choice<c, a>(
       _set-gap-size(k, default-gap-size);
       Right(v)
     | Left(_) =>
-      Left(_Label(label))
+      _set-expected-label(k, label);
+      Left(Unit)
     }
   | Cons(cand, rest) =>
     match cand(k) {
@@ -446,7 +483,7 @@ define _choice<c, a>(
   }
 }
 
-inline choice<c, a>(label: &string, candidates: list(zonk(c, a)), fallback: zonk(c, a)) ->> zonk(c, a) {
+inline choice<c, a>(label: text, candidates: list(zonk(c, a)), fallback: zonk(c, a)) ->> zonk(c, a) {
   (k) =>> {
     match candidates {
     | Nil =>
@@ -456,13 +493,13 @@ inline choice<c, a>(label: &string, candidates: list(zonk(c, a)), fallback: zonk
       match p(k) {
       | Right(v) =>
         Right(v)
-      | Left(e) =>
+      | Left(_) =>
         let new-cursor = _get-cursor(k);
         if eq-int(old-cursor, new-cursor) {
           let gap-size = _get-gap-size(k);
           _choice(k, label, rest, fallback, gap-size)
         } else {
-          Left(e)
+          Left(Unit)
         }
       }
     }
@@ -493,7 +530,7 @@ inline some<c, a>(!p: zonk(c, a)) ->> zonk(c, list(a)) {
 }
 
 inline scan-while<c, a>(
-  label: &string,
+  label: text,
   !p: (rune) -> bool,
   interpret: (&string) -> +?a,
 ) ->> zonk(c, a) {
@@ -511,7 +548,8 @@ inline scan-while<c, a>(
       Right(v)
     | Left(_) =>
       _set-gap-size(k, max-int(size, 1));
-      Left(_Label(label))
+      _set-expected-label(k, label);
+      Left(Unit)
     }
   }
 }

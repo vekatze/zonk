@@ -9,17 +9,17 @@ define zen() -> unit {
       Repeat(
         Join(List[
           Choose(
-            "variable",
+            static "variable",
             List[
-              Chunk("pqr"),
-              Chunk("H"),
-              Any("Lorem ipsum", List[`P`, `あ`, `k`]),
+              Chunk(static "pqr"),
+              Chunk(static "H"),
+              Any(static "Lorem ipsum", List[`P`, `あ`, `k`]),
             ],
-            Chunk("abc"),
+            Chunk(static "abc"),
           ),
-          Chunk(":"),
-          Choose("type", List[Chunk("AAAA")], Chunk("XX")),
-          Chunk(", "),
+          Chunk(static ":"),
+          Choose(static "type", List[Chunk(static "AAAA")], Chunk(static "XX")),
+          Chunk(static ", "),
         ]),
       ),
       End-Of-Input,

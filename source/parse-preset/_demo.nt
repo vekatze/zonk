@@ -36,8 +36,8 @@ define zen() -> unit {
   match _sample-zonk(k) {
   | Right(_) =>
     print("pass\n")
-  | Left(e) =>
-    let err = make-parse-error(k, e);
+  | Left(_) =>
+    let err = make-parse-error(k);
     pin message = report(err);
     print("fail: ");
     print-line(message);

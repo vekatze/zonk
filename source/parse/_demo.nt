@@ -13,35 +13,35 @@ import {
 define zen() -> unit {
   let my-parser =
     choice(
-      "some term",
+      static "some term",
       List[
         (k) =>> {
-          try _ = chunk("gaoe")(k);
-          try _ = chunk("item")(k);
+          try _ = chunk(static "gaoe")(k);
+          try _ = chunk(static "item")(k);
           Right(Unit)
         },
-        choice("item", List[chunk("k")], label("whatever", (k) =>> {
-          try _ = chunk("px")(k);
-          try _ = chunk("kgあ")(k);
+        choice(static "item", List[chunk(static "k")], label(static "whatever", (k) =>> {
+          try _ = chunk(static "px")(k);
+          try _ = chunk(static "kgあ")(k);
           Right(Unit)
         })),
-        chunk("tあい"),
-        label("whatever 2", (k) =>> {
-          try _ = chunk("pt")(k);
-          try _ = chunk("あhebc")(k);
+        chunk(static "tあい"),
+        label(static "whatever 2", (k) =>> {
+          try _ = chunk(static "pt")(k);
+          try _ = chunk(static "あhebc")(k);
           Right(Unit)
         }),
-        chunk("abc"),
-        chunk("{}"),
+        chunk(static "abc"),
+        chunk(static "{}"),
         end-of-input,
       ],
-      chunk("tn"),
+      chunk(static "tn"),
     );
   pin k = make-zonk-kit(*"gaxoeitemtesttnapqabcd\nctああhehoge \n\r  hehehetest", Unit);
   let my-result = my-parser(k);
   match my-result {
-  | Left(e) =>
-    let err = make-parse-error(k, e);
+  | Left(_) =>
+    let err = make-parse-error(k);
     pin message = report(err);
     print("left: ");
     print-line(message);
