@@ -6,8 +6,8 @@ import {
   this.regex {Any, Chunk, End-Of-Input, Join, Repeat, regex},
 }
 
-define _try-parse(p: zonk(unit, unit)) -> unit {
-  pin k = make-zonk-kit(*"abcnああhehoge \n\r  hehehetest", Unit);
+define _try-parse(p: zonk(unit)) -> unit {
+  pin k = make-zonk-kit(*"abcnああhehoge \n\r  hehehetest");
   match p(k) {
   | Left(_) =>
     Unit
@@ -16,8 +16,8 @@ define _try-parse(p: zonk(unit, unit)) -> unit {
   }
 }
 
-define _try-parse-ints(p: zonk(unit, list(int))) -> unit {
-  pin k = make-zonk-kit(*"10 -20 30 -40 50 -60 70 -80 90 -100 110 -120 130 -140 150 -160", Unit);
+define _try-parse-ints(p: zonk(list(int))) -> unit {
+  pin k = make-zonk-kit(*"10 -20 30 -40 50 -60 70 -80 90 -100 110 -120 130 -140 150 -160");
   match p(k) {
   | Left(_) =>
     Unit
@@ -26,8 +26,8 @@ define _try-parse-ints(p: zonk(unit, list(int))) -> unit {
   }
 }
 
-define _try-parse-floats(p: zonk(unit, list(float))) -> unit {
-  pin k = make-zonk-kit(*"1.0 -2.5 3e2 -4.25 5.0 -6.0 7.5 -8.0 9.0 -10.0 11.0 -12.5 13.0 -14.0 15.0 -16.0", Unit);
+define _try-parse-floats(p: zonk(list(float))) -> unit {
+  pin k = make-zonk-kit(*"1.0 -2.5 3e2 -4.25 5.0 -6.0 7.5 -8.0 9.0 -10.0 11.0 -12.5 13.0 -14.0 15.0 -16.0");
   match p(k) {
   | Left(_) =>
     Unit
@@ -36,8 +36,8 @@ define _try-parse-floats(p: zonk(unit, list(float))) -> unit {
   }
 }
 
-define _try-parse-many(p: zonk(unit, list(unit))) -> unit {
-  pin k = make-zonk-kit(*"yoyoyoyoyoyoyoyoyoyoyoyoyoyoyoyo", Unit);
+define _try-parse-many(p: zonk(list(unit))) -> unit {
+  pin k = make-zonk-kit(*"yoyoyoyoyoyoyoyoyoyoyoyoyoyoyoyo");
   match p(k) {
   | Left(_) =>
     Unit
@@ -46,8 +46,8 @@ define _try-parse-many(p: zonk(unit, list(unit))) -> unit {
   }
 }
 
-define _try-parse-long-chunk-hit(p: zonk(unit, unit)) -> unit {
-  pin k = make-zonk-kit(*"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-rest", Unit);
+define _try-parse-long-chunk-hit(p: zonk(unit)) -> unit {
+  pin k = make-zonk-kit(*"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-rest");
   match p(k) {
   | Left(_) =>
     Unit
@@ -56,8 +56,8 @@ define _try-parse-long-chunk-hit(p: zonk(unit, unit)) -> unit {
   }
 }
 
-define _try-parse-long-chunk-miss(p: zonk(unit, unit)) -> unit {
-  pin k = make-zonk-kit(*"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXY_-rest", Unit);
+define _try-parse-long-chunk-miss(p: zonk(unit)) -> unit {
+  pin k = make-zonk-kit(*"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXY_-rest");
   match p(k) {
   | Left(_) =>
     Unit
@@ -66,8 +66,8 @@ define _try-parse-long-chunk-miss(p: zonk(unit, unit)) -> unit {
   }
 }
 
-define _try-parse-unicode-chunk-hit(p: zonk(unit, unit)) -> unit {
-  pin k = make-zonk-kit(*"abc\nあいうxyz-rest", Unit);
+define _try-parse-unicode-chunk-hit(p: zonk(unit)) -> unit {
+  pin k = make-zonk-kit(*"abc\nあいうxyz-rest");
   match p(k) {
   | Left(_) =>
     Unit
@@ -117,7 +117,7 @@ define _bench() -> unit {
         ),
       ),
     );
-  let my-parser: zonk(unit, unit) =
+  let my-parser: zonk(unit) =
     (k) =>> {
       try _ = chunk(static "abc")(k);
       try _ = whatnot(k);

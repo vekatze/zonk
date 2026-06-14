@@ -17,7 +17,7 @@ neut get zonk https://github.com/vekatze/zonk/raw/main/archive/0-2-13.tar.zst
 data expected-item
 
 // An opaque type that holds information needed to execute parsers
-data zonk-kit(c)
+data zonk-kit
 
 // A fully elaborated parse error with position information.
 data parse-error {
@@ -29,18 +29,15 @@ data parse-error {
 }
 
 // The type of parsers
-alias zonk(c, a) {
-  (&zonk-kit(c)) -> either(unit, a)
+alias zonk(a) {
+  (&zonk-kit) -> either(unit, a)
 }
 
-// Creates a zonk-kit for given string and context
-define make-zonk-kit<c>(input-stream: string, context: c) -> zonk-kit(c)
-
-// Gets the user-supplied context
-define get-context<c>(k: &zonk-kit(c)) -> &c
+// Creates a zonk-kit for the given input string
+define make-zonk-kit(input-stream: string) -> zonk-kit
 
 // Builds a parse error from the kit's current failure state
-define make-parse-error<c>(k: &zonk-kit(c)) -> parse-error
+define make-parse-error(k: &zonk-kit) -> parse-error
 
 // Converts a parse error into a human-readable string
 define report(e: parse-error) -> string
@@ -50,68 +47,68 @@ define report(e: parse-error) -> string
 
 ```neut
 // Succeeds only at the end of the input.
-constant end-of-input<c>: zonk(c, unit)
+constant end-of-input: zonk(unit)
 
 // Succeeds only when the head rune of the remaining stream satisfies `p`.
 // The variable `label` is used when reporting errors.
-inline satisfy<c>(label: text, p: (rune) -> bool) -> zonk(c, rune)
+inline satisfy(label: text, p: (rune) -> bool) -> zonk(rune)
 
 // Reads any single rune from the remaining stream.
-constant any-rune<c>: zonk(c, rune)
+constant any-rune: zonk(rune)
 
 // Succeeds only when the head of the remaining stream is equal to `t`.
-inline chunk<c>(t: text) -> zonk(c, unit)
+inline chunk(t: text) -> zonk(unit)
 
 // Consumes the input stream while `!p` is true.
-inline take-while<c>(!p: (rune) -> bool) -> zonk(c, string)
+inline take-while(!p: (rune) -> bool) -> zonk(string)
 
 // A non-empty version of `take-while`.
-inline take-while-1<c>(!p: (rune) -> bool) -> zonk(c, string)
+inline take-while-1(!p: (rune) -> bool) -> zonk(string)
 
 // Discards the input stream while `!p` is true.
-inline drop-while<c>(!p: (rune) -> bool) -> zonk(c, unit)
+inline drop-while(!p: (rune) -> bool) -> zonk(unit)
 
 // Skips ascii spaces.
-constant ascii-space<c>: zonk(c, unit)
+constant ascii-space: zonk(unit)
 
 // Executes `p`, overriding the (possible) error message with `l`.
-inline label<c, a>(l: text, p: zonk(c, a)) -> zonk(c, a)
+inline label<a>(l: text, p: zonk(a)) -> zonk(a)
 
 // `attempt(p)` is the same as `p` if `p` succeeds.
 // `attempt(p)` rewinds the input stream if `p` fails.
-inline attempt<c, a>(p: zonk(c, a)) -> zonk(c, a)
+inline attempt<a>(p: zonk(a)) -> zonk(a)
 
 // `look-ahead(p)` rewinds the input stream if `p` succeeds.
 // `look-ahead(p)` is the same as `p` if `p` fails.
-inline look-ahead<c, a>(p: zonk(c, a)) -> zonk(c, a)
+inline look-ahead<a>(p: zonk(a)) -> zonk(a)
 
 // `optional(p)` is the same as `p` if `p` succeeds.
 // `optional(p)` suppresses the error of `p` and results in none if `p` fails.
 // Note that `optional(p)` does not rewind the input stream automatically.
-inline optional<c, a>(p: zonk(c, a)) -> zonk(c, ?a)
+inline optional<a>(p: zonk(a)) -> zonk(?a)
 
 // Executes `p1`. If it succeeds, `branch(p1, p2)` returns the result of `p1`.
 // If it fails, executes `p2`.
 // Note that `branch(p1, p2)` does not rewind the input stream automatically.
-inline branch<c, a>(p1: zonk(c, a), p2: zonk(c, a)) -> zonk(c, a)
+inline branch<a>(p1: zonk(a), p2: zonk(a)) -> zonk(a)
 
 // Succeeds only when `p` can parse the head of the input stream.
 // `not-followed-by` does not consume the input stream.
 // The variable `label` is used when reporting errors.
-inline not-followed-by<c, a>(label: text, p: zonk(c, a)) -> zonk(c, unit)
+inline not-followed-by<a>(label: text, p: zonk(a)) -> zonk(unit)
 
 // Tries given parsers one by one.
 // The variable `label` is used when reporting errors.
 // Note that each candidate should be wrapped in `attempt` if it may consume input before failing.
-inline choice<c, a>(label: text, candidates: list(zonk(c, a)), fallback: zonk(c, a)) -> zonk(c, a)
+inline choice<a>(label: text, candidates: list(zonk(a)), fallback: zonk(a)) -> zonk(a)
 
 // Parses the input stream using `!p` iteratively until it fails.
 // This parser never fails.
-inline many<c, a>(!p: zonk(c, a)) -> zonk(c, list(a))
+inline many<a>(!p: zonk(a)) -> zonk(list(a))
 
 // Parses the input stream using `!p` iteratively until it fails.
 // This parser succeeds only if `!p` successfully parses the input stream at least once.
-inline some<c, a>(!p: zonk(c, a)) -> zonk(c, list(a))
+inline some<a>(!p: zonk(a)) -> zonk(list(a))
 ```
 
 ### Presets
@@ -131,31 +128,31 @@ data regex {
 inline recognize(r: regex, input: string) -> bool
 
 // Skips space characters.
-constant skip-space<c>: zonk(c, unit)
+constant skip-space: zonk(unit)
 
 // Parses a symbol.
-inline read-symbol<c>() -> zonk(c, string)
+inline read-symbol() -> zonk(string)
 
 // Parses an integer.
-constant read-int<c>: zonk(c, int)
+constant read-int: zonk(int)
 
 // Parses a float.
-constant read-float<c>: zonk(c, float)
+constant read-float: zonk(float)
 
 // Parses integers separated by space characters and stores them into a list.
-define read-int-list<c>(size: int) -> zonk(c, list(int))
+define read-int-list(size: int) -> zonk(list(int))
 
 // Parses values separated by space characters and stores them into a vector.
-inline read-vector<c, a>(size: int, !p: zonk(c, a)) -> zonk(c, vector(a))
+inline read-vector<a>(size: int, !p: zonk(a)) -> zonk(vector(a))
 
 // Parses integers separated by space characters and stores them into a vector.
-define read-int-vector<c>(size: int) -> zonk(c, vector(int))
+define read-int-vector(size: int) -> zonk(vector(int))
 
 // A float-version of `read-int-list`.
-define read-float-list<c>(size: int) -> zonk(c, list(float))
+define read-float-list(size: int) -> zonk(list(float))
 
 // A float-version of `read-int-vector`.
-define read-float-vector<c>(size: int) -> zonk(c, vector(float))
+define read-float-vector(size: int) -> zonk(vector(float))
 ```
 
 ### Utils
@@ -170,7 +167,7 @@ data point {
 }
 
 // Gets the current reading position.
-define get-point<c>(k: &zonk-kit(c)) -> point
+define get-point(k: &zonk-kit) -> point
 ```
 
 ## Example
@@ -183,7 +180,7 @@ import {
   this.parse {choice, chunk, end-of-input, make-parse-error, make-zonk-kit, many, report, some, zonk},
 }
 
-constant sample-parser: zonk(unit, unit) {
+constant sample-parser: zonk(unit) {
   // constructs a parser
   (k) => {
     // accepts: foo
@@ -201,7 +198,7 @@ constant sample-parser: zonk(unit, unit) {
 }
 
 define zen() -> unit {
-  pin k = make-zonk-kit(*"foobarquxquxyoyoyoyo", Unit);
+  pin k = make-zonk-kit(*"foobarquxquxyoyoyoyo");
   match sample-parser(k) {
   | Right(_) =>
     print("pass\n")

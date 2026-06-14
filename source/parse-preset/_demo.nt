@@ -3,7 +3,6 @@ import {
   core.int.io {print-int, print-int-line},
   this.parse {
     end-of-input,
-    get-context,
     make-parse-error,
     make-zonk-kit,
     report,
@@ -12,7 +11,7 @@ import {
   this.parse-preset {read-float-vector, read-int},
 }
 
-constant _sample-zonk<c>: zonk(c, unit) {
+constant _sample-zonk: zonk(unit) {
   (k) =>> {
     try v1 = read-int(k);
     try v2 = read-int(k);
@@ -30,9 +29,7 @@ constant _sample-zonk<c>: zonk(c, unit) {
 }
 
 define zen() -> unit {
-  pin k = make-zonk-kit(*"6 42 \n   5.0 4.0 3.0 2.0 1.0 -1234.0", *"path/to/some/file.txt");
-  let ctx = get-context(k);
-  vet::(ctx);
+  pin k = make-zonk-kit(*"6 42 \n   5.0 4.0 3.0 2.0 1.0 -1234.0");
   match _sample-zonk(k) {
   | Right(_) =>
     print("pass\n")

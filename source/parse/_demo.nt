@@ -37,7 +37,7 @@ define zen() -> unit {
       ],
       chunk(static "tn"),
     );
-  pin k = make-zonk-kit(*"gaxoeitemtesttnapqabcd\nctああhehoge \n\r  hehehetest", Unit);
+  pin k = make-zonk-kit(*"gaxoeitemtesttnapqabcd\nctああhehoge \n\r  hehehetest");
   let my-result = my-parser(k);
   match my-result {
   | Left(_) =>

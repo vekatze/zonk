@@ -22,7 +22,7 @@ define _is-space(r: rune) -> bool {
   }
 }
 
-constant skip-space<c>: zonk(c, unit) {
+constant skip-space: zonk(unit) {
   drop-while(_is-space)
 }
 
@@ -61,7 +61,7 @@ define _is-float-rune(r: rune) -> bool {
   )
 }
 
-inline read-symbol<c>() -> zonk(c, string) {
+inline read-symbol() -> zonk(string) {
   (k) =>> {
     try result = take-while(compose(not, _is-space))(k);
     try _ = skip-space(k);
@@ -69,7 +69,7 @@ inline read-symbol<c>() -> zonk(c, string) {
   }
 }
 
-constant read-int<c>: zonk(c, int) {
+constant read-int: zonk(int) {
   (k) =>> {
     try v =
       scan-while(static "integer", _is-integer-rune, (v) => {
@@ -81,7 +81,7 @@ constant read-int<c>: zonk(c, int) {
   }
 }
 
-constant read-float<c>: zonk(c, float) {
+constant read-float: zonk(float) {
   (k) =>> {
     try v =
       scan-while(static "float", _is-float-rune, (v) => {
@@ -93,7 +93,7 @@ constant read-float<c>: zonk(c, float) {
   }
 }
 
-define read-int-list<c>(size: int) -> zonk(c, list(int)) {
+define read-int-list(size: int) -> zonk(list(int)) {
   (k) =>> {
     let f =
       define self(cursor: int, acc: list(int)) -> parsed(list(int)) {
@@ -108,7 +108,7 @@ define read-int-list<c>(size: int) -> zonk(c, list(int)) {
   }
 }
 
-inline read-vector<c, a>(size: int, !p: zonk(c, a)) -> zonk(c, vector(a)) {
+inline read-vector<a>(size: int, !p: zonk(a)) -> zonk(vector(a)) {
   (k) =>> {
     let f =
       define self(cursor: int, acc: vector(a)) -> parsed(vector(a)) {
@@ -125,11 +125,11 @@ inline read-vector<c, a>(size: int, !p: zonk(c, a)) -> zonk(c, vector(a)) {
   }
 }
 
-define read-int-vector<c>(size: int) -> zonk(c, vector(int)) {
+define read-int-vector(size: int) -> zonk(vector(int)) {
   read-vector(size, read-int)
 }
 
-define read-float-list<c>(size: int) -> zonk(c, list(float)) {
+define read-float-list(size: int) -> zonk(list(float)) {
   (k) =>> {
     let f =
       define self(cursor: int, acc: list(float)) -> parsed(list(float)) {
@@ -145,6 +145,6 @@ define read-float-list<c>(size: int) -> zonk(c, list(float)) {
   }
 }
 
-define read-float-vector<c>(size: int) -> zonk(c, vector(float)) {
+define read-float-vector(size: int) -> zonk(vector(float)) {
   read-vector(size, read-float)
 }
