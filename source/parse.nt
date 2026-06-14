@@ -60,13 +60,13 @@ define report(e: parse-error) -> string {
 data zonk-kit(a) {
 | _Zonk-Kit(
     input-stream: string,
-    cursor: cell(int),
-    gap-size: cell(int),
-    point-cursor: cell(int),
-    point-line: cell(int),
-    point-column: cell(int),
-    expected-is-raw: cell(int),
-    expected-text: cell(text),
+    cursor: cell(int) mix,
+    gap-size: cell(int) mix,
+    point-cursor: cell(int) mix,
+    point-line: cell(int) mix,
+    point-column: cell(int) mix,
+    expected-is-raw: cell(int) mix,
+    expected-text: cell(text) mix,
     context: a,
   )
 }
