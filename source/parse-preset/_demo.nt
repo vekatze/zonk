@@ -1,14 +1,14 @@
 import {
-  core.float.io {print-float},
-  core.int.io {print-int, print-int-line},
-  this.parse {
+  core::float.io {print-float},
+  core::int.io {print-int, print-int-line},
+  parse {
     end-of-input,
     make-parse-error,
     make-zonk-kit,
     report,
     zonk,
   },
-  this.parse-preset {read-float-vector, read-int},
+  parse-preset {read-float-vector, read-int},
 }
 
 constant _sample-zonk: zonk(unit) {
@@ -20,8 +20,8 @@ constant _sample-zonk: zonk(unit) {
     print-int(v1);
     print(", ");
     print-int-line(v2);
-    core.vector.for(xs, (x, _) => {
-      print-float(x, 6);
+    core::vector.for(xs, (x, _) => {
+      print-float(x);
       print(" ");
     });
     Right(Unit)

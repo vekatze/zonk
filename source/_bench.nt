@@ -1,9 +1,9 @@
 import {
-  core.control {loop},
-  this.parse {branch, chunk, label, make-zonk-kit, many, not-followed-by, zonk},
-  this.parse-preset {read-float-list, read-int-list},
-  this.recognize {recognize},
-  this.regex {Any, Chunk, End-Of-Input, Join, Repeat, regex},
+  core::control {loop},
+  parse {branch, chunk, label, make-zonk-kit, many, not-followed-by, zonk},
+  parse-preset {read-float-list, read-int-list},
+  recognize {recognize},
+  regex {Any, Chunk, End-Of-Input, Join, Repeat, regex},
 }
 
 define _try-parse(p: zonk(unit)) -> unit {
@@ -84,32 +84,32 @@ define _try-recognize(reg: regex) -> unit {
 define _bench() -> unit {
   let whatnot =
     branch(
-      not-followed-by(static "aoeu", chunk(static "nああ")),
+      not-followed-by("aoeu", chunk("nああ")),
       branch(
-        branch(chunk(static "k"), label(static "whatever", (k) =>> {
-          try _ = chunk(static "px")(k);
-          try _ = chunk(static "kgあ")(k);
+        branch(chunk("k"), label("whatever", (k) =>> {
+          try _ = chunk("px")(k);
+          try _ = chunk("kgあ")(k);
           Right(Unit)
         })),
         branch(
-          not-followed-by(static "my label", chunk(static "nあ")),
+          not-followed-by("my label", chunk("nあ")),
           branch(
-            label(static "whatever 2", (k) =>> {
-              try _ = chunk(static "pt")(k);
-              try _ = chunk(static "あhebc")(k);
+            label("whatever 2", (k) =>> {
+              try _ = chunk("pt")(k);
+              try _ = chunk("あhebc")(k);
               Right(Unit)
             }),
             branch(
               (k) =>> {
-                try _ = chunk(static "pt")(k);
-                try _ = chunk(static "あhebc")(k);
+                try _ = chunk("pt")(k);
+                try _ = chunk("あhebc")(k);
                 Right(Unit)
               },
               branch(
-                chunk(static "abc"),
+                chunk("abc"),
                 branch(
-                  chunk(static "{}"),
-                  chunk(static "tn"),
+                  chunk("{}"),
+                  chunk("tn"),
                 ),
               ),
             ),
@@ -119,7 +119,7 @@ define _bench() -> unit {
     );
   let my-parser: zonk(unit) =
     (k) =>> {
-      try _ = chunk(static "abc")(k);
+      try _ = chunk("abc")(k);
       try _ = whatnot(k);
       Right(Unit)
     };
@@ -134,26 +134,26 @@ define _bench() -> unit {
   loop(100000, (_) => {
     _try-parse-floats(float-list-parser)
   });
-  let many-parser = many(chunk(static "yo"));
+  let many-parser = many(chunk("yo"));
   loop(100000, (_) => {
     _try-parse-many(many-parser)
   });
-  let !long-chunk-parser = chunk(static "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+  let !long-chunk-parser = chunk("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
   loop(500000, (_) => {
     _try-parse-long-chunk-hit(long-chunk-parser)
   });
   loop(500000, (_) => {
     _try-parse-long-chunk-miss(long-chunk-parser)
   });
-  let unicode-chunk-parser = chunk(static "abc\nあいうxyz");
+  let unicode-chunk-parser = chunk("abc\nあいうxyz");
   loop(500000, (_) => {
     _try-parse-unicode-chunk-hit(unicode-chunk-parser)
   });
-  let repeat-regex = Join(List[Repeat(Chunk(static "ab")), End-Of-Input]);
+  let repeat-regex = Join(List::[Repeat(Chunk("ab")), End-Of-Input]);
   loop(100000, (_) => {
     _try-recognize(repeat-regex)
   });
-  let any-repeat-regex = Join(List[Repeat(Any(static "a or b", List[`a`, `b`])), End-Of-Input]);
+  let any-repeat-regex = Join(List::[Repeat(Any("a or b", List::[`a`, `b`])), End-Of-Input]);
   loop(100000, (_) => {
     _try-recognize(any-repeat-regex)
   })

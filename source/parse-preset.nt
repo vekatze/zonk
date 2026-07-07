@@ -1,9 +1,10 @@
 import {
-  core.float.parse {parse-float},
-  core.function {compose},
-  core.int.parse {parse-int},
-  core.list {reverse},
-  this.parse {
+  core::bool {any},
+  core::float.parse {parse-float},
+  core::function {compose},
+  core::int.parse {parse-int},
+  core::list {reverse},
+  parse {
     drop-while,
     parsed,
     scan-while,
@@ -15,7 +16,7 @@ import {
 define _is-space(r: rune) -> bool {
   if eq-rune(r, ` `) {
     True
-  } else-if and(le-rune(`\u{9}`, r), le-rune(r, `\u{D}`)) {
+  } else-if and::(le-rune(`\u{9}`, r), le-rune(r, `\u{D}`)) {
     True
   } else {
     False
@@ -27,38 +28,26 @@ constant skip-space: zonk(unit) {
 }
 
 define _any-number(r: rune) -> bool {
-  let b1 = le-rune(`0`, r);
-  let b2 = le-rune(r, `9`);
-  and(b1, b2)
+  and::(le-rune(`0`, r), le-rune(r, `9`))
 }
 
 define _is-integer-rune(r: rune) -> bool {
-  or(
+  any::[
     _any-number(r),
-    or(
-      eq-rune(r, `+`),
-      eq-rune(r, `-`),
-    ),
-  )
+    eq-rune(r, `+`),
+    eq-rune(r, `-`),
+  ]
 }
 
 define _is-float-rune(r: rune) -> bool {
-  or(
+  any::[
     _any-number(r),
-    or(
-      eq-rune(r, `.`),
-      or(
-        eq-rune(r, `e`),
-        or(
-          eq-rune(r, `E`),
-          or(
-            eq-rune(r, `+`),
-            eq-rune(r, `-`),
-          ),
-        ),
-      ),
-    ),
-  )
+    eq-rune(r, `.`),
+    eq-rune(r, `e`),
+    eq-rune(r, `E`),
+    eq-rune(r, `+`),
+    eq-rune(r, `-`),
+  ]
 }
 
 inline read-symbol() -> zonk(string) {
@@ -72,7 +61,7 @@ inline read-symbol() -> zonk(string) {
 constant read-int: zonk(int) {
   (k) =>> {
     try v =
-      scan-while(static "integer", _is-integer-rune, (v) => {
+      scan-while("integer", _is-integer-rune, (v) => {
         let result = parse-int(v);
         lift {result}
       })(k);
@@ -84,7 +73,7 @@ constant read-int: zonk(int) {
 constant read-float: zonk(float) {
   (k) =>> {
     try v =
-      scan-while(static "float", _is-float-rune, (v) => {
+      scan-while("float", _is-float-rune, (v) => {
         let result = parse-float(v);
         lift {result}
       })(k);
@@ -117,10 +106,10 @@ inline read-vector<a>(size: int, !p: zonk(a)) -> zonk(vector(a)) {
         } else {
           try v = p(k);
           try _ = skip-space(k);
-          self(add-int(cursor, 1), core.vector.push-back(acc, v))
+          self(add-int(cursor, 1), core::vector.push-back(acc, v))
         }
       };
-    try result = f(0, core.vector.make(size));
+    try result = f(0, core::vector.make(size));
     Right(result)
   }
 }

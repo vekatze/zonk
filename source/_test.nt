@@ -1,12 +1,11 @@
 import {
-  core.bool {all},
-  core.eq.generic {eq-data},
-  core.string {byte-length},
-  noa.check {check},
-  noa.gen.string {string-gen},
-  noa.noa-kit {make-default-noa-kit},
-  noa.test {test},
-  this.parse {
+  _noa::gen.generic {derive},
+  _noa::suite {make-default-noa-kit},
+  _noa::suite.spec {check, example, property},
+  core::bool {all},
+  core::eq.generic {eq-data},
+  core::string {byte-length},
+  parse {
     Parse-Error,
     Point,
     choice,
@@ -26,243 +25,236 @@ import {
 
 define main() -> unit {
   pin k = make-default-noa-kit();
-  test(
-    k,
-    "chunk(prefix) succeeds and leaves the remainder",
-    () => {
-      pin k = make-zonk-kit(*"fooあい-bar");
-      let p: zonk(bool) =
-        (k) =>> {
-          try _ = chunk(static "fooあい")(k);
-          try rest =
-            take-while((_) => {
-              True
-            })(k);
-          try _ = end-of-input(k);
-          let result on rest = eq-string("-bar", rest);
-          let _ = rest;
-          Right(result)
-        };
-      match p(k) {
-      | Right(result) =>
-        result
-      | Left(_) =>
-        False
-      }
-    },
-  );
-  test(
-    k,
-    "chunk(whole) → end-of-input succeeds",
-    () => {
-      pin k = make-zonk-kit(*"helloあ");
-      let p: zonk(unit) =
-        (k) =>> {
-          try _ = chunk(static "helloあ")(k);
-          try _ = end-of-input(k);
-          Right(Unit)
-        };
-      match p(k) {
-      | Right(_) =>
-        True
-      | Left(_) =>
-        False
-      }
-    },
-  );
-  test(
-    k,
-    "chunk → chunk → end-of-input succeeds on the concatenation",
-    () => {
-      pin k = make-zonk-kit(*"fooあいbar");
-      let p: zonk(unit) =
-        (k) =>> {
-          try _ = chunk(static "fooあい")(k);
-          try _ = chunk(static "bar")(k);
-          try _ = end-of-input(k);
-          Right(Unit)
-        };
-      match p(k) {
-      | Right(_) =>
-        True
-      | Left(_) =>
-        False
-      }
-    },
-  );
-  check::(
-    k,
-    "for any non-empty string, end-of-input must fail",
-    string-gen,
-    (t) => {
-      let len on t = byte-length(t);
-      if eq-int(len, 0) {
-        True
-      } else {
-        pin k = make-zonk-kit(t);
-        let result =
-          match end-of-input(k) {
-          | Right(_) =>
-            False
-          | Left(_) =>
-            True
+  check(k, List::[
+    example::(
+      "chunk(prefix) succeeds and leaves the remainder",
+      {
+        pin k = make-zonk-kit(*"fooあい-bar");
+        let p: zonk(bool) =
+          (k) =>> {
+            try _ = chunk("fooあい")(k);
+            try rest =
+              take-while((_) => {
+                True
+              })(k);
+            try _ = end-of-input(k);
+            let result on rest = eq-string("-bar", rest);
+            let _ = rest;
+            Right(result)
           };
-        result
-      }
-    },
-  );
-  test(
-    k,
-    "take-while, chunk, take-while",
-    () => {
-      pin k = make-zonk-kit(*"xxx\nbar");
-      let my-parser: zonk(unit) =
-        (k) =>> {
-          try _ =
-            take-while((r) => {
-              eq-rune(r, `x`)
-            })(k);
-          try _ = chunk(static "\n")(k);
-          try _ =
-            take-while((r) => {
-              ne-rune(r, `x`)
-            })(k);
-          Right(Unit)
-        };
-      match my-parser(k) {
-      | Right(_) =>
-        True
-      | Left(_) =>
-        False
-      }
-    },
-  );
-  test(
-    k,
-    "drop-while, chunk, drop-while",
-    () => {
-      pin k = make-zonk-kit(*"xxx\nbar");
-      let my-parser: zonk(unit) =
-        (k) =>> {
-          try _ =
-            drop-while((r) => {
-              eq-rune(r, `x`)
-            })(k);
-          try _ = chunk(static "\n")(k);
-          try _ =
-            drop-while((r) => {
-              ne-rune(r, `x`)
-            })(k);
-          Right(Unit)
-        };
-      match my-parser(k) {
-      | Right(_) =>
-        True
-      | Left(_) =>
-        False
-      }
-    },
-  );
-  test(
-    k,
-    "report error locations correctly (take-while, chunk)",
-    () => {
-      pin k = make-zonk-kit(*"xxx\nbar");
-      let my-parser: zonk(unit) =
-        (k) =>> {
-          try _ =
-            take-while((r) => {
-              eq-rune(r, `x`)
-            })(k);
-          try _ = chunk(static "\n")(k);
-          try _ = chunk(static "a")(k);
-          Right(Unit)
-        };
-      match my-parser(k) {
-      | Right(_) =>
-        False
-      | Left(_) =>
-        let Parse-Error{error-location} = make-parse-error(k);
-        pin actual = error-location;
-        pin expected = Point(1, 0);
-        eq-data::(actual, expected)
-      }
-    },
-  );
-  test(
-    k,
-    "report error locations correctly (drop-while, chunk)",
-    () => {
-      pin k = make-zonk-kit(*"xxx\nbar");
-      let my-parser: zonk(unit) =
-        (k) =>> {
-          try _ =
-            drop-while((r) => {
-              all[
-                ne-rune(r, `y`),
-                ne-rune(r, `\n`),
-              ]
-            })(k);
-          try _ = chunk(static "\n")(k);
-          try _ = chunk(static "a")(k);
-          Right(Unit)
-        };
-      match my-parser(k) {
-      | Right(_) =>
-        False
-      | Left(_) =>
-        let Parse-Error{error-location} = make-parse-error(k);
-        pin actual = error-location;
-        pin expected = Point(1, 0);
-        eq-data::(actual, expected)
-      }
-    },
-  );
-  test(
-    k,
-    "report error locations correctly (satisfy, chunk)",
-    () => {
-      pin k = make-zonk-kit(*"xxx\nbar");
-      let my-parser: zonk(unit) =
-        (k) =>> {
-          try _ =
-            drop-while((r) => {
-              all[
-                ne-rune(r, `y`),
-                ne-rune(r, `\n`),
-              ]
-            })(k);
-          try _ =
-            satisfy(static "foo", (r) => {
-              eq-rune(r, `\n`)
-            })(k);
-          try _ = chunk(static "a")(k);
-          Right(Unit)
-        };
-      match my-parser(k) {
-      | Right(_) =>
-        False
-      | Left(_) =>
-        let Parse-Error{error-location} = make-parse-error(k);
-        pin actual = error-location;
-        pin expected = Point(1, 0);
-        eq-data::(actual, expected)
-      }
-    },
-  );
+        match p(k) {
+        | Right(result) =>
+          result
+        | Left(_) =>
+          False
+        }
+      },
+    ),
+    example::(
+      "chunk(whole) → end-of-input succeeds",
+      {
+        pin k = make-zonk-kit(*"helloあ");
+        let p: zonk(unit) =
+          (k) =>> {
+            try _ = chunk("helloあ")(k);
+            try _ = end-of-input(k);
+            Right(Unit)
+          };
+        match p(k) {
+        | Right(_) =>
+          True
+        | Left(_) =>
+          False
+        }
+      },
+    ),
+    example::(
+      "chunk → chunk → end-of-input succeeds on the concatenation",
+      {
+        pin k = make-zonk-kit(*"fooあいbar");
+        let p: zonk(unit) =
+          (k) =>> {
+            try _ = chunk("fooあい")(k);
+            try _ = chunk("bar")(k);
+            try _ = end-of-input(k);
+            Right(Unit)
+          };
+        match p(k) {
+        | Right(_) =>
+          True
+        | Left(_) =>
+          False
+        }
+      },
+    ),
+    property::(
+      "for any non-empty string, end-of-input must fail",
+      derive::(),
+      (t: &string) => {
+        let len = byte-length(t);
+        if eq-int(len, 0) {
+          True
+        } else {
+          pin k = make-zonk-kit(*t);
+          let result =
+            match end-of-input(k) {
+            | Right(_) =>
+              False
+            | Left(_) =>
+              True
+            };
+          result
+        }
+      },
+    ),
+    example::(
+      "take-while, chunk, take-while",
+      {
+        pin k = make-zonk-kit(*"xxx\nbar");
+        let my-parser: zonk(unit) =
+          (k) =>> {
+            try _ =
+              take-while((r) => {
+                eq-rune(r, `x`)
+              })(k);
+            try _ = chunk("\n")(k);
+            try _ =
+              take-while((r) => {
+                ne-rune(r, `x`)
+              })(k);
+            Right(Unit)
+          };
+        match my-parser(k) {
+        | Right(_) =>
+          True
+        | Left(_) =>
+          False
+        }
+      },
+    ),
+    example::(
+      "drop-while, chunk, drop-while",
+      {
+        pin k = make-zonk-kit(*"xxx\nbar");
+        let my-parser: zonk(unit) =
+          (k) =>> {
+            try _ =
+              drop-while((r) => {
+                eq-rune(r, `x`)
+              })(k);
+            try _ = chunk("\n")(k);
+            try _ =
+              drop-while((r) => {
+                ne-rune(r, `x`)
+              })(k);
+            Right(Unit)
+          };
+        match my-parser(k) {
+        | Right(_) =>
+          True
+        | Left(_) =>
+          False
+        }
+      },
+    ),
+    example::(
+      "report error locations correctly (take-while, chunk)",
+      {
+        pin k = make-zonk-kit(*"xxx\nbar");
+        let my-parser: zonk(unit) =
+          (k) =>> {
+            try _ =
+              take-while((r) => {
+                eq-rune(r, `x`)
+              })(k);
+            try _ = chunk("\n")(k);
+            try _ = chunk("a")(k);
+            Right(Unit)
+          };
+        match my-parser(k) {
+        | Right(_) =>
+          False
+        | Left(_) =>
+          let Parse-Error{error-location} = make-parse-error(k);
+          pin actual = error-location;
+          pin expected = Point(1, 0);
+          eq-data::(actual, expected)
+        }
+      },
+    ),
+    example::(
+      "report error locations correctly (drop-while, chunk)",
+      {
+        pin k = make-zonk-kit(*"xxx\nbar");
+        let my-parser: zonk(unit) =
+          (k) =>> {
+            try _ =
+              drop-while((r) => {
+                all::[
+                  ne-rune(r, `y`),
+                  ne-rune(r, `\n`),
+                ]
+              })(k);
+            try _ = chunk("\n")(k);
+            try _ = chunk("a")(k);
+            Right(Unit)
+          };
+        match my-parser(k) {
+        | Right(_) =>
+          False
+        | Left(_) =>
+          let Parse-Error{error-location} = make-parse-error(k);
+          pin actual = error-location;
+          pin expected = Point(1, 0);
+          eq-data::(actual, expected)
+        }
+      },
+    ),
+    example::(
+      "report error locations correctly (satisfy, chunk)",
+      {
+        pin k = make-zonk-kit(*"xxx\nbar");
+        let my-parser: zonk(unit) =
+          (k) =>> {
+            try _ =
+              drop-while((r) => {
+                all::[
+                  ne-rune(r, `y`),
+                  ne-rune(r, `\n`),
+                ]
+              })(k);
+            try _ =
+              satisfy("foo", (r) => {
+                eq-rune(r, `\n`)
+              })(k);
+            try _ = chunk("a")(k);
+            Right(Unit)
+          };
+        match my-parser(k) {
+        | Right(_) =>
+          False
+        | Left(_) =>
+          let Parse-Error{error-location} = make-parse-error(k);
+          pin actual = error-location;
+          pin expected = Point(1, 0);
+          eq-data::(actual, expected)
+        }
+      },
+    ),
+  ])
 }
 
 constant _sample-parser: zonk(unit) {
   // constructs a parser
   (k) =>> {
     // accepts: foo
-    try _ = chunk(static "foo")(k);
+    try _ = chunk("foo")(k);
     // accepts: (buz|test|bar)
-    try _ = choice(static "buz, test, or bar", List[chunk(static "buz"), chunk(static "test")], chunk(static "bar"))(k);
+    try _ = choice("buz, test, or bar", List::[chunk("buz"), chunk("test")], chunk("bar"))(k);
     // accepts: (qux)+
-    try _ = some(chunk(static "qux"))(k);
+    try _ = some(chunk("qux"))(k);
     // accepts: (yo)*
-    try _ = many(chunk(static "yo"))(k);
+    try _ = many(chunk("yo"))(k);
     // accepts: end-of-input
     try _ = end-of-input(k);
     Right(Unit)

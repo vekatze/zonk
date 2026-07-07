@@ -1,25 +1,25 @@
 import {
-  this.recognize {recognize},
-  this.regex {Any, Choose, Chunk, End-Of-Input, Join, Repeat},
+  recognize {recognize},
+  regex {Any, Choose, Chunk, End-Of-Input, Join, Repeat},
 }
 
 define zen() -> unit {
   let reg =
-    Join(List[
+    Join(List::[
       Repeat(
-        Join(List[
+        Join(List::[
           Choose(
-            static "variable",
-            List[
-              Chunk(static "pqr"),
-              Chunk(static "H"),
-              Any(static "Lorem ipsum", List[`P`, `あ`, `k`]),
+            "variable",
+            List::[
+              Chunk("pqr"),
+              Chunk("H"),
+              Any("Lorem ipsum", List::[`P`, `あ`, `k`]),
             ],
-            Chunk(static "abc"),
+            Chunk("abc"),
           ),
-          Chunk(static ":"),
-          Choose(static "type", List[Chunk(static "AAAA")], Chunk(static "XX")),
-          Chunk(static ", "),
+          Chunk(":"),
+          Choose("type", List::[Chunk("AAAA")], Chunk("XX")),
+          Chunk(", "),
         ]),
       ),
       End-Of-Input,

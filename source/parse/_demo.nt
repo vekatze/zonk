@@ -1,5 +1,5 @@
 import {
-  this.parse {
+  parse {
     choice,
     chunk,
     end-of-input,
@@ -13,29 +13,29 @@ import {
 define zen() -> unit {
   let my-parser =
     choice(
-      static "some term",
-      List[
+      "some term",
+      List::[
         (k) =>> {
-          try _ = chunk(static "gaoe")(k);
-          try _ = chunk(static "item")(k);
+          try _ = chunk("gaoe")(k);
+          try _ = chunk("item")(k);
           Right(Unit)
         },
-        choice(static "item", List[chunk(static "k")], label(static "whatever", (k) =>> {
-          try _ = chunk(static "px")(k);
-          try _ = chunk(static "kgあ")(k);
+        choice("item", List::[chunk("k")], label("whatever", (k) =>> {
+          try _ = chunk("px")(k);
+          try _ = chunk("kgあ")(k);
           Right(Unit)
         })),
-        chunk(static "tあい"),
-        label(static "whatever 2", (k) =>> {
-          try _ = chunk(static "pt")(k);
-          try _ = chunk(static "あhebc")(k);
+        chunk("tあい"),
+        label("whatever 2", (k) =>> {
+          try _ = chunk("pt")(k);
+          try _ = chunk("あhebc")(k);
           Right(Unit)
         }),
-        chunk(static "abc"),
-        chunk(static "{}"),
+        chunk("abc"),
+        chunk("{}"),
         end-of-input,
       ],
-      chunk(static "tn"),
+      chunk("tn"),
     );
   pin k = make-zonk-kit(*"gaxoeitemtesttnapqabcd\nctああhehoge \n\r  hehehetest");
   let my-result = my-parser(k);
