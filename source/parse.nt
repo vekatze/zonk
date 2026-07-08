@@ -1,9 +1,9 @@
 import {
-  core::box {axiom-T},
   core::c-size {C-Size, c-size},
   core::cell {borrow, cell, make-cell, mutate},
   core::int {max-int},
   core::int.show {show-int},
+  core::layer {axiom-T},
   core::list {reverse},
   core::pointer {shift},
   core::rune,
