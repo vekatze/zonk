@@ -225,6 +225,11 @@ alias zonk(a) {
   (&zonk-kit) ->> parsed(a)
 }
 
+inline report-unexpected-input<a>(k: &zonk-kit, label: text) -> parsed(a) {
+  _set-expected-label(k, label);
+  Left(Unit)
+}
+
 inline get-point(k: &zonk-kit) -> point {
   _resolve-point(k, _get-cursor(k))
 }
