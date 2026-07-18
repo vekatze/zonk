@@ -4,7 +4,7 @@ import {
   core::bool {all},
   core::eq.generic {eq-data},
   core::string {byte-length},
-  parse {
+  this::parse {
     Parse-Error,
     Point,
     choice,

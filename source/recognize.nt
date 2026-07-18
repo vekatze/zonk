@@ -1,6 +1,6 @@
 import {
   core::list {for-each},
-  parse {
+  this::parse {
     attempt,
     branch,
     chunk,
@@ -13,7 +13,7 @@ import {
     satisfy,
     zonk,
   },
-  regex {Any, Choose, Chunk, End-Of-Input, Join, Repeat, regex},
+  this::regex {Any, Choose, Chunk, End-Of-Input, Join, Repeat, regex},
 }
 
 define _rune-member(r: rune, rs: &list(rune)) -> bool {

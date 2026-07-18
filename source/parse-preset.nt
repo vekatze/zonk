@@ -4,7 +4,7 @@ import {
   core::function {compose},
   core::int.parse {parse-int},
   core::list {reverse},
-  parse {
+  this::parse {
     drop-while,
     parsed,
     scan-while,
@@ -106,10 +106,10 @@ inline read-vector<a>(size: int, !p: zonk(a)) -> zonk(vector(a)) {
         } else {
           try v = p(k);
           try _ = skip-space(k);
-          self(add-int(cursor, 1), core::vector.push-back(acc, v))
+          self(add-int(cursor, 1), core::vector::push-back(acc, v))
         }
       };
-    try result = f(0, core::vector.make(size));
+    try result = f(0, core::vector::make(size));
     Right(result)
   }
 }

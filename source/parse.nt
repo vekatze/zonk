@@ -187,7 +187,7 @@ define _resolve-point(k: &zonk-kit, target: int) -> point {
       } else {
         let r = get-rune-unchecked(input-stream, cursor);
         let Point(line, column) = _advance-point(line, column, r);
-        go(add-int(cursor, core::rune.size(r)), line, column)
+        go(add-int(cursor, core::rune::size(r)), line, column)
       }
     };
   let Point(line, column) =
@@ -260,7 +260,7 @@ inline satisfy(label: text, p: (rune) -> bool) ->> zonk(rune) {
     } else {
       let r = get-rune-unchecked(input-stream, cursor);
       if p(r) {
-        _set-cursor(k, add-int(cursor, core::rune.size(r)));
+        _set-cursor(k, add-int(cursor, core::rune::size(r)));
         Right(r)
       } else {
         _set-gap-size(k, 1);
@@ -291,7 +291,7 @@ define _chunk-body(k: &zonk-kit, chunk-string: &string) -> int {
     let chunk-ptr = get-content-pointer(chunk-string);
     let match-result = magic external memcmp(input-ptr, chunk-ptr, C-Size(len2));
     if ne-int(match-result, 0) {
-      _set-gap-size(k, core::string.length(chunk-string));
+      _set-gap-size(k, core::string::length(chunk-string));
       -1
     } else {
       _set-cursor(k, add-int(cursor, len2));
@@ -322,7 +322,7 @@ inline _scan-while(k: &zonk-kit, !p: (rune) -> bool) -> int {
       } else {
         let r = get-rune-unchecked(input-stream, cursor);
         if p(r) {
-          consumer(add-int(cursor, core::rune.size(r)))
+          consumer(add-int(cursor, core::rune::size(r)))
         } else {
           cursor
         }

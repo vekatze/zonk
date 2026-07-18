@@ -1,5 +1,5 @@
 import {
-  parse {
+  this::parse {
     choice,
     chunk,
     end-of-input,

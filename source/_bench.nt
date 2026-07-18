@@ -1,9 +1,9 @@
 import {
   core::control {loop},
-  parse {branch, chunk, label, make-zonk-kit, many, not-followed-by, zonk},
-  parse-preset {read-float-list, read-int-list},
-  recognize {recognize},
-  regex {Any, Chunk, End-Of-Input, Join, Repeat, regex},
+  this::parse {branch, chunk, label, make-zonk-kit, many, not-followed-by, zonk},
+  this::parse-preset {read-float-list, read-int-list},
+  this::recognize {recognize},
+  this::regex {Any, Chunk, End-Of-Input, Join, Repeat, regex},
 }
 
 define _try-parse(p: zonk(unit)) -> unit {

@@ -1,6 +1,6 @@
 import {
-  recognize {recognize},
-  regex {Any, Choose, Chunk, End-Of-Input, Join, Repeat},
+  this::recognize {recognize},
+  this::regex {Any, Choose, Chunk, End-Of-Input, Join, Repeat},
 }
 
 define zen() -> unit {
