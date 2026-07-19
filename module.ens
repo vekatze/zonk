@@ -19,9 +19,9 @@
       enable-preset true,
     },
     _noa {
-      digest "cuZctbsh3R3iZUbMAMdebRLIrZIDjUCRiKie-7aw9r0",
+      digest "3lbTlxMZtE-gODjfDocJfc9t3cSiYnq8Kc0Qu5AMKXo",
       mirror [
-        "https://github.com/vekatze/noa/raw/main/archive/0.5.0.tar.zst",
+        "https://github.com/vekatze/noa/raw/main/archive/0.5.1.tar.zst",
       ],
     },
   },
