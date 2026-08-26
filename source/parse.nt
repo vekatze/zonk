@@ -60,26 +60,26 @@ define report(e: parse-error) -> string {
 data zonk-kit {
 | _Zonk-Kit(
     input-stream: string,
-    cursor: cell(int) mix,
-    gap-size: cell(int) mix,
-    point-cursor: cell(int) mix,
-    point-line: cell(int) mix,
-    point-column: cell(int) mix,
-    expected-is-raw: cell(bool) mix,
-    expected-text: cell(text) mix,
+    ~cursor: cell(int),
+    ~gap-size: cell(int),
+    ~point-cursor: cell(int),
+    ~point-line: cell(int),
+    ~point-column: cell(int),
+    ~expected-is-raw: cell(bool),
+    ~expected-text: cell(text),
   )
 }
 
-define make-zonk-kit(input-stream: string) ->> zonk-kit {
+define make-zonk-kit@(input-stream: string) -> zonk-kit {
   _Zonk-Kit{
     input-stream,
-    cursor := make-cell(lift {0}),
-    gap-size := make-cell(lift {0}),
-    point-cursor := make-cell(lift {0}),
-    point-line := make-cell(lift {0}),
-    point-column := make-cell(lift {0}),
-    expected-is-raw := make-cell(lift {False}),
-    expected-text := make-cell(lift {"unknown"}),
+    ~cursor := make-cell(lift {0}),
+    ~gap-size := make-cell(lift {0}),
+    ~point-cursor := make-cell(lift {0}),
+    ~point-line := make-cell(lift {0}),
+    ~point-column := make-cell(lift {0}),
+    ~expected-is-raw := make-cell(lift {False}),
+    ~expected-text := make-cell(lift {"unknown"}),
   }
 }
 
@@ -113,34 +113,34 @@ define _get-input-stream(k: &zonk-kit) -> &string {
 }
 
 inline _get-cursor(k: &zonk-kit) -> int {
-  tie _Zonk-Kit{cursor} = k;
+  tie _Zonk-Kit{~cursor} = k;
   _read-int-cell(cursor)
 }
 
 inline _set-cursor(k: &zonk-kit, new-cursor: int) -> unit {
-  tie _Zonk-Kit{cursor} = k;
+  tie _Zonk-Kit{~cursor} = k;
   _write-int-cell(cursor, new-cursor)
 }
 
 inline _get-gap-size(k: &zonk-kit) -> int {
-  tie _Zonk-Kit{gap-size} = k;
+  tie _Zonk-Kit{~gap-size} = k;
   _read-int-cell(gap-size)
 }
 
 inline _set-gap-size(k: &zonk-kit, new-gap-size: int) -> unit {
-  tie _Zonk-Kit{gap-size} = k;
+  tie _Zonk-Kit{~gap-size} = k;
   mutate(gap-size, (g) => {
     lift {max-int(axiom-T(g), new-gap-size)}
   })
 }
 
 inline _reset-gap-size(k: &zonk-kit, new-gap-size: int) -> unit {
-  tie _Zonk-Kit{gap-size} = k;
+  tie _Zonk-Kit{~gap-size} = k;
   _write-int-cell(gap-size, new-gap-size)
 }
 
 inline _store-expected(k: &zonk-kit, is-raw: bool, t: text) -> unit {
-  tie _Zonk-Kit{expected-is-raw, expected-text} = k;
+  tie _Zonk-Kit{~expected-is-raw, ~expected-text} = k;
   _write-bool-cell(expected-is-raw, is-raw);
   mutate(expected-text, (_) => {
     lift {t}
@@ -156,7 +156,7 @@ inline _set-expected-label(k: &zonk-kit, l: text) -> unit {
 }
 
 define _get-expected(k: &zonk-kit) -> expected-item {
-  tie _Zonk-Kit{expected-is-raw, expected-text} = k;
+  tie _Zonk-Kit{~expected-is-raw, ~expected-text} = k;
   let t =
     from-text(borrow(expected-text, (x) => {
       lift {*x}
@@ -168,7 +168,7 @@ define _get-expected(k: &zonk-kit) -> expected-item {
   }
 }
 
-inline _advance-point(line: int, column: int, r: rune) ->> point {
+inline _advance-point@(line: int, column: int, r: rune) -> point {
   if eq-rune(r, `\n`) {
     Point(add-int(line, 1), 0)
   } else {
@@ -178,7 +178,7 @@ inline _advance-point(line: int, column: int, r: rune) ->> point {
 
 define _resolve-point(k: &zonk-kit, target: int) -> point {
   let input-stream = _get-input-stream(k);
-  tie _Zonk-Kit{point-cursor, point-line, point-column} = k;
+  tie _Zonk-Kit{~point-cursor, ~point-line, ~point-column} = k;
   let base-cursor = _read-int-cell(point-cursor);
   let scan =
     define go(cursor: int, line: int, column: int) -> point {
@@ -186,7 +186,7 @@ define _resolve-point(k: &zonk-kit, target: int) -> point {
         Point(line, column)
       } else {
         let r = get-rune-unchecked(input-stream, cursor);
-        let Point(line, column) = _advance-point(line, column, r);
+        let Point(line, column) = _advance-point@(line, column, r);
         go(add-int(cursor, core::rune::size(r)), line, column)
       }
     };
@@ -202,7 +202,7 @@ define _resolve-point(k: &zonk-kit, target: int) -> point {
   Point(line, column)
 }
 
-define make-parse-error(k: &zonk-kit) ->> parse-error {
+define make-parse-error@(k: &zonk-kit) -> parse-error {
   let cursor = _get-cursor(k);
   let gap-size = _get-gap-size(k);
   let error-location = _resolve-point(k, cursor);
@@ -222,7 +222,7 @@ alias parsed(a) {
 }
 
 alias zonk(a) {
-  (&zonk-kit) ->> parsed(a)
+  @(&zonk-kit) -> parsed(a)
 }
 
 inline report-unexpected-input<a>(k: &zonk-kit, label: text) -> parsed(a) {
@@ -235,7 +235,7 @@ inline get-point(k: &zonk-kit) -> point {
 }
 
 constant end-of-input: zonk(unit) {
-  (k) =>> {
+  @(k) => {
     let input-stream = _get-input-stream(k);
     let cursor = _get-cursor(k);
     let len = byte-length(input-stream);
@@ -249,8 +249,8 @@ constant end-of-input: zonk(unit) {
   }
 }
 
-inline satisfy(label: text, p: (rune) -> bool) ->> zonk(rune) {
-  (k) =>> {
+inline satisfy@(label: text, p: (rune) -> bool) -> zonk(rune) {
+  @(k) => {
     let input-stream = _get-input-stream(k);
     let len = byte-length(input-stream);
     let cursor = _get-cursor(k);
@@ -272,7 +272,7 @@ inline satisfy(label: text, p: (rune) -> bool) ->> zonk(rune) {
 }
 
 constant any-rune: zonk(rune) {
-  satisfy("any character", (_) => {
+  satisfy@("any character", (_) => {
     True
   })
 }
@@ -300,8 +300,8 @@ define _chunk-body(k: &zonk-kit, chunk-string: &string) -> int {
   }
 }
 
-inline chunk(chunk-text: text) ->> zonk(unit) {
-  (k) =>> {
+inline chunk@(chunk-text: text) -> zonk(unit) {
+  @(k) => {
     let result-flag = _chunk-body(k, from-text(chunk-text));
     if gt-int(result-flag, 0) {
       Right(Unit)
@@ -331,8 +331,8 @@ inline _scan-while(k: &zonk-kit, !p: (rune) -> bool) -> int {
   f(_get-cursor(k))
 }
 
-inline take-while(!p: (rune) -> bool) ->> zonk(string) {
-  (k) =>> {
+inline take-while@(p: (rune) -> bool) -> zonk(string) {
+  @(k) => {
     let orig-cursor = _get-cursor(k);
     let end-cursor = _scan-while(k, p);
     _set-cursor(k, end-cursor);
@@ -340,8 +340,8 @@ inline take-while(!p: (rune) -> bool) ->> zonk(string) {
   }
 }
 
-inline take-while-1(!p: (rune) -> bool) ->> zonk(string) {
-  (k) =>> {
+inline take-while-1@(p: (rune) -> bool) -> zonk(string) {
+  @(k) => {
     let orig-cursor = _get-cursor(k);
     let end-cursor = _scan-while(k, p);
     let size = sub-int(end-cursor, orig-cursor);
@@ -355,8 +355,8 @@ inline take-while-1(!p: (rune) -> bool) ->> zonk(string) {
   }
 }
 
-inline drop-while(!p: (rune) -> bool) ->> zonk(unit) {
-  (k) =>> {
+inline drop-while@(p: (rune) -> bool) -> zonk(unit) {
+  @(k) => {
     _set-cursor(k, _scan-while(k, p));
     Right(Unit)
   }
@@ -373,12 +373,12 @@ define _is-ascii-space(r: rune) -> bool {
 }
 
 constant ascii-space: zonk(unit) {
-  drop-while(_is-ascii-space)
+  drop-while@(_is-ascii-space)
 }
 
-inline label<a>(l: text, p: zonk(a)) ->> zonk(a) {
-  (k) =>> {
-    let v = p(k);
+inline label@<a>(l: text, p: zonk(a)) -> zonk(a) {
+  @(k) => {
+    let v = p@(k);
     match v {
     | Right(result) =>
       Right(result)
@@ -394,11 +394,11 @@ inline _rewind(k: &zonk-kit, cursor: int, gap-size: int) -> unit {
   _reset-gap-size(k, gap-size)
 }
 
-inline attempt<a>(p: zonk(a)) ->> zonk(a) {
-  (k) =>> {
+inline attempt@<a>(p: zonk(a)) -> zonk(a) {
+  @(k) => {
     let cursor = _get-cursor(k);
     let gap-size = _get-gap-size(k);
-    match p(k) {
+    match p@(k) {
     | Right(result) =>
       Right(result)
     | Left(_) =>
@@ -408,11 +408,11 @@ inline attempt<a>(p: zonk(a)) ->> zonk(a) {
   }
 }
 
-inline look-ahead<a>(p: zonk(a)) ->> zonk(a) {
-  (k) =>> {
+inline look-ahead@<a>(p: zonk(a)) -> zonk(a) {
+  @(k) => {
     let cursor = _get-cursor(k);
     let gap-size = _get-gap-size(k);
-    match p(k) {
+    match p@(k) {
     | Right(result) =>
       _rewind(k, cursor, gap-size);
       Right(result)
@@ -431,28 +431,28 @@ define _optional-body<a>(v: parsed(a)) -> parsed(?a) {
   }
 }
 
-inline optional<a>(p: zonk(a)) ->> zonk(?a) {
-  (k) =>> {
-    _optional-body(p(k))
+inline optional@<a>(p: zonk(a)) -> zonk(?a) {
+  @(k) => {
+    _optional-body(p@(k))
   }
 }
 
-inline branch<a>(p1: zonk(a), p2: zonk(a)) ->> zonk(a) {
-  (k) =>> {
-    match p1(k) {
+inline branch@<a>(p1: zonk(a), p2: zonk(a)) -> zonk(a) {
+  @(k) => {
+    match p1@(k) {
     | Right(result) =>
       Right(result)
     | Left(_) =>
-      p2(k)
+      p2@(k)
     }
   }
 }
 
-inline not-followed-by<a>(label: text, p: zonk(a)) ->> zonk(unit) {
-  (k) =>> {
+inline not-followed-by@<a>(label: text, p: zonk(a)) -> zonk(unit) {
+  @(k) => {
     let cursor = _get-cursor(k);
     let gap-size = _get-gap-size(k);
-    let v = p(k);
+    let v = p@(k);
     _rewind(k, cursor, gap-size);
     match v {
     | Left(_) =>
@@ -465,16 +465,16 @@ inline not-followed-by<a>(label: text, p: zonk(a)) ->> zonk(unit) {
   }
 }
 
-define _choice<a>(
+define _choice@<a>(
   k: &zonk-kit,
   label: text,
   candidates: list(zonk(a)),
   fallback: zonk(a),
   default-gap-size: int,
-) ->> parsed(a) {
+) -> parsed(a) {
   match candidates {
   | Nil =>
-    match fallback(k) {
+    match fallback@(k) {
     | Right(v) =>
       _set-gap-size(k, default-gap-size);
       Right(v)
@@ -483,31 +483,31 @@ define _choice<a>(
       Left(Unit)
     }
   | Cons(cand, rest) =>
-    match cand(k) {
+    match cand@(k) {
     | Right(v) =>
       _set-gap-size(k, default-gap-size);
       Right(v)
     | Left(_) =>
-      _choice(k, label, rest, fallback, default-gap-size)
+      _choice@(k, label, rest, fallback, default-gap-size)
     }
   }
 }
 
-inline choice<a>(label: text, candidates: list(zonk(a)), fallback: zonk(a)) ->> zonk(a) {
-  (k) =>> {
+inline choice@<a>(label: text, candidates: list(zonk(a)), fallback: zonk(a)) -> zonk(a) {
+  @(k) => {
     match candidates {
     | Nil =>
-      fallback(k)
+      fallback@(k)
     | Cons(p, rest) =>
       let old-cursor = _get-cursor(k);
-      match p(k) {
+      match p@(k) {
       | Right(v) =>
         Right(v)
       | Left(_) =>
         let new-cursor = _get-cursor(k);
         if eq-int(old-cursor, new-cursor) {
           let gap-size = _get-gap-size(k);
-          _choice(k, label, rest, fallback, gap-size)
+          _choice@(k, label, rest, fallback, gap-size)
         } else {
           Left(Unit)
         }
@@ -517,34 +517,34 @@ inline choice<a>(label: text, candidates: list(zonk(a)), fallback: zonk(a)) ->> 
 }
 
 inline many<a>(!p: zonk(a)) -> zonk(list(a)) {
-  (k) =>> {
+  @(k) => {
     let f =
-      define self(acc: list(a)) ->> parsed(list(a)) {
-        match p(k) {
+      define self@(acc: list(a)) -> parsed(list(a)) {
+        match p@(k) {
         | Right(v) =>
-          self(Cons(v, acc))
+          self@(Cons(v, acc))
         | Left(_) =>
           Right(reverse(acc))
         }
       };
-    f(Nil)
+    f@(Nil)
   }
 }
 
-inline some<a>(!p: zonk(a)) ->> zonk(list(a)) {
-  (k) =>> {
-    try v = p(k);
-    try vs = many(p)(k);
+inline some@<a>(!p: zonk(a)) -> zonk(list(a)) {
+  @(k) => {
+    try v = p@(k);
+    try vs = many(p)@(k);
     Right(Cons(v, vs))
   }
 }
 
-inline scan-while<a>(
+inline scan-while@<a>(
   label: text,
-  !p: (rune) -> bool,
+  p: (rune) -> bool,
   interpret: (&string) -> +?a,
-) ->> zonk(a) {
-  (k) =>> {
+) -> zonk(a) {
+  @(k) => {
     let orig-cursor = _get-cursor(k);
     let end-cursor = _scan-while(k, p);
     _set-cursor(k, end-cursor);

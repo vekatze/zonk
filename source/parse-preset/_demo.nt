@@ -12,11 +12,11 @@ import {
 }
 
 constant _sample-zonk: zonk(unit) {
-  (k) =>> {
-    try v1 = read-int(k);
-    try v2 = read-int(k);
-    try xs = read-float-vector(v1)(k);
-    try _ = end-of-input(k);
+  @(k) => {
+    try v1 = read-int@(k);
+    try v2 = read-int@(k);
+    try xs = read-float-vector(v1)@(k);
+    try _ = end-of-input@(k);
     print-int(v1);
     print(", ");
     print-int-line(v2);
@@ -29,12 +29,12 @@ constant _sample-zonk: zonk(unit) {
 }
 
 define zen() -> unit {
-  pin k = make-zonk-kit(*"6 42 \n   5.0 4.0 3.0 2.0 1.0 -1234.0");
-  match _sample-zonk(k) {
+  pin k = make-zonk-kit@(*"6 42 \n   5.0 4.0 3.0 2.0 1.0 -1234.0");
+  match _sample-zonk@(k) {
   | Right(_) =>
     print("pass\n")
   | Left(_) =>
-    let err = make-parse-error(k);
+    let err = make-parse-error@(k);
     pin message = report(err);
     print("fail: ");
     print-line(message);

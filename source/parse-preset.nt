@@ -24,7 +24,7 @@ define _is-space(r: rune) -> bool {
 }
 
 constant skip-space: zonk(unit) {
-  drop-while(_is-space)
+  drop-while@(_is-space)
 }
 
 define _any-number(r: rune) -> bool {
@@ -51,45 +51,45 @@ define _is-float-rune(r: rune) -> bool {
 }
 
 inline read-symbol() -> zonk(string) {
-  (k) =>> {
-    try result = take-while(compose(not, _is-space))(k);
-    try _ = skip-space(k);
+  @(k) => {
+    try result = take-while@(compose(not, _is-space))@(k);
+    try _ = skip-space@(k);
     Right(result)
   }
 }
 
 constant read-int: zonk(int) {
-  (k) =>> {
+  @(k) => {
     try v =
-      scan-while("integer", _is-integer-rune, (v) => {
-        let result = parse-int(v);
+      scan-while@("integer", _is-integer-rune, (v) => {
+        let result = parse-int@(v);
         lift {result}
-      })(k);
-    try _ = skip-space(k);
+      })@(k);
+    try _ = skip-space@(k);
     Right(v)
   }
 }
 
 constant read-float: zonk(float) {
-  (k) =>> {
+  @(k) => {
     try v =
-      scan-while("float", _is-float-rune, (v) => {
-        let result = parse-float(v);
+      scan-while@("float", _is-float-rune, (v) => {
+        let result = parse-float@(v);
         lift {result}
-      })(k);
-    try _ = skip-space(k);
+      })@(k);
+    try _ = skip-space@(k);
     Right(v)
   }
 }
 
 define read-int-list(size: int) -> zonk(list(int)) {
-  (k) =>> {
+  @(k) => {
     let f =
       define self(cursor: int, acc: list(int)) -> parsed(list(int)) {
         if le-int(cursor, 0) {
           Right(reverse(acc))
         } else {
-          try v = read-int(k);
+          try v = read-int@(k);
           self(sub-int(cursor, 1), Cons(v, acc))
         }
       };
@@ -98,14 +98,14 @@ define read-int-list(size: int) -> zonk(list(int)) {
 }
 
 inline read-vector<a>(size: int, !p: zonk(a)) -> zonk(vector(a)) {
-  (k) =>> {
+  @(k) => {
     let f =
       define self(cursor: int, acc: vector(a)) -> parsed(vector(a)) {
         if ge-int(cursor, size) {
           Right(acc)
         } else {
-          try v = p(k);
-          try _ = skip-space(k);
+          try v = p@(k);
+          try _ = skip-space@(k);
           self(add-int(cursor, 1), core::vector::push-back(acc, v))
         }
       };
@@ -119,14 +119,14 @@ define read-int-vector(size: int) -> zonk(vector(int)) {
 }
 
 define read-float-list(size: int) -> zonk(list(float)) {
-  (k) =>> {
+  @(k) => {
     let f =
       define self(cursor: int, acc: list(float)) -> parsed(list(float)) {
         if le-int(cursor, 0) {
           Right(reverse(acc))
         } else {
-          try v = read-float(k);
-          try _ = skip-space(k);
+          try v = read-float@(k);
+          try _ = skip-space@(k);
           self(sub-int(cursor, 1), Cons(v, acc))
         }
       };

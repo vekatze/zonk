@@ -23,25 +23,25 @@ import {
 }
 
 define main() -> unit {
-  pin k = make-default-noa-kit();
+  pin k = make-default-noa-kit@();
   check(k, List::[
     example::(
       "chunk(prefix) succeeds and leaves the remainder",
       {
-        pin k = make-zonk-kit(*"fooあい-bar");
+        pin k = make-zonk-kit@(*"fooあい-bar");
         let p: zonk(bool) =
-          (k) =>> {
-            try _ = chunk("fooあい")(k);
+          @(k) => {
+            try _ = chunk@("fooあい")@(k);
             try rest =
-              take-while((_) => {
+              take-while@((_) => {
                 True
-              })(k);
-            try _ = end-of-input(k);
+              })@(k);
+            try _ = end-of-input@(k);
             let result on rest = eq-string("-bar", rest);
             let _ = rest;
             Right(result)
           };
-        match p(k) {
+        match p@(k) {
         | Right(result) =>
           result
         | Left(_) =>
@@ -52,14 +52,14 @@ define main() -> unit {
     example::(
       "chunk(whole) → end-of-input succeeds",
       {
-        pin k = make-zonk-kit(*"helloあ");
+        pin k = make-zonk-kit@(*"helloあ");
         let p: zonk(unit) =
-          (k) =>> {
-            try _ = chunk("helloあ")(k);
-            try _ = end-of-input(k);
+          @(k) => {
+            try _ = chunk@("helloあ")@(k);
+            try _ = end-of-input@(k);
             Right(Unit)
           };
-        match p(k) {
+        match p@(k) {
         | Right(_) =>
           True
         | Left(_) =>
@@ -70,15 +70,15 @@ define main() -> unit {
     example::(
       "chunk → chunk → end-of-input succeeds on the concatenation",
       {
-        pin k = make-zonk-kit(*"fooあいbar");
+        pin k = make-zonk-kit@(*"fooあいbar");
         let p: zonk(unit) =
-          (k) =>> {
-            try _ = chunk("fooあい")(k);
-            try _ = chunk("bar")(k);
-            try _ = end-of-input(k);
+          @(k) => {
+            try _ = chunk@("fooあい")@(k);
+            try _ = chunk@("bar")@(k);
+            try _ = end-of-input@(k);
             Right(Unit)
           };
-        match p(k) {
+        match p@(k) {
         | Right(_) =>
           True
         | Left(_) =>
@@ -93,9 +93,9 @@ define main() -> unit {
         if eq-int(len, 0) {
           True
         } else {
-          pin k = make-zonk-kit(*t);
+          pin k = make-zonk-kit@(*t);
           let result =
-            match end-of-input(k) {
+            match end-of-input@(k) {
             | Right(_) =>
               False
             | Left(_) =>
@@ -108,21 +108,21 @@ define main() -> unit {
     example::(
       "take-while, chunk, take-while",
       {
-        pin k = make-zonk-kit(*"xxx\nbar");
+        pin k = make-zonk-kit@(*"xxx\nbar");
         let my-parser: zonk(unit) =
-          (k) =>> {
+          @(k) => {
             try _ =
-              take-while((r) => {
+              take-while@((r) => {
                 eq-rune(r, `x`)
-              })(k);
-            try _ = chunk("\n")(k);
+              })@(k);
+            try _ = chunk@("\n")@(k);
             try _ =
-              take-while((r) => {
+              take-while@((r) => {
                 ne-rune(r, `x`)
-              })(k);
+              })@(k);
             Right(Unit)
           };
-        match my-parser(k) {
+        match my-parser@(k) {
         | Right(_) =>
           True
         | Left(_) =>
@@ -133,21 +133,21 @@ define main() -> unit {
     example::(
       "drop-while, chunk, drop-while",
       {
-        pin k = make-zonk-kit(*"xxx\nbar");
+        pin k = make-zonk-kit@(*"xxx\nbar");
         let my-parser: zonk(unit) =
-          (k) =>> {
+          @(k) => {
             try _ =
-              drop-while((r) => {
+              drop-while@((r) => {
                 eq-rune(r, `x`)
-              })(k);
-            try _ = chunk("\n")(k);
+              })@(k);
+            try _ = chunk@("\n")@(k);
             try _ =
-              drop-while((r) => {
+              drop-while@((r) => {
                 ne-rune(r, `x`)
-              })(k);
+              })@(k);
             Right(Unit)
           };
-        match my-parser(k) {
+        match my-parser@(k) {
         | Right(_) =>
           True
         | Left(_) =>
@@ -158,22 +158,22 @@ define main() -> unit {
     example::(
       "report error locations correctly (take-while, chunk)",
       {
-        pin k = make-zonk-kit(*"xxx\nbar");
+        pin k = make-zonk-kit@(*"xxx\nbar");
         let my-parser: zonk(unit) =
-          (k) =>> {
+          @(k) => {
             try _ =
-              take-while((r) => {
+              take-while@((r) => {
                 eq-rune(r, `x`)
-              })(k);
-            try _ = chunk("\n")(k);
-            try _ = chunk("a")(k);
+              })@(k);
+            try _ = chunk@("\n")@(k);
+            try _ = chunk@("a")@(k);
             Right(Unit)
           };
-        match my-parser(k) {
+        match my-parser@(k) {
         | Right(_) =>
           False
         | Left(_) =>
-          let Parse-Error{error-location} = make-parse-error(k);
+          let Parse-Error{error-location} = make-parse-error@(k);
           pin actual = error-location;
           pin expected = Point(1, 0);
           eq-data::(actual, expected)
@@ -183,25 +183,25 @@ define main() -> unit {
     example::(
       "report error locations correctly (drop-while, chunk)",
       {
-        pin k = make-zonk-kit(*"xxx\nbar");
+        pin k = make-zonk-kit@(*"xxx\nbar");
         let my-parser: zonk(unit) =
-          (k) =>> {
+          @(k) => {
             try _ =
-              drop-while((r) => {
+              drop-while@((r) => {
                 all::[
                   ne-rune(r, `y`),
                   ne-rune(r, `\n`),
                 ]
-              })(k);
-            try _ = chunk("\n")(k);
-            try _ = chunk("a")(k);
+              })@(k);
+            try _ = chunk@("\n")@(k);
+            try _ = chunk@("a")@(k);
             Right(Unit)
           };
-        match my-parser(k) {
+        match my-parser@(k) {
         | Right(_) =>
           False
         | Left(_) =>
-          let Parse-Error{error-location} = make-parse-error(k);
+          let Parse-Error{error-location} = make-parse-error@(k);
           pin actual = error-location;
           pin expected = Point(1, 0);
           eq-data::(actual, expected)
@@ -211,28 +211,28 @@ define main() -> unit {
     example::(
       "report error locations correctly (satisfy, chunk)",
       {
-        pin k = make-zonk-kit(*"xxx\nbar");
+        pin k = make-zonk-kit@(*"xxx\nbar");
         let my-parser: zonk(unit) =
-          (k) =>> {
+          @(k) => {
             try _ =
-              drop-while((r) => {
+              drop-while@((r) => {
                 all::[
                   ne-rune(r, `y`),
                   ne-rune(r, `\n`),
                 ]
-              })(k);
+              })@(k);
             try _ =
-              satisfy("foo", (r) => {
+              satisfy@("foo", (r) => {
                 eq-rune(r, `\n`)
-              })(k);
-            try _ = chunk("a")(k);
+              })@(k);
+            try _ = chunk@("a")@(k);
             Right(Unit)
           };
-        match my-parser(k) {
+        match my-parser@(k) {
         | Right(_) =>
           False
         | Left(_) =>
-          let Parse-Error{error-location} = make-parse-error(k);
+          let Parse-Error{error-location} = make-parse-error@(k);
           pin actual = error-location;
           pin expected = Point(1, 0);
           eq-data::(actual, expected)
@@ -244,28 +244,28 @@ define main() -> unit {
 
 constant _sample-parser: zonk(unit) {
   // constructs a parser
-  (k) =>> {
+  @(k) => {
     // accepts: foo
-    try _ = chunk("foo")(k);
+    try _ = chunk@("foo")@(k);
     // accepts: (buz|test|bar)
-    try _ = choice("buz, test, or bar", List::[chunk("buz"), chunk("test")], chunk("bar"))(k);
+    try _ = choice@("buz, test, or bar", List::[chunk@("buz"), chunk@("test")], chunk@("bar"))@(k);
     // accepts: (qux)+
-    try _ = some(chunk("qux"))(k);
+    try _ = some@(chunk@("qux"))@(k);
     // accepts: (yo)*
-    try _ = many(chunk("yo"))(k);
+    try _ = many(chunk@("yo"))@(k);
     // accepts: end-of-input
-    try _ = end-of-input(k);
+    try _ = end-of-input@(k);
     Right(Unit)
   }
 }
 
 define zen() -> unit {
-  pin k = make-zonk-kit(*"fooXXXXquxquxyoyoyoyo");
-  match _sample-parser(k) {
+  pin k = make-zonk-kit@(*"fooXXXXquxquxyoyoyoyo");
+  match _sample-parser@(k) {
   | Right(_) =>
     print("pass\n")
   | Left(_) =>
-    let err = make-parse-error(k);
+    let err = make-parse-error@(k);
     pin err = report(err);
     print("fail: ");
     print-line(err);

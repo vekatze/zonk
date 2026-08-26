@@ -7,8 +7,8 @@ import {
 }
 
 define _try-parse(p: zonk(unit)) -> unit {
-  pin k = make-zonk-kit(*"abcnああhehoge \n\r  hehehetest");
-  match p(k) {
+  pin k = make-zonk-kit@(*"abcnああhehoge \n\r  hehehetest");
+  match p@(k) {
   | Left(_) =>
     Unit
   | Right(_) =>
@@ -17,8 +17,8 @@ define _try-parse(p: zonk(unit)) -> unit {
 }
 
 define _try-parse-ints(p: zonk(list(int))) -> unit {
-  pin k = make-zonk-kit(*"10 -20 30 -40 50 -60 70 -80 90 -100 110 -120 130 -140 150 -160");
-  match p(k) {
+  pin k = make-zonk-kit@(*"10 -20 30 -40 50 -60 70 -80 90 -100 110 -120 130 -140 150 -160");
+  match p@(k) {
   | Left(_) =>
     Unit
   | Right(_) =>
@@ -27,8 +27,8 @@ define _try-parse-ints(p: zonk(list(int))) -> unit {
 }
 
 define _try-parse-floats(p: zonk(list(float))) -> unit {
-  pin k = make-zonk-kit(*"1.0 -2.5 3e2 -4.25 5.0 -6.0 7.5 -8.0 9.0 -10.0 11.0 -12.5 13.0 -14.0 15.0 -16.0");
-  match p(k) {
+  pin k = make-zonk-kit@(*"1.0 -2.5 3e2 -4.25 5.0 -6.0 7.5 -8.0 9.0 -10.0 11.0 -12.5 13.0 -14.0 15.0 -16.0");
+  match p@(k) {
   | Left(_) =>
     Unit
   | Right(_) =>
@@ -37,8 +37,8 @@ define _try-parse-floats(p: zonk(list(float))) -> unit {
 }
 
 define _try-parse-many(p: zonk(list(unit))) -> unit {
-  pin k = make-zonk-kit(*"yoyoyoyoyoyoyoyoyoyoyoyoyoyoyoyo");
-  match p(k) {
+  pin k = make-zonk-kit@(*"yoyoyoyoyoyoyoyoyoyoyoyoyoyoyoyo");
+  match p@(k) {
   | Left(_) =>
     Unit
   | Right(_) =>
@@ -47,8 +47,8 @@ define _try-parse-many(p: zonk(list(unit))) -> unit {
 }
 
 define _try-parse-long-chunk-hit(p: zonk(unit)) -> unit {
-  pin k = make-zonk-kit(*"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-rest");
-  match p(k) {
+  pin k = make-zonk-kit@(*"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-rest");
+  match p@(k) {
   | Left(_) =>
     Unit
   | Right(_) =>
@@ -57,8 +57,8 @@ define _try-parse-long-chunk-hit(p: zonk(unit)) -> unit {
 }
 
 define _try-parse-long-chunk-miss(p: zonk(unit)) -> unit {
-  pin k = make-zonk-kit(*"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXY_-rest");
-  match p(k) {
+  pin k = make-zonk-kit@(*"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXY_-rest");
+  match p@(k) {
   | Left(_) =>
     Unit
   | Right(_) =>
@@ -67,8 +67,8 @@ define _try-parse-long-chunk-miss(p: zonk(unit)) -> unit {
 }
 
 define _try-parse-unicode-chunk-hit(p: zonk(unit)) -> unit {
-  pin k = make-zonk-kit(*"abc\nあいうxyz-rest");
-  match p(k) {
+  pin k = make-zonk-kit@(*"abc\nあいうxyz-rest");
+  match p@(k) {
   | Left(_) =>
     Unit
   | Right(_) =>
@@ -83,33 +83,33 @@ define _try-recognize(reg: regex) -> unit {
 
 define _bench() -> unit {
   let whatnot =
-    branch(
-      not-followed-by("aoeu", chunk("nああ")),
-      branch(
-        branch(chunk("k"), label("whatever", (k) =>> {
-          try _ = chunk("px")(k);
-          try _ = chunk("kgあ")(k);
+    branch@(
+      not-followed-by@("aoeu", chunk@("nああ")),
+      branch@(
+        branch@(chunk@("k"), label@("whatever", @(k) => {
+          try _ = chunk@("px")@(k);
+          try _ = chunk@("kgあ")@(k);
           Right(Unit)
         })),
-        branch(
-          not-followed-by("my label", chunk("nあ")),
-          branch(
-            label("whatever 2", (k) =>> {
-              try _ = chunk("pt")(k);
-              try _ = chunk("あhebc")(k);
+        branch@(
+          not-followed-by@("my label", chunk@("nあ")),
+          branch@(
+            label@("whatever 2", @(k) => {
+              try _ = chunk@("pt")@(k);
+              try _ = chunk@("あhebc")@(k);
               Right(Unit)
             }),
-            branch(
-              (k) =>> {
-                try _ = chunk("pt")(k);
-                try _ = chunk("あhebc")(k);
+            branch@(
+              @(k) => {
+                try _ = chunk@("pt")@(k);
+                try _ = chunk@("あhebc")@(k);
                 Right(Unit)
               },
-              branch(
-                chunk("abc"),
-                branch(
-                  chunk("{}"),
-                  chunk("tn"),
+              branch@(
+                chunk@("abc"),
+                branch@(
+                  chunk@("{}"),
+                  chunk@("tn"),
                 ),
               ),
             ),
@@ -118,9 +118,9 @@ define _bench() -> unit {
       ),
     );
   let my-parser: zonk(unit) =
-    (k) =>> {
-      try _ = chunk("abc")(k);
-      try _ = whatnot(k);
+    @(k) => {
+      try _ = chunk@("abc")@(k);
+      try _ = whatnot@(k);
       Right(Unit)
     };
   loop(1000000, (_) => {
@@ -134,18 +134,18 @@ define _bench() -> unit {
   loop(100000, (_) => {
     _try-parse-floats(float-list-parser)
   });
-  let many-parser = many(chunk("yo"));
+  let many-parser = many(chunk@("yo"));
   loop(100000, (_) => {
     _try-parse-many(many-parser)
   });
-  let !long-chunk-parser = chunk("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+  let !long-chunk-parser = chunk@("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
   loop(500000, (_) => {
     _try-parse-long-chunk-hit(long-chunk-parser)
   });
   loop(500000, (_) => {
     _try-parse-long-chunk-miss(long-chunk-parser)
   });
-  let unicode-chunk-parser = chunk("abc\nあいうxyz");
+  let unicode-chunk-parser = chunk@("abc\nあいうxyz");
   loop(500000, (_) => {
     _try-parse-unicode-chunk-hit(unicode-chunk-parser)
   });

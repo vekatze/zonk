@@ -32,17 +32,17 @@ define _rune-member(r: rune, rs: &list(rune)) -> bool {
 define _from-regex(reg: regex) -> zonk(unit) {
   match reg {
   | Any(label, rs) =>
-    (k) =>> {
+    @(k) => {
       try _ =
-        satisfy(label, (r) => {
+        satisfy@(label, (r) => {
           let found on rs = _rune-member(r, rs);
           let _ = rs;
           found
-        })(k);
+        })@(k);
       Right(Unit)
     }
   | Chunk(t) =>
-    chunk(t)
+    chunk@(t)
   | Choose(name, xs, fallback) =>
     let xs = for-each(xs, exact _from-regex);
     let fallback = _from-regex(fallback);
@@ -52,33 +52,33 @@ define _from-regex(reg: regex) -> zonk(unit) {
         | Nil =>
           fallback
         | Cons(x, rest) =>
-          branch(attempt(x), loop(rest, fallback))
+          branch@(attempt@(x), loop(rest, fallback))
         }
       };
-    label(name, go(xs, fallback))
+    label@(name, go(xs, fallback))
   | Join(xs) =>
     let xs = for-each(xs, exact _from-regex);
     let go =
       define loop(xs: list(zonk(unit))) -> zonk(unit) {
         match xs {
         | Nil =>
-          (_) =>> {
+          @(_) => {
             Right(Unit)
           }
         | Cons(x, xs) =>
-          (k) =>> {
-            try _ = x(k);
-            loop(xs)(k)
+          @(k) => {
+            try _ = x@(k);
+            loop(xs)@(k)
           }
         }
       };
     go(xs)
   | Repeat(r) =>
-    let !p = attempt(_from-regex(r));
-    (k) =>> {
+    let !p = attempt@(_from-regex(r));
+    @(k) => {
       let go =
         define self() -> parsed(unit) {
-          match p(k) {
+          match p@(k) {
           | Right(_) =>
             self()
           | Left(_) =>
@@ -93,12 +93,12 @@ define _from-regex(reg: regex) -> zonk(unit) {
 }
 
 inline recognize(r: regex, input: string) -> bool {
-  pin k = make-zonk-kit(input);
-  match _from-regex(r)(k) {
+  pin k = make-zonk-kit@(input);
+  match _from-regex(r)@(k) {
   | Right(_) =>
     True
   | Left(_) =>
-    pin t = report(make-parse-error(k));
+    pin t = report(make-parse-error@(k));
     print-line(t);
     False
   }

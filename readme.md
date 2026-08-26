@@ -5,7 +5,7 @@
 ## Installation
 
 ```sh
-neut get zonk https://github.com/vekatze/zonk/raw/main/archive/0-2-13.tar.zst
+neut get zonk https://github.com/vekatze/zonk/raw/main/archive/0.3.1.tar.zst
 ```
 
 ## Types
@@ -13,7 +13,7 @@ neut get zonk https://github.com/vekatze/zonk/raw/main/archive/0-2-13.tar.zst
 ### Main Definitions
 
 ```neut
-// An opaque type that holds expected items
+// Holds an item expected by a parser.
 data expected-item
 
 // An opaque type that holds information needed to execute parsers
@@ -30,14 +30,19 @@ data parse-error {
 
 // The type of parsers
 alias zonk(a) {
-  (&zonk-kit) -> either(unit, a)
+  (&zonk-kit) ->> either(unit, a)
+}
+
+// The result type of a parser.
+alias parsed(a) {
+  either(unit, a)
 }
 
 // Creates a zonk-kit for the given input string
-define make-zonk-kit(input-stream: string) -> zonk-kit
+define make-zonk-kit(input-stream: string) ->> zonk-kit
 
 // Builds a parse error from the kit's current failure state
-define make-parse-error(k: &zonk-kit) -> parse-error
+define make-parse-error(k: &zonk-kit) ->> parse-error
 
 // Converts a parse error into a human-readable string
 define report(e: parse-error) -> string
@@ -46,61 +51,64 @@ define report(e: parse-error) -> string
 ### Parser Combinators
 
 ```neut
+// Fails with `label` as the expected input.
+inline report-unexpected-input<a>(k: &zonk-kit, label: text) -> parsed(a)
+
 // Succeeds only at the end of the input.
 constant end-of-input: zonk(unit)
 
 // Succeeds only when the head rune of the remaining stream satisfies `p`.
 // The variable `label` is used when reporting errors.
-inline satisfy(label: text, p: (rune) -> bool) -> zonk(rune)
+inline satisfy(label: text, p: (rune) -> bool) ->> zonk(rune)
 
 // Reads any single rune from the remaining stream.
 constant any-rune: zonk(rune)
 
 // Succeeds only when the head of the remaining stream is equal to `t`.
-inline chunk(t: text) -> zonk(unit)
+inline chunk(t: text) ->> zonk(unit)
 
 // Consumes the input stream while `!p` is true.
-inline take-while(!p: (rune) -> bool) -> zonk(string)
+inline take-while(!p: (rune) -> bool) ->> zonk(string)
 
 // A non-empty version of `take-while`.
-inline take-while-1(!p: (rune) -> bool) -> zonk(string)
+inline take-while-1(!p: (rune) -> bool) ->> zonk(string)
 
 // Discards the input stream while `!p` is true.
-inline drop-while(!p: (rune) -> bool) -> zonk(unit)
+inline drop-while(!p: (rune) -> bool) ->> zonk(unit)
 
-// Skips ascii spaces.
+// Skips ASCII spaces.
 constant ascii-space: zonk(unit)
 
 // Executes `p`, overriding the (possible) error message with `l`.
-inline label<a>(l: text, p: zonk(a)) -> zonk(a)
+inline label<a>(l: text, p: zonk(a)) ->> zonk(a)
 
 // `attempt(p)` is the same as `p` if `p` succeeds.
 // `attempt(p)` rewinds the input stream if `p` fails.
-inline attempt<a>(p: zonk(a)) -> zonk(a)
+inline attempt<a>(p: zonk(a)) ->> zonk(a)
 
 // `look-ahead(p)` rewinds the input stream if `p` succeeds.
 // `look-ahead(p)` is the same as `p` if `p` fails.
-inline look-ahead<a>(p: zonk(a)) -> zonk(a)
+inline look-ahead<a>(p: zonk(a)) ->> zonk(a)
 
 // `optional(p)` is the same as `p` if `p` succeeds.
 // `optional(p)` suppresses the error of `p` and results in none if `p` fails.
 // Note that `optional(p)` does not rewind the input stream automatically.
-inline optional<a>(p: zonk(a)) -> zonk(?a)
+inline optional<a>(p: zonk(a)) ->> zonk(?a)
 
 // Executes `p1`. If it succeeds, `branch(p1, p2)` returns the result of `p1`.
 // If it fails, executes `p2`.
 // Note that `branch(p1, p2)` does not rewind the input stream automatically.
-inline branch<a>(p1: zonk(a), p2: zonk(a)) -> zonk(a)
+inline branch<a>(p1: zonk(a), p2: zonk(a)) ->> zonk(a)
 
 // Succeeds only when `p` can parse the head of the input stream.
 // `not-followed-by` does not consume the input stream.
 // The variable `label` is used when reporting errors.
-inline not-followed-by<a>(label: text, p: zonk(a)) -> zonk(unit)
+inline not-followed-by<a>(label: text, p: zonk(a)) ->> zonk(unit)
 
 // Tries given parsers one by one.
 // The variable `label` is used when reporting errors.
 // Note that each candidate should be wrapped in `attempt` if it may consume input before failing.
-inline choice<a>(label: text, candidates: list(zonk(a)), fallback: zonk(a)) -> zonk(a)
+inline choice<a>(label: text, candidates: list(zonk(a)), fallback: zonk(a)) ->> zonk(a)
 
 // Parses the input stream using `!p` iteratively until it fails.
 // This parser never fails.
@@ -108,7 +116,10 @@ inline many<a>(!p: zonk(a)) -> zonk(list(a))
 
 // Parses the input stream using `!p` iteratively until it fails.
 // This parser succeeds only if `!p` successfully parses the input stream at least once.
-inline some<a>(!p: zonk(a)) -> zonk(list(a))
+inline some<a>(!p: zonk(a)) ->> zonk(list(a))
+
+// Consumes runes while `p` holds and interprets the consumed string.
+inline scan-while<a>(label: text, !p: (rune) -> bool, interpret: (&string) -> +?a) ->> zonk(a)
 ```
 
 ### Presets
@@ -120,7 +131,7 @@ data regex {
 | Chunk(chunk-text: text)
 | Choose(label: text, candidates: list(regex), fallback: regex)
 | Join(components: list(regex))
-| Repeat(component: regex)
+| Repeat(regex)
 | End-Of-Input
 }
 
@@ -168,6 +179,9 @@ data point {
 
 // Gets the current reading position.
 define get-point(k: &zonk-kit) -> point
+
+// Converts a point into human-readable text.
+define show-point(p: point) -> string
 ```
 
 ## Example
@@ -176,21 +190,21 @@ Executing `zen` in the following example should output `pass`:
 
 ```neut
 import {
-  core.string.io {print-line},
-  this.parse {choice, chunk, end-of-input, make-parse-error, make-zonk-kit, many, report, some, zonk},
+  core::string.io {print-line},
+  this::parse {choice, chunk, end-of-input, make-parse-error, make-zonk-kit, many, report, some, zonk},
 }
 
 constant sample-parser: zonk(unit) {
   // constructs a parser
-  (k) => {
+  (k) =>> {
     // accepts: foo
-    try _ = chunk(static "foo")(k);
+    try _ = chunk("foo")(k);
     // accepts: (baz|test|bar)
-    try _ = choice(static "baz, test, or bar", List[chunk(static "baz"), chunk(static "test")], chunk(static "bar"))(k);
+    try _ = choice("baz, test, or bar", List::[chunk("baz"), chunk("test")], chunk("bar"))(k);
     // accepts: (qux)+
-    try _ = some(chunk(static "qux"))(k);
+    try _ = some(chunk("qux"))(k);
     // accepts: (yo)*
-    try _ = many(chunk(static "yo"))(k);
+    try _ = many(chunk("yo"))(k);
     // accepts: end-of-input
     try _ = end-of-input(k);
     Right(Unit)

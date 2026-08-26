@@ -12,36 +12,36 @@ import {
 
 define zen() -> unit {
   let my-parser =
-    choice(
+    choice@(
       "some term",
       List::[
-        (k) =>> {
-          try _ = chunk("gaoe")(k);
-          try _ = chunk("item")(k);
+        @(k) => {
+          try _ = chunk@("gaoe")@(k);
+          try _ = chunk@("item")@(k);
           Right(Unit)
         },
-        choice("item", List::[chunk("k")], label("whatever", (k) =>> {
-          try _ = chunk("px")(k);
-          try _ = chunk("kgあ")(k);
+        choice@("item", List::[chunk@("k")], label@("whatever", @(k) => {
+          try _ = chunk@("px")@(k);
+          try _ = chunk@("kgあ")@(k);
           Right(Unit)
         })),
-        chunk("tあい"),
-        label("whatever 2", (k) =>> {
-          try _ = chunk("pt")(k);
-          try _ = chunk("あhebc")(k);
+        chunk@("tあい"),
+        label@("whatever 2", @(k) => {
+          try _ = chunk@("pt")@(k);
+          try _ = chunk@("あhebc")@(k);
           Right(Unit)
         }),
-        chunk("abc"),
-        chunk("{}"),
+        chunk@("abc"),
+        chunk@("{}"),
         end-of-input,
       ],
-      chunk("tn"),
+      chunk@("tn"),
     );
-  pin k = make-zonk-kit(*"gaxoeitemtesttnapqabcd\nctああhehoge \n\r  hehehetest");
-  let my-result = my-parser(k);
+  pin k = make-zonk-kit@(*"gaxoeitemtesttnapqabcd\nctああhehoge \n\r  hehehetest");
+  let my-result = my-parser@(k);
   match my-result {
   | Left(_) =>
-    let err = make-parse-error(k);
+    let err = make-parse-error@(k);
     pin message = report(err);
     print("left: ");
     print-line(message);
