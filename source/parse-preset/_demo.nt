@@ -12,7 +12,7 @@ import {
 }
 
 constant _sample-zonk: zonk(unit) {
-  @(k) => {
+  (k) =>> {
     try v1 = read-int@(k);
     try v2 = read-int@(k);
     try xs = read-float-vector(v1)@(k);

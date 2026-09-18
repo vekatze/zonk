@@ -30,7 +30,7 @@ define main() -> unit {
       {
         pin k = make-zonk-kit@(*"fooあい-bar");
         let p: zonk(bool) =
-          @(k) => {
+          (k) =>> {
             try _ = chunk@("fooあい")@(k);
             try rest =
               take-while@((_) => {
@@ -54,7 +54,7 @@ define main() -> unit {
       {
         pin k = make-zonk-kit@(*"helloあ");
         let p: zonk(unit) =
-          @(k) => {
+          (k) =>> {
             try _ = chunk@("helloあ")@(k);
             try _ = end-of-input@(k);
             Right(Unit)
@@ -72,7 +72,7 @@ define main() -> unit {
       {
         pin k = make-zonk-kit@(*"fooあいbar");
         let p: zonk(unit) =
-          @(k) => {
+          (k) =>> {
             try _ = chunk@("fooあい")@(k);
             try _ = chunk@("bar")@(k);
             try _ = end-of-input@(k);
@@ -110,7 +110,7 @@ define main() -> unit {
       {
         pin k = make-zonk-kit@(*"xxx\nbar");
         let my-parser: zonk(unit) =
-          @(k) => {
+          (k) =>> {
             try _ =
               take-while@((r) => {
                 eq-rune(r, `x`)
@@ -135,7 +135,7 @@ define main() -> unit {
       {
         pin k = make-zonk-kit@(*"xxx\nbar");
         let my-parser: zonk(unit) =
-          @(k) => {
+          (k) =>> {
             try _ =
               drop-while@((r) => {
                 eq-rune(r, `x`)
@@ -160,7 +160,7 @@ define main() -> unit {
       {
         pin k = make-zonk-kit@(*"xxx\nbar");
         let my-parser: zonk(unit) =
-          @(k) => {
+          (k) =>> {
             try _ =
               take-while@((r) => {
                 eq-rune(r, `x`)
@@ -185,7 +185,7 @@ define main() -> unit {
       {
         pin k = make-zonk-kit@(*"xxx\nbar");
         let my-parser: zonk(unit) =
-          @(k) => {
+          (k) =>> {
             try _ =
               drop-while@((r) => {
                 all::[
@@ -213,7 +213,7 @@ define main() -> unit {
       {
         pin k = make-zonk-kit@(*"xxx\nbar");
         let my-parser: zonk(unit) =
-          @(k) => {
+          (k) =>> {
             try _ =
               drop-while@((r) => {
                 all::[
@@ -244,7 +244,7 @@ define main() -> unit {
 
 constant _sample-parser: zonk(unit) {
   // constructs a parser
-  @(k) => {
+  (k) =>> {
     // accepts: foo
     try _ = chunk@("foo")@(k);
     // accepts: (buz|test|bar)

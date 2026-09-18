@@ -32,7 +32,7 @@ define _rune-member(r: rune, rs: &list(rune)) -> bool {
 define _from-regex(reg: regex) -> zonk(unit) {
   match reg {
   | Any(label, rs) =>
-    @(k) => {
+    (k) =>> {
       try _ =
         satisfy@(label, (r) => {
           let found on rs = _rune-member(r, rs);
@@ -62,11 +62,11 @@ define _from-regex(reg: regex) -> zonk(unit) {
       define loop(xs: list(zonk(unit))) -> zonk(unit) {
         match xs {
         | Nil =>
-          @(_) => {
+          (_) =>> {
             Right(Unit)
           }
         | Cons(x, xs) =>
-          @(k) => {
+          (k) =>> {
             try _ = x@(k);
             loop(xs)@(k)
           }
@@ -75,7 +75,7 @@ define _from-regex(reg: regex) -> zonk(unit) {
     go(xs)
   | Repeat(r) =>
     let !p = attempt@(_from-regex(r));
-    @(k) => {
+    (k) =>> {
       let go =
         define self() -> parsed(unit) {
           match p@(k) {
