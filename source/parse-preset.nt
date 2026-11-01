@@ -84,32 +84,30 @@ constant read-float: zonk(float) {
 
 define read-int-list(size: int) -> zonk(list(int)) {
   (k) =>> {
-    let f =
-      define self(cursor: int, acc: list(int)) -> parsed(list(int)) {
-        if le-int(cursor, 0) {
-          Right(reverse(acc))
-        } else {
-          try v = read-int@(k);
-          self(sub-int(cursor, 1), Cons(v, acc))
-        }
-      };
-    f(size, Nil)
+    define go(cursor: int, acc: list(int)) -> parsed(list(int)) {
+      if le-int(cursor, 0) {
+        Right(reverse(acc))
+      } else {
+        try v = read-int@(k);
+        go(sub-int(cursor, 1), Cons(v, acc))
+      }
+    };
+    go(size, Nil)
   }
 }
 
 inline read-vector<a>(size: int, !p: zonk(a)) -> zonk(vector(a)) {
   (k) =>> {
-    let f =
-      define self(cursor: int, acc: vector(a)) -> parsed(vector(a)) {
-        if ge-int(cursor, size) {
-          Right(acc)
-        } else {
-          try v = p@(k);
-          try _ = skip-space@(k);
-          self(add-int(cursor, 1), core::vector::push-back(acc, v))
-        }
-      };
-    try result = f(0, core::vector::make(size));
+    define go(cursor: int, acc: vector(a)) -> parsed(vector(a)) {
+      if ge-int(cursor, size) {
+        Right(acc)
+      } else {
+        try v = p@(k);
+        try _ = skip-space@(k);
+        go(add-int(cursor, 1), core::vector::push-back(acc, v))
+      }
+    };
+    try result = go(0, core::vector::make(size));
     Right(result)
   }
 }
@@ -120,17 +118,16 @@ define read-int-vector(size: int) -> zonk(vector(int)) {
 
 define read-float-list(size: int) -> zonk(list(float)) {
   (k) =>> {
-    let f =
-      define self(cursor: int, acc: list(float)) -> parsed(list(float)) {
-        if le-int(cursor, 0) {
-          Right(reverse(acc))
-        } else {
-          try v = read-float@(k);
-          try _ = skip-space@(k);
-          self(sub-int(cursor, 1), Cons(v, acc))
-        }
-      };
-    f(size, Nil)
+    define go(cursor: int, acc: list(float)) -> parsed(list(float)) {
+      if le-int(cursor, 0) {
+        Right(reverse(acc))
+      } else {
+        try v = read-float@(k);
+        try _ = skip-space@(k);
+        go(sub-int(cursor, 1), Cons(v, acc))
+      }
+    };
+    go(size, Nil)
   }
 }
 

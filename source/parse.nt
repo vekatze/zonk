@@ -181,21 +181,20 @@ define _resolve-point(k: &zonk-kit, target: int) -> point {
   let input-stream = _get-input-stream(k);
   tie _Zonk-Kit{+point-cursor, +point-line, +point-column} = k;
   let base-cursor = _read-int-cell(point-cursor);
-  let scan =
-    define go(cursor: int, line: int, column: int) -> point {
-      if ge-int(cursor, target) {
-        Point(line, column)
-      } else {
-        let r = get-rune-unchecked(input-stream, cursor);
-        let Point(line, column) = _advance-point@(line, column, r);
-        go(add-int(cursor, core::rune::size(r)), line, column)
-      }
-    };
+  define go(cursor: int, line: int, column: int) -> point {
+    if ge-int(cursor, target) {
+      Point(line, column)
+    } else {
+      let r = get-rune-unchecked(input-stream, cursor);
+      let Point(line, column) = _advance-point@(line, column, r);
+      go(add-int(cursor, core::rune::size(r)), line, column)
+    }
+  };
   let Point(line, column) =
     if le-int(base-cursor, target) {
-      scan(base-cursor, _read-int-cell(point-line), _read-int-cell(point-column))
+      go(base-cursor, _read-int-cell(point-line), _read-int-cell(point-column))
     } else {
-      scan(0, 0, 0)
+      go(0, 0, 0)
     };
   _write-int-cell(point-cursor, target);
   _write-int-cell(point-line, line);
@@ -316,20 +315,19 @@ inline chunk(chunk-text: text) ->> zonk(unit) {
 inline _scan-while(k: &zonk-kit, !p: (rune) -> bool) -> int {
   let input-stream = _get-input-stream(k);
   let len = byte-length(input-stream);
-  let f =
-    define consumer(cursor: int) -> int {
-      if ge-int(cursor, len) {
-        cursor
+  define consumer(cursor: int) -> int {
+    if ge-int(cursor, len) {
+      cursor
+    } else {
+      let r = get-rune-unchecked(input-stream, cursor);
+      if p(r) {
+        consumer(add-int(cursor, core::rune::size(r)))
       } else {
-        let r = get-rune-unchecked(input-stream, cursor);
-        if p(r) {
-          consumer(add-int(cursor, core::rune::size(r)))
-        } else {
-          cursor
-        }
+        cursor
       }
-    };
-  f(_get-cursor(k))
+    }
+  };
+  consumer(_get-cursor(k))
 }
 
 inline take-while(p: (rune) -> bool) ->> zonk(string) {
@@ -519,16 +517,15 @@ inline choice<a>(label: text, candidates: list(zonk(a)), fallback: zonk(a)) ->> 
 
 inline many<a>(!p: zonk(a)) -> zonk(list(a)) {
   (k) =>> {
-    let f =
-      define self(acc: list(a)) ->> parsed(list(a)) {
-        match p@(k) {
-        | Right(v) =>
-          self@(Cons(v, acc))
-        | Left(_) =>
-          Right(reverse(acc))
-        }
-      };
-    f@(Nil)
+    define go(acc: list(a)) ->> parsed(list(a)) {
+      match p@(k) {
+      | Right(v) =>
+        go@(Cons(v, acc))
+      | Left(_) =>
+        Right(reverse(acc))
+      }
+    };
+    go@(Nil)
   }
 }
 

@@ -46,45 +46,42 @@ define _from-regex(reg: regex) -> zonk(unit) {
   | Choose(name, xs, fallback) =>
     let xs = for-each(xs, exact _from-regex);
     let fallback = _from-regex(fallback);
-    let go =
-      define loop(xs: list(zonk(unit)), fallback: zonk(unit)) -> zonk(unit) {
-        match xs {
-        | Nil =>
-          fallback
-        | Cons(x, rest) =>
-          branch@(attempt@(x), loop(rest, fallback))
-        }
-      };
+    define go(xs: list(zonk(unit)), fallback: zonk(unit)) -> zonk(unit) {
+      match xs {
+      | Nil =>
+        fallback
+      | Cons(x, rest) =>
+        branch@(attempt@(x), go(rest, fallback))
+      }
+    };
     label@(name, go(xs, fallback))
   | Join(xs) =>
     let xs = for-each(xs, exact _from-regex);
-    let go =
-      define loop(xs: list(zonk(unit))) -> zonk(unit) {
-        match xs {
-        | Nil =>
-          (_) =>> {
-            Right(Unit)
-          }
-        | Cons(x, xs) =>
-          (k) =>> {
-            try _ = x@(k);
-            loop(xs)@(k)
-          }
+    define go(xs: list(zonk(unit))) -> zonk(unit) {
+      match xs {
+      | Nil =>
+        (_) =>> {
+          Right(Unit)
         }
-      };
+      | Cons(x, xs) =>
+        (k) =>> {
+          try _ = x@(k);
+          go(xs)@(k)
+        }
+      }
+    };
     go(xs)
   | Repeat(r) =>
     let !p = attempt@(_from-regex(r));
     (k) =>> {
-      let go =
-        define self() -> parsed(unit) {
-          match p@(k) {
-          | Right(_) =>
-            self()
-          | Left(_) =>
-            Right(Unit)
-          }
-        };
+      define go() -> parsed(unit) {
+        match p@(k) {
+        | Right(_) =>
+          go()
+        | Left(_) =>
+          Right(Unit)
+        }
+      };
       go()
     }
   | End-Of-Input =>
